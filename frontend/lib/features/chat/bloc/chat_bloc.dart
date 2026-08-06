@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
@@ -66,6 +67,104 @@ class _FrameReceived extends ChatEvent {
   List<Object?> get props => [frame];
 }
 
+// AI Events
+class ChatFetchSummaryStarted extends ChatEvent {}
+class ChatFetchSummarySuccess extends ChatEvent {
+  final String summary;
+  const ChatFetchSummarySuccess(this.summary);
+  @override
+  List<Object?> get props => [summary];
+}
+class ChatFetchSummaryFailure extends ChatEvent {
+  final String error;
+  const ChatFetchSummaryFailure(this.error);
+  @override
+  List<Object?> get props => [error];
+}
+
+class ChatGenerateSmartRepliesStarted extends ChatEvent {
+  final String context;
+  const ChatGenerateSmartRepliesStarted(this.context);
+  @override
+  List<Object?> get props => [context];
+}
+class ChatGenerateSmartRepliesSuccess extends ChatEvent {
+  final List<String> replies;
+  const ChatGenerateSmartRepliesSuccess(this.replies);
+  @override
+  List<Object?> get props => [replies];
+}
+class ChatGenerateSmartRepliesFailure extends ChatEvent {
+  final String error;
+  const ChatGenerateSmartRepliesFailure(this.error);
+  @override
+  List<Object?> get props => [error];
+}
+
+class ChatTranslateMessageStarted extends ChatEvent {
+  final String messageId;
+  final String text;
+  final String targetLang;
+  const ChatTranslateMessageStarted({
+    required this.messageId,
+    required this.text,
+    required this.targetLang,
+  });
+  @override
+  List<Object?> get props => [messageId, text, targetLang];
+}
+class ChatTranslateMessageSuccess extends ChatEvent {
+  final String messageId;
+  final String translation;
+  const ChatTranslateMessageSuccess({
+    required this.messageId,
+    required this.translation,
+  });
+  @override
+  List<Object?> get props => [messageId, translation];
+}
+class ChatTranslateMessageFailure extends ChatEvent {
+  final String messageId;
+  final String error;
+  const ChatTranslateMessageFailure({
+    required this.messageId,
+    required this.error,
+  });
+  @override
+  List<Object?> get props => [messageId, error];
+}
+
+class ChatModerateMessageStarted extends ChatEvent {
+  final String messageId;
+  final String text;
+  const ChatModerateMessageStarted({
+    required this.messageId,
+    required this.text,
+  });
+  @override
+  List<Object?> get props => [messageId, text];
+}
+class ChatModerateMessageSuccess extends ChatEvent {
+  final String messageId;
+  final Map<String, double> scores;
+  const ChatModerateMessageSuccess({
+    required this.messageId,
+    required this.scores,
+  });
+  @override
+  List<Object?> get props => [messageId, scores];
+}
+class ChatModerateMessageFailure extends ChatEvent {
+  final String messageId;
+  final String error;
+  const ChatModerateMessageFailure({
+    required this.messageId,
+    required this.error,
+  });
+  @override
+  List<Object?> get props => [messageId, error];
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 class ChatRoomState extends Equatable {
@@ -74,6 +173,15 @@ class ChatRoomState extends Equatable {
     this.peerTyping = false,
     this.loading = true,
     this.error,
+    // AI state
+    this.summary = '',
+    this.summaryLoading = false,
+    this.smartReplies = const [],
+    this.smartRepliesLoading = false,
+    this.translations = const {}, // map messageId -> translation
+    this.translationLoading = const {}, // map messageId -> bool
+    this.moderationScores = const {}, // map messageId -> scores
+    this.moderationLoading = const {}, // map messageId -> bool
   });
 
   final List<ChatMessage> messages;
@@ -81,22 +189,48 @@ class ChatRoomState extends Equatable {
   final bool loading;
   final String? error;
 
+  // AI fields
+  final String summary;
+  final bool summaryLoading;
+  final List<String> smartReplies;
+  final bool smartRepliesLoading;
+  final Map<String, String> translations;
+  final Map<String, bool> translationLoading;
+  final Map<String, Map<String, double>> moderationScores;
+  final Map<String, bool> moderationLoading;
+
   ChatRoomState copyWith({
     List<ChatMessage>? messages,
     bool? peerTyping,
     bool? loading,
     String? error,
+    String? summary,
+    bool? summaryLoading,
+    List<String>? smartReplies,
+    bool? smartRepliesLoading,
+    Map<String, String>? translations,
+    Map<String, bool>? translationLoading,
+    Map<String, Map<String, double>>? moderationScores,
+    Map<String, bool>? moderationLoading,
   }) =>
       ChatRoomState(
         messages: messages ?? this.messages,
         peerTyping: peerTyping ?? this.peerTyping,
         loading: loading ?? this.loading,
         error: error,
+        summary: summary ?? this.summary,
+        summaryLoading: summaryLoading ?? this.summaryLoading,
+        smartReplies: smartReplies ?? this.smartReplies,
+        smartRepliesLoading: smartRepliesLoading ?? this.smartRepliesLoading,
+        translations: translations ?? this.translations,
+        translationLoading: translationLoading ?? this.translationLoading,
+        moderationScores: moderationScores ?? this.moderationScores,
+        moderationLoading: moderationLoading ?? this.moderationLoading,
       );
 
   @override
   List<Object?> get props =>
-      [messages.length, _rev, peerTyping, loading, error];
+      [messages.length, _rev, peerTyping, loading, error, summary, summaryLoading, smartReplies, smartRepliesLoading];
 
   // Revision counter derived from mutable message fields so Equatable
   // notices tick/deletion changes inside the list.
@@ -113,10 +247,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     required this.myId,
     required this.peerId,
     this.isSecret = false,
+    required String baseUrl,
+    required String authToken,
   })  : _repo = repo,
         _ws = ws,
-        _signalService = SignalService(myId, baseUrl: 'http://localhost:8000'),
+        _signalService = SignalService(myId, baseUrl: baseUrl),
         _isSecret = isSecret,
+        _baseUrl = baseUrl,
+        _authToken = authToken,
         super(const ChatRoomState()) {
     on<ChatOpened>(_onOpened);
     on<TextSent>(_onTextSent);
@@ -124,6 +262,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     on<TypingChanged>(_onTypingChanged);
     on<MessageUnsent>(_onUnsent);
     on<_FrameReceived>(_onFrame);
+
+    // AI events
+    on<ChatFetchSummaryStarted>(_onFetchSummaryStarted);
+    on<ChatFetchSummarySuccess>(_onFetchSummarySuccess);
+    on<ChatFetchSummaryFailure>(_onFetchSummaryFailure);
+    on<ChatGenerateSmartRepliesStarted>(_onGenerateSmartRepliesStarted);
+    on<ChatGenerateSmartRepliesSuccess>(_onGenerateSmartRepliesSuccess);
+    on<ChatGenerateSmartRepliesFailure>(_onGenerateSmartRepliesFailure);
+    on<ChatTranslateMessageStarted>(_onTranslateMessageStarted);
+    on<ChatTranslateMessageSuccess>(_onTranslateMessageSuccess);
+    on<ChatTranslateMessageFailure>(_onTranslateMessageFailure);
+    on<ChatModerateMessageStarted>(_onModerateMessageStarted);
+    on<ChatModerateMessageSuccess>(_onModerateMessageSuccess);
+    on<ChatModerateMessageFailure>(_onModerateMessageFailure);
 
     _sub = _ws.frames.listen((f) => add(_FrameReceived(f)));
   }
@@ -134,6 +286,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   final String peerId;
   final bool _isSecret;
   final SignalService _signalService;
+
+  final String _baseUrl;
+  final String _authToken;
 
   StreamSubscription? _sub;
   Timer? _typingDebounce;
@@ -146,6 +301,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       // Everything from the peer that we just displayed is now read
       for (final m in history.where((m) => !m.isMine && m.tick != MessageTick.read)) {
         _ws.sendRead(m.id);
+      }
+      // Optionally fetch summary if there are many messages
+      // For now, we can trigger summary fetch if unread count > 20
+      final unreadCount = history.where((m) => !m.isMine && m.tick != MessageTick.read).length;
+      if (unreadCount > 20) {
+        add(ChatFetchSummaryStarted());
       }
     } catch (err) {
       emit(state.copyWith(loading: false, error: err.toString()));
@@ -371,6 +532,214 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         }
         emit(state.copyWith(messages: updated));
     }
+  }
+
+  // === AI Event Handlers ===
+
+  Future<void> _onFetchSummaryStarted(
+      ChatFetchSummaryStarted event, Emitter<ChatRoomState> emit) async {
+    emit(state.copyWith(summaryLoading: true));
+    try {
+      // Fetch recent messages from the chat
+      final messages = await _repo.history(peerId, myId: myId, limit: 100);
+      final messageTexts = messages.where((m) => m.content.isNotEmpty).map((m) => m.content).toList();
+      if (messageTexts.isEmpty) {
+        emit(state.copyWith(summaryLoading: false, summary: ''));
+        return;
+      }
+      // Call AI summary endpoint
+      final response = await http.post(
+        Uri.parse('$_baseUrl/chats/$peerId/summary'),
+        headers: {
+          'Authorization': 'Bearer $_authToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'messages': messageTexts,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final summary = data['summary'] as String?;
+        emit(state.copyWith(summaryLoading: false, summary: summary ?? ''));
+      } else {
+        throw Exception('Failed to fetch summary');
+      }
+    } catch (e) {
+      emit(state.copyWith(summaryLoading: false, summary: '', error: e.toString()));
+    }
+  }
+
+  void _onFetchSummarySuccess(
+      ChatFetchSummarySuccess event, Emitter<ChatRoomState> emit) {
+    emit(state.copyWith(summaryLoading: false, summary: event.summary));
+  }
+
+  void _onFetchSummaryFailure(
+      ChatFetchSummaryFailure event, Emitter<ChatRoomState> emit) {
+    emit(state.copyWith(summaryLoading: false, error: event.error));
+  }
+
+  Future<void> _onGenerateSmartRepliesStarted(
+      ChatGenerateSmartRepliesStarted event, Emitter<ChatRoomState> emit) async {
+    emit(state.copyWith(smartRepliesLoading: true));
+    try {
+      // Use the last few messages as context
+      final messages = await _repo.history(peerId, myId: myId, limit: 10);
+      final context = messages.map((m) => m.content).join(' ');
+      if (context.trim().isEmpty) {
+        emit(state.copyWith(smartRepliesLoading: false, smartReplies: const []));
+        return;
+      }
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ai/smart-replies'),
+        headers: {
+          'Authorization': 'Bearer $_authToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'context': context,
+          'num_replies': 3,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> repliesJson = data['replies'];
+        final List<String> replies = repliesJson.cast<String>();
+        emit(state.copyWith(smartRepliesLoading: false, smartReplies: replies));
+      } else {
+        throw Exception('Failed to generate smart replies');
+      }
+    } catch (e) {
+      emit(state.copyWith(smartRepliesLoading: false, smartReplies: const [], error: e.toString()));
+    }
+  }
+
+  void _onGenerateSmartRepliesSuccess(
+      ChatGenerateSmartRepliesSuccess event, Emitter<ChatRoomState> emit) {
+    emit(state.copyWith(smartRepliesLoading: false, smartReplies: event.replies));
+  }
+
+  void _onGenerateSmartRepliesFailure(
+      ChatGenerateSmartRepliesFailure event, Emitter<ChatRoomState> emit) {
+    emit(state.copyWith(smartRepliesLoading: false, error: event.error));
+  }
+
+  Future<void> _onTranslateMessageStarted(
+      ChatTranslateMessageStarted event, Emitter<ChatRoomState> emit) async {
+    // Update translation loading flag for this message
+    final updatedLoading = Map<String, bool>.from(state.translationLoading)
+      ..[event.messageId] = true;
+    emit(state.copyWith(translationLoading: updatedLoading));
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ai/translate'),
+        headers: {
+          'Authorization': 'Bearer $_authToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'text': event.text,
+          'target_lang': event.targetLang,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final translation = data['translation'] as String?;
+        final updatedTranslations = Map<String, String>.from(state.translations)
+          ..[event.messageId] = translation ?? '';
+        final updatedLoading = Map<String, bool>.from(state.translationLoading)
+          ..[event.messageId] = false;
+        emit(state.copyWith(
+          translations: updatedTranslations,
+          translationLoading: updatedLoading,
+        ));
+      } else {
+        throw Exception('Failed to translate message');
+      }
+    } catch (e) {
+      final updatedLoading = Map<String, bool>.from(state.translationLoading)
+        ..[event.messageId] = false;
+      emit(state.copyWith(
+        translationLoading: updatedLoading,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  void _onTranslateMessageSuccess(
+      ChatTranslateMessageSuccess event, Emitter<ChatRoomState> emit) {
+    final updatedTranslations = Map<String, String>.from(state.translations)
+      ..[event.messageId] = event.translation;
+    emit(state.copyWith(translations: updatedTranslations));
+  }
+
+  void _onTranslateMessageFailure(
+      ChatTranslateMessageFailure event, Emitter<ChatRoomState> emit) {
+    final updatedLoading = Map<String, bool>.from(state.translationLoading)
+      ..[event.messageId] = false;
+    emit(state.copyWith(
+      translationLoading: updatedLoading,
+      error: event.error,
+    ));
+  }
+
+  Future<void> _onModerateMessageStarted(
+      ChatModerateMessageStarted event, Emitter<ChatRoomState> emit) async {
+    final updatedLoading = Map<String, bool>.from(state.moderationLoading)
+      ..[event.messageId] = true;
+    emit(state.copyWith(moderationLoading: updatedLoading));
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ai/moderate'),
+        headers: {
+          'Authorization': 'Bearer $_authToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'text': event.text,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final Map<String, dynamic> scoresJson = data['scores'];
+        final Map<String, double> scores = scoresJson.map((key, value) => MapEntry(key, (value as num).toDouble()));
+        final updatedScores = Map<String, Map<String, double>>.from(state.moderationScores)
+          ..[event.messageId] = scores;
+        final updatedLoading = Map<String, bool>.from(state.moderationLoading)
+          ..[event.messageId] = false;
+        emit(state.copyWith(
+          moderationScores: updatedScores,
+          moderationLoading: updatedLoading,
+        ));
+      } else {
+        throw Exception('Failed to moderate message');
+      }
+    } catch (e) {
+      final updatedLoading = Map<String, bool>.from(state.moderationLoading)
+        ..[event.messageId] = false;
+      emit(state.copyWith(
+        moderationLoading: updatedLoading,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  void _onModerateMessageSuccess(
+      ChatModerateMessageSuccess event, Emitter<ChatRoomState> emit) {
+    final updatedScores = Map<String, Map<String, double>>.from(state.moderationScores)
+      ..[event.messageId] = event.scores;
+    emit(state.copyWith(moderationScores: updatedScores));
+  }
+
+  void _onModerateMessageFailure(
+      ChatModerateMessageFailure event, Emitter<ChatRoomState> emit) {
+    final updatedLoading = Map<String, bool>.from(state.moderationLoading)
+      ..[event.messageId] = false;
+    emit(state.copyWith(
+      moderationLoading: updatedLoading,
+      error: event.error,
+    ));
   }
 
   @override

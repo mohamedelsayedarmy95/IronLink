@@ -5,6 +5,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'api_client.dart';
 import 'env.dart';
+import '../features/notification/ticker_bloc.dart';
+import '../features/notification/ticker_event.dart';
 
 /// Real WebSocket transport — ticket handshake then persistent socket.
 ///
@@ -35,6 +37,11 @@ class WsService {
     _channel!.stream.listen(
       (raw) {
         final frame = jsonDecode(raw as String) as Map<String, dynamic>;
+        // Handle OCR alerts: forward them to the TickerBloc
+        if (frame['type'] == 'ocr_alert') {
+          // Add the alert to the ticker bloc
+          TickerBloc().add(AddOcrAlert(frame));
+        }
         _frames.add(frame);
       },
       onDone: _handleDisconnect,

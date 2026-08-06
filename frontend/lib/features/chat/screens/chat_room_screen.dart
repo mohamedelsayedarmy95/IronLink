@@ -1,12 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
+import '../../../core/widgets/ticker.dart';
 import '../bloc/chat_bloc.dart';
 import '../chat_repository.dart';
 import '../widgets/attach_flow.dart';
+import '../widgets/smart_replies.dart';
+import '../widgets/summary_banner.dart';
 import '../widgets/voice_recorder.dart';
 import 'dart:convert';
 
@@ -19,6 +25,7 @@ class ChatRoomScreen extends StatelessWidget {
     required this.peerId,
     required this.peerName,
     required this.peerOnline,
+    required this.isSecret,
   });
 
   final ChatRepository repo;
@@ -27,18 +34,28 @@ class ChatRoomScreen extends StatelessWidget {
   final String peerId;
   final String peerName;
   final bool peerOnline;
+  final bool isSecret;
 
   @override
   Widget build(BuildContext context) {
+    // In a real app, these would come from secure storage/config
+    final baseUrl = 'https://api.ironlink.app';
+    final authToken = ''; // TODO: get from secure storage
+
     return BlocProvider(
       create: (_) => ChatBloc(
         repo: repo,
         ws: ws,
         myId: myId,
         peerId: peerId,
-        isSecret: false, // Start with regular chat, user can toggle to secret
+        isSecret: isSecret,
+        baseUrl: baseUrl,
+        authToken: authToken,
       )..add(const ChatOpened()),
-      child: _ChatRoomView(peerName: peerName, peerOnline: peerOnline),
+      child: _ChatRoomView(
+        peerName: peerName,
+        peerOnline: peerOnline,
+      ),
     );
   }
 }
@@ -108,84 +125,146 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
           ],
         ),
         actions: [
-          // Secret chat toggle button
+          // Secret chat toggle button (simplified)
           BlocBuilder<ChatBloc, ChatRoomState>(
             builder: (context, state) {
-              // We need to access the bloc's isSecret flag
-              final bloc = context.read<ChatBloc>();
-              // Since ChatBloc doesn't expose isSecret directly, we'll use a workaround
-              // For now, we'll show a button that starts a secret chat
               return IconButton(
                 tooltip: 'بدء محادثة سرية',
                 icon: const Icon(Icons.lock, color: MilColors.gold),
                 onPressed: () {
-                  // Recreate the bloc with isSecret = true
-                  // In a real implementation, we'd have a proper way to toggle
-                  // For now, we'll show a dialog or navigate to a secret chat screen
-                  // Since we're modifying the existing bloc, we'll just indicate
-                  // that secret chat is now active (this is a simplified implementation)
+                  // In a full implementation, we would restart the bloc with isSecret=true
+                  // For now, just show a snack bar
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('تم تفعيل المحادثة السرية'),
+                      content: Text('تم تفعيل المحادثة السرية (سيتم تطبيقها في التحديث التالي)'),
                       backgroundColor: MilColors.gold,
                     ),
                   );
-                  // In a full implementation, we would:
-                  // 1. Update the bloc to use secret chat mode
-                  // 2. Trigger key exchange
-                  // 3. Change UI to indicate secure connection
                 },
               );
             },
           ),
+          // AI Summary toggle (for demo, we'll just show it automatically if there are many messages)
+          // In a real app, this could be a setting
         ],
       ),
-      body: BlocConsumer<ChatBloc, ChatRoomState>(
-        listener: (_, __) => _jumpToBottom(),
-        builder: (context, state) {
-          if (state.loading) {
-            return const Center(
-                child: CircularProgressIndicator(color: MilColors.gold));
-          }
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scroll,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: state.messages.length,
-                  itemBuilder: (context, i) =>
-                      _MessageBubble(message: state.messages[i]),
-                ),
-              ),
-              if (state.peerTyping)
-                _TypingIndicator(peerName: widget.peerName),
-              _InputBar(
-                controller: _input,
-                onChanged: (text) => context
-                    .read<ChatBloc>()
-                    .add(TypingChanged(text.isNotEmpty)),
-                onSend: () {
-                  final text = _input.text.trim();
-                  if (text.isEmpty) return;
-                  context.read<ChatBloc>().add(TextSent(text));
-                  _input.clear();
-                },
-              ),
-            ],
-          );
-        },
+      body: Column(
+        children: [
+          // News Ticker for OCR alerts
+          const NewsTicker(),
+          Expanded(
+            child: BlocConsumer<ChatBloc, ChatRoomState>(
+              listener: (_, __) => _jumpToBottom(),
+              builder: (context, state) {
+                if (state.loading) {
+                  return const Center(
+                      child: CircularProgressIndicator(color: MilColors.gold));
+                }
+                return Column(
+                  children: [
+                    // AI Summary Banner
+                    if (state.summaryLoading)
+                      SummaryBanner(
+                        summary: '',
+                        isLoading: true,
+                        onRefresh: () {
+                          context.read<ChatBloc>().add(const ChatFetchSummaryStarted());
+                        },
+                      )
+                    else if (state.summary.isNotEmpty)
+                      SummaryBanner(
+                        summary: state.summary,
+                        isLoading: false,
+                        onRefresh: () {
+                          context.read<ChatBloc>().add(const ChatFetchSummaryStarted());
+                        },
+                      )
+                    else
+                      const SizedBox.shrink(),
+
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scroll,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: state.messages.length,
+                        itemBuilder: (context, i) {
+                          final message = state.messages[i];
+                          return _MessageBubble(
+                            message: message,
+                            onTranslatePressed: (text, targetLang) {
+                              // Trigger translation for this message
+                              // We need the message ID - we'll pass it via the message object
+                              // For simplicity, we'll add a translate method to ChatBloc that takes messageId
+                              // But we don't have access to messageId here easily
+                              // Let's modify the approach: we'll add a method to the bloc state to translate
+                              // For now, we'll just call the bloc event with the text and targetLang
+                              // and assume we can get the messageId from somewhere
+                              // This is a limitation - in a real implementation we'd pass messageId
+                              context.read<ChatBloc>().add(ChatTranslateMessageStarted(
+                                messageId: message.id,
+                                text: text,
+                                targetLang: targetLang,
+                              ));
+                            },
+                            onModeratePressed: (text) {
+                              context.read<ChatBloc>().add(ChatModerateMessageStarted(
+                                messageId: message.id,
+                                text: text,
+                              ));
+                            },
+                          );
+                        },
+                      ),
+                    ),
+
+                    if (state.peerTyping)
+                      _TypingIndicator(peerName: widget.peerName),
+
+                    // Smart Replies
+                    if (state.smartReplies.isNotEmpty && !state.smartRepliesLoading)
+                      SmartReplies(
+                        suggestions: state.smartReplies,
+                        onTap: (suggestion) {
+                          context.read<ChatBloc>().add(TextSent(suggestion));
+                        },
+                      ),
+
+                    _InputBar(
+                      controller: _input,
+                      onChanged: (text) => context
+                          .read<ChatBloc>()
+                          .add(TypingChanged(text.isNotEmpty)),
+                      onSend: () {
+                        final text = _input.text.trim();
+                        if (text.isEmpty) return;
+                        context.read<ChatBloc>().add(TextSent(text));
+                        _input.clear();
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Message bubble: gold gradient (mine) / slate grey (theirs) ───────────────
+// ── Message bubble with translate/moderate callbacks ───────────────
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({
+    super.key,
+    required this.message,
+    required this.onTranslatePressed,
+    required this.onModeratePressed,
+  });
 
   final ChatMessage message;
+  final void Function(String text, String targetLang) onTranslatePressed;
+  final void Function(String text) onModeratePressed;
 
   static const _slateGrey = Color(0xFF3E4A5C);
 
@@ -197,10 +276,9 @@ class _MessageBubble extends StatelessWidget {
       alignment:
           mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
       child: GestureDetector(
-        // Fable5-Enhancement: long-press on your own message opens the unsend
-        // sheet — discoverable, and impossible to trigger by accident.
+        // Long-press for options (translate, moderate, unsend)
         onLongPress: mine && !message.deleted
-            ? () => _showUnsendSheet(context)
+            ? () => _showMessageOptions(context)
             : null,
         child: Container(
           constraints: BoxConstraints(
@@ -287,8 +365,7 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  void _showUnsendSheet(BuildContext context) {
-    final bloc = context.read<ChatBloc>();
+  void _showMessageOptions(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: MilColors.navySurface,
@@ -296,17 +373,50 @@ class _MessageBubble extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => SafeArea(
-        child: ListTile(
-          leading: const Icon(Icons.delete_forever_outlined,
-              color: MilColors.errorRed),
-          title: const Text('حذف لدى الجميع',
-              style: TextStyle(color: MilColors.textHi)),
-          subtitle: const Text('متاح خلال 5 دقائق من الإرسال',
-              style: TextStyle(color: MilColors.textLo, fontSize: 12)),
-          onTap: () {
-            bloc.add(MessageUnsent(message.id));
-            Navigator.pop(context);
-          },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.translate, color: MilColors.gold),
+              title: const Text('ترجمة'),
+              onTap: () {
+                Navigator.pop(context);
+                // For translation, we need to ask for target language
+                // For simplicity, we'll use English as default
+                final text = message.content ?? '';
+                if (text.isNotEmpty) {
+                  onTranslatePressed(text, 'eng_Latn'); // English
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.shield, color: MilColors.gold),
+              title: const Text('إبلاغ عن رسالة'),
+              onTap: () {
+                Navigator.pop(context);
+                final text = message.content ?? '';
+                if (text.isNotEmpty) {
+                  onModeratePressed(text);
+                }
+              },
+            ),
+            if (mine && !message.deleted) ...[
+              const Divider(color: MilColors.navyDeep),
+              ListTile(
+                leading: const Icon(Icons.delete_forever_outlined,
+                    color: MilColors.errorRed),
+                title: const Text('حذف لدى الجميع',
+                    style: TextStyle(color: MilColors.textHi)),
+                subtitle: const Text('متاح خلال 5 دقائق من الإرسال',
+                    style: TextStyle(color: MilColors.textLo, fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Find the bloc and send unsend event
+                  context.read<ChatBloc>().add(MessageUnsent(message.id));
+                },
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -316,7 +426,7 @@ class _MessageBubble extends StatelessWidget {
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }
 
-/// One grey � ✓ (sent) → two grey � ✓��✓ (delivered) → two GOLD � ✓��✓ (read).
+// ── One grey ����� ��� ��� � ��� � � ✓ (sent) → two grey ����� ��� ��� � ��� � � ✓��������������✓ (delivered) → two GOLD ����� ��� ��� � ��� � � ✓��������������✓ (read).
 class _Ticks extends StatelessWidget {
   const _Ticks({required this.tick, required this.pending});
 
@@ -346,7 +456,6 @@ class _Ticks extends StatelessWidget {
 }
 
 // ── "يكتب..." indicator with 3 animated gold dots ────────────────────────────
-
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator({required this.peerName});
 
@@ -403,8 +512,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             ),
           ),
         ],
-      ),
-    );
+      );
+    }
   }
 
   double _dotOpacity(int i) {
@@ -414,7 +523,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 }
 
 // ── Input bar: mic + attach sheet + send ─────────────────────────────────────
-
 class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
@@ -492,5 +600,4 @@ class _InputBar extends StatelessWidget {
       ),
     );
   }
-
 }

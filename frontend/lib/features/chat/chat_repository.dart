@@ -95,9 +95,10 @@ class ChatRepository {
   }
 
   Future<List<ChatMessage>> history(String peerId,
-      {required String myId}) async {
+      {required String myId, int limit = 100}) async {
     final res = await _api.dio.get<List<dynamic>>(
       '/chats/$peerId/messages',
+      queryParameters: {'limit': limit},
       options: await _auth(),
     );
     return [

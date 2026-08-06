@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../core/ws_service.dart';
+import '../../core/widgets/ticker.dart';
 import '../auth/auth_repository.dart';
 import '../broadcast/broadcast_banner.dart';
 import '../chat/chat_repository.dart';
@@ -28,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _tabs = [
     (icon: Icons.chat_bubble_outline, label: 'المحادثات'),
-    (icon: Icons.groups_outlined, label: 'المجموعات'),
+    (icon: Icons.groups_outlain, label: 'المجموعات'),
     (icon: Icons.campaign_outlined, label: 'التعميمات'),
     (icon: Icons.settings_outlined, label: 'الإعدادات'),
   ];
@@ -76,32 +77,40 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       // Urgent broadcasts stack above whatever tab is showing and stay
       // until tapped (server-side ack).
-      body: BroadcastBannerHost(
-        api: context.read<ApiClient>(),
-        ws: context.read<WsService>(),
-        child: switch (_tab) {
-          0 => ChatsListScreen(
-              repo: context.read<ChatRepository>(),
+      body: Column(
+        children: [
+          // News Ticker for OCR alerts
+          const NewsTicker(),
+          Expanded(
+            child: BroadcastBannerHost(
+              api: context.read<ApiClient>(),
               ws: context.read<WsService>(),
-              myId: widget.user.id,
-            ),
-          1 => GroupsScreen(repo: context.read<GroupsRepository>()),
-          2 => const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(_tabs[_tab].icon,
-                        size: 64, color: MilColors.goldDim),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'قريباً',
-                      style: TextStyle(color: MilColors.textLo),
+              child: switch (_tab) {
+                0 => ChatsListScreen(
+                    repo: context.read<ChatRepository>(),
+                    ws: context.read<WsService>(),
+                    myId: widget.user.id,
+                  ),
+                1 => GroupsScreen(repo: context.read<GroupsRepository>()),
+                2 => const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(_tabs[_tab].icon,
+                              size: 64, color: MilColors.goldDim),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'قريباً',
+                            style: TextStyle(color: MilColors.textLo),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-          3 => const OcrSettingsPage(),
-        },
+                3 => const OcrSettingsPage(),
+              },
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: MilColors.navySurface,
