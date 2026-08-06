@@ -105,4 +105,12 @@ class ChatRepository {
         ChatMessage.fromJson(j as Map<String, dynamic>, myId: myId)
     ];
   }
+
+  Future<void> sendTyping(String chatId, bool typing) async {
+    final res = await _api.dio.post<void>(
+      '/chats/$chatId/typing',
+      data: {'typing': typing},
+      options: await _auth(),
+    );
+  }
 }

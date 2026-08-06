@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
 
-// ── Events ────────────────────────────────────────────────────────────────────
+// ── Events ─────────────────────────────────────────────────────────────────────
 
 sealed class ChatEvent extends Equatable {
   const ChatEvent();
@@ -63,7 +63,7 @@ class _FrameReceived extends ChatEvent {
   List<Object?> get props => [frame];
 }
 
-// ── State ────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 
 class ChatRoomState extends Equatable {
   const ChatRoomState({
@@ -156,7 +156,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       pending: true,
     );
     _ws.sendText(to: peerId, content: e.content, clientRef: ref);
-    _ws.sendTyping(to: peerId, typing: false);
+    // Send typing_stop via HTTP when sending a message
+    _repo.sendTyping(peerId, false);
     emit(state.copyWith(messages: [...state.messages, optimistic]));
   }
 
@@ -178,6 +179,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       caption: e.caption,
       clientRef: ref,
     );
+    // Send typing_stop via HTTP when sending a message
+    _repo.sendTyping(peerId, false);
     emit(state.copyWith(messages: [...state.messages, optimistic]));
   }
 
@@ -185,11 +188,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   // debounce here, so a user who stops mid-sentence doesn't stay "typing"
   // forever on the peer's screen.
   void _onTypingChanged(TypingChanged e, Emitter<ChatRoomState> emit) {
-    _ws.sendTyping(to: peerId, typing: e.typing);
+    // Send typing indicator via HTTP endpoint (not WebSocket)
+    _repo.sendTyping(peerId, e.typing);
     _typingDebounce?.cancel();
     if (e.typing) {
       _typingDebounce = Timer(const Duration(seconds: 3),
-          () => _ws.sendTyping(to: peerId, typing: false));
+          () => _repo.sendTyping(peerId, false));
     }
   }
 
