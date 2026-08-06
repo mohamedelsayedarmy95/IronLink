@@ -1,433 +1,387 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// IronLink Design System
-///
-/// This file contains the core design tokens for the IronLink app:
-/// - Colors (IronColors)
-/// - Typography (IronTypography)
-/// - Spacing (IronSpacing)
-///
-/// Additionally, it provides light and dark theme data.
-
 class IronColors {
-  // Dark Mode Palette
-  static const Color darkBackground = Color(0xFF0A0A0A); // Almost black
-  static const Color darkSurface = Color(0xFF1A1A1A);    // Slightly lighter
-  static const Color darkGold = Color(0xFFF5D76E);       // Warm gold
-  static const Color darkGoldDark = Color(0xFFD4AF37);   // Darker gold for gradients
-  static const Color darkAccent = Color(0xFF4A90E2);     // Blue accent
-  static const Color darkTextPrimary = Color(0xFFFFFFFF); // White
-  static const Color darkTextSecondary = Color(0xFFB0B0B0); // Light gray
-  static const Color darkTextDisabled = Color(0xFF606060); // Dark gray
-  static const Color darkDivider = Color(0xFF303030);    // Divider lines
-  static const Color darkError = Color(0xFFE74C3C);      // Red for errors
-  static const Color darkSuccess = Color(0xFF2ECC71);    // Green for success
-  static const Color darkWarning = Color(0xFFF1C40F);    // Yellow for warning
+  // Dark theme colors
+  static const Color darkPrimary = Color(0xFF0F172A); // Navy bg
+  static const Color darkSecondary = Color(0xFF1E293B);
+  static const Color darkTertiary = Color(0xFF334155);
+  static const Color darkAccent = Color(0xFFD4AF37); // Metallic gold
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFFE2E8F0);
+  static const Color darkTextTertiary = Color(0xFFCBD5E1);
 
-  // Light Mode Palette
-  static const Color lightBackground = Color(0xFFFAFAFA); // Off-white
-  static const Color lightSurface = Color(0xFFFFFFFF);    // White
-  static const Color lightGold = Color(0xFFF5D76E);       // Warm gold
-  static const Color lightGoldDark = Color(0xFFD4AF37);   // Darker gold for gradients
-  static const Color lightAccent = Color(0xFF4A90E2);     // Blue accent
-  static const Color lightTextPrimary = Color(0xFF0A0A0A); // Almost black
-  static const Color lightTextSecondary = Color(0xFF505050); // Dark gray
-  static const Color lightTextDisabled = Color(0xFF909090); // Medium gray
-  static const Color lightDivider = Color(0xFFE0E0E0);    // Divider lines
-  static const Color lightError = Color(0xFFE74C3C);      // Red for errors
-  static const Color lightSuccess = Color(0xFF2ECC71);    // Green for success
-  static const Color lightWarning = Color(0xFFF1C40F);    // Yellow for warning
+  // Light theme colors
+  static const Color lightPrimary = Color(0xFFF8FAFC); // Almost white
+  static const Color lightSecondary = Color(0xFFF1F5F9);
+  static const Color lightTertiary = Color(0xFFE2E8F0);
+  static const Color lightAccent = Color(0xFFD4AF37); // Metallic gold
+  static const Color lightTextPrimary = Color(0xFF0F172A); // Navy text
+  static const Color lightTextSecondary = Color(0xFF1E293B);
+  static const Color lightTextTertiary = Color(0xFF334155);
 
-  /// Returns the appropriate color for the current theme.
-  static Color background(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkBackground
-          : lightBackground;
-
-  static Color surface(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkSurface
-          : lightSurface;
-
-  static Color gold(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkGold
-          : lightGold;
-
-  static Color goldDark(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkGoldDark
-          : lightGoldDark;
-
-  static Color accent(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkAccent
-          : lightAccent;
-
-  static Color textPrimary(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkTextPrimary
-          : lightTextPrimary;
-
-  static Color textSecondary(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkTextSecondary
-          : lightTextSecondary;
-
-  static Color textDisabled(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkTextDisabled
-          : lightTextDisabled;
-
-  static Color divider(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkDivider
-          : lightDivider;
-
-  static Color error(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkError
-          : lightError;
-
-  static Color success(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkSuccess
-          : lightSuccess;
-
-  static Color warning(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? darkWarning
-          : lightWarning;
+  // Common colors
+  static const Color success = Color(0xFF10B981);
+  static const Color warning = Color(0xFFFAB005);
+  static const Color error = Color(0xFFEF4444);
+  static const Color info = Color(0xFF3B82F6);
 }
 
 class IronTypography {
-  /// Define font families
-  static const String fontEnglish = 'Inter';
-  static const String fontArabic = 'Tajawal'; // or 'Cairo'
+  // Font families
+  static const String fontPrimary = 'Inter'; // Clean, modern sans-serif
+  static const String fontSecondary = 'Tajawal'; // For headings/names
 
-  /// Text styles for dark and light modes are handled by the ThemeData,
-  /// but we can define base styles that are then adapted by the theme.
-  /// We'll use GoogleFonts to create the text styles.
-
-  /// Display / Headline
-  static TextStyle headline1({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 96,
-        fontWeight: FontWeight.w300,
-        color: IronColors.textPrimary(context),
+  // Text styles
+  static TextStyle displayLarge({Color? color}) => GoogleFonts.tajawal(
+        fontSize: 57,
+        fontWeight: FontWeight.bold,
+        color: color,
+        letterSpacing: -0.5,
         height: 1.2,
       );
 
-  static TextStyle headline2({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 60,
-        fontWeight: FontWeight.w300,
-        color: IronColors.textPrimary(context),
+  static TextStyle displayMedium({Color? color}) => GoogleFonts.tajawal(
+        fontSize: 45,
+        fontWeight: FontWeight.bold,
+        color: color,
+        letterSpacing: -0.5,
+        height: 1.3,
+      );
+
+  static TextStyle displaySmall({Color? color}) => GoogleFonts.tajawal(
+        fontSize: 36,
+        fontWeight: FontWeight.bold,
+        color: color,
+        letterSpacing: -0.5,
+        height: 1.4,
+      );
+
+  static TextStyle headlineLarge({Color? color}) => GoogleFonts.inter(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: color,
+        letterSpacing: 0,
         height: 1.2,
       );
 
-  static TextStyle headline3({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 48,
-        fontWeight: FontWeight.w400,
-        color: IronColors.textPrimary(context),
-        height: 1.2,
+  static TextStyle headlineMedium({Color? color}) => GoogleFonts.inter(
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: color,
+        letterSpacing: 0,
+        height: 1.3,
       );
 
-  /// Title styles
-  static TextStyle titleLarge({required BuildContext context}) =>
-      GoogleFonts.inter(
+  static TextStyle headlineSmall({Color? color}) => GoogleFonts.inter(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: color,
+        letterSpacing: 0,
+        height: 1.4,
+      );
+
+  static TextStyle titleLarge({Color? color}) => GoogleFonts.inter(
         fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: IronColors.textPrimary(context),
-      );
-
-  static TextStyle titleMedium({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: IronColors.textPrimary(context),
-      );
-
-  static TextStyle titleSmall({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: IronColors.textPrimary(context),
-      );
-
-  /// Body styles
-  static TextStyle bodyLarge({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
-        color: IronColors.textPrimary(context),
+        fontWeight: FontWeight.w600,
+        color: color,
+        letterSpacing: 0,
         height: 1.5,
       );
 
-  static TextStyle bodyMedium({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.normal,
-        color: IronColors.textPrimary(context),
+  static TextStyle titleMedium({Color? color}) => GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: color,
+        letterSpacing: 0,
         height: 1.5,
       );
 
-  static TextStyle bodySmall({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.normal,
-        color: IronColors.textPrimary(context),
-        height: 1.5,
-      );
-
-  /// Caption / Label
-  static TextStyle labelLarge({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: IronColors.textSecondary(context),
-      );
-
-  static TextStyle labelMedium({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: IronColors.textSecondary(context),
-      );
-
-  static TextStyle labelSmall({required BuildContext context}) =>
-      GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: FontWeight.w500,
-        color: IronColors.textSecondary(context),
-      );
-
-  /// Button text
-  static TextStyle buttonLarge({required BuildContext context}) =>
-      GoogleFonts.inter(
+  static TextStyle titleSmall({Color? color}) => GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: IronColors.textPrimary(context),
+        color: color,
+        letterSpacing: 0,
+        height: 1.5,
       );
 
-  static TextStyle buttonMedium({required BuildContext context}) =>
-      GoogleFonts.inter(
+  static TextStyle bodyLarge({Color? color}) => GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.normal,
+        color: color,
+        letterSpacing: 0.5,
+        height: 1.5,
+      );
+
+  static TextStyle bodyMedium({Color? color}) => GoogleFonts.inter(
         fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: IronColors.textPrimary(context),
+        fontWeight: FontWeight.normal,
+        color: color,
+        letterSpacing: 0.25,
+        height: 1.4,
       );
 
-  static TextStyle buttonSmall({required BuildContext context}) =>
-      GoogleFonts.inter(
+  static TextStyle bodySmall({Color? color}) => GoogleFonts.inter(
         fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: IronColors.textPrimary(context),
+        fontWeight: FontWeight.normal,
+        color: color,
+        letterSpacing: 0.4,
+        height: 1.3,
+      );
+
+  static TextStyle labelLarge({Color? color}) => GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: color,
+        letterSpacing: 0.1,
+        height: 1.4,
+      );
+
+  static TextStyle labelMedium({Color? color}) => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: color,
+        letterSpacing: 0.5,
+        height: 1.3,
+      );
+
+  static TextStyle labelSmall({Color? color}) => GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: color,
+        letterSpacing: 0.5,
+        height: 1.2,
       );
 }
 
 class IronSpacing {
-  /// Consistent spacing values (in pixels)
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 12.0;
-  static const double lg = 16.0;
-  static const double xl = 24.0;
-  static const double xxl = 32.0;
-
-  /// For use in padding and margins
-  static EdgeInsets all(double size) => EdgeInsets.all(size);
-  static EdgeInsets symmetric({double vertical = 0, double horizontal = 0}) =>
-      EdgeInsets.symmetric(vertical: vertical, horizontal: horizontal);
-  static EdgeInsets only({
-    double left = 0,
-    double top = 0,
-    double right = 0,
-    double bottom = 0,
-  }) => EdgeInsets.only(left: left, top: top, right: right, bottom: bottom);
+  // Base 4px spacing system
+  static const double xs = 4.0; // Extra small
+  static const double sm = 8.0; // Small
+  static const double md = 12.0; // Medium
+  static const double lg = 16.0; // Large
+  static const double xl = 24.0; // Extra large
+  static const double xxl = 32.0; // Double extra large
 }
 
-/// Returns the Light ThemeData for IronLink.
 ThemeData ironLinkLightTheme() {
   return ThemeData(
-    brightness: Brightness.light,
-    scaffoldBackgroundColor: IronColors.lightBackground,
+    // Color scheme
     colorScheme: ColorScheme.light(
-      primary: IronColors.lightGold,
-      secondary: IronColors.lightAccent,
-      background: IronColors.lightBackground,
-      surface: IronColors.lightSurface,
-      error: IronColors.lightError,
+      primary: IronColors.lightPrimary,
+      secondary: IronColors.lightSecondary,
+      tertiary: IronColors.lightTertiary,
+      background: IronColors.lightPrimary,
+      surface: IronColors.lightSecondary,
+      onPrimary: IronColors.lightTextPrimary,
+      onSecondary: IronColors.lightTextSecondary,
+      onTertiary: IronColors.lightTextTertiary,
+      onBackground: IronColors.lightTextPrimary,
+      onSurface: IronColors.lightTextSecondary,
     ),
-    // We'll define the textTheme explicitly using the colors from the colorScheme
+    // Typography
+    fontFamily: IronTypography.fontPrimary,
     textTheme: TextTheme(
-      displayLarge: GoogleFonts.inter(
-        fontSize: 96,
-        fontWeight: FontWeight.w300,
-        color: IronColors.lightTextPrimary,
-        height: 1.2,
-      ),
-      displayMedium: GoogleFonts.inter(
-        fontSize: 60,
-        fontWeight: FontWeight.w300,
-        color: IronColors.lightTextPrimary,
-        height: 1.2,
-      ),
-      displaySmall: GoogleFonts.inter(
-        fontSize: 48,
-        fontWeight: FontWeight.w400,
-        color: IronColors.lightTextPrimary,
-        height: 1.2,
-      ),
-      headlineMedium: GoogleFonts.inter(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: IronColors.lightTextPrimary,
-      ),
-      titleLarge: GoogleFonts.inter(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: IronColors.lightTextPrimary,
-      ),
-      titleMedium: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: IronColors.lightTextPrimary,
-      ),
-      titleSmall: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: IronColors.lightTextPrimary,
-      ),
-      bodyLarge: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
-        color: IronColors.lightTextPrimary,
-        height: 1.5,
-      ),
-      bodyMedium: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.normal,
-        color: IronColors.lightTextPrimary,
-        height: 1.5,
-      ),
-      bodySmall: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.normal,
-        color: IronColors.lightTextPrimary,
-        height: 1.5,
-      ),
-      labelLarge: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: IronColors.lightTextSecondary,
-      ),
-      labelMedium: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: IronColors.lightTextSecondary,
-      ),
-      labelSmall: GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: FontWeight.w500,
-        color: IronColors.lightTextSecondary,
+      displayLarge: IronTypography.displayLarge(color: IronColors.lightTextPrimary),
+      displayMedium: IronTypography.displayMedium(color: IronColors.lightTextPrimary),
+      displaySmall: IronTypography.displaySmall(color: IronColors.lightTextPrimary),
+      headlineLarge: IronTypography.headlineLarge(color: IronColors.lightTextPrimary),
+      headlineMedium: IronTypography.headlineMedium(color: IronColors.lightTextPrimary),
+      headlineSmall: IronTypography.headlineSmall(color: IronColors.lightTextPrimary),
+      titleLarge: IronTypography.titleLarge(color: IronColors.lightTextPrimary),
+      titleMedium: IronTypography.titleMedium(color: IronColors.lightTextPrimary),
+      titleSmall: IronTypography.titleSmall(color: IronColors.lightTextPrimary),
+      bodyLarge: IronTypography.bodyLarge(color: IronColors.lightTextPrimary),
+      bodyMedium: IronTypography.bodyMedium(color: IronColors.lightTextPrimary),
+      bodySmall: IronTypography.bodySmall(color: IronColors.lightTextPrimary),
+      labelLarge: IronTypography.labelLarge(color: IronColors.lightTextPrimary),
+      labelMedium: IronTypography.labelMedium(color: IronColors.lightTextPrimary),
+      labelSmall: IronTypography.labelSmall(color: IronColors.lightTextPrimary),
+    ),
+    // Component themes
+    cardTheme: CardTheme(
+      color: IronColors.lightSecondary,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: IronColors.lightTertiary.withOpacity(0.3),
+          width: 1,
+        ),
       ),
     ),
-    fontFamily: 'Inter',
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: IronColors.lightAccent,
+        foregroundColor: IronColors.lightTextPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        elevation: 0,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: IronColors.lightTextPrimary,
+        side: BorderSide(
+          color: IronColors.lightAccent,
+          width: 2,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: IronColors.lightAccent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: IronColors.lightSecondary.withOpacity(0.5),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: IronColors.lightAccent,
+          width: 2,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: IronColors.lightTertiary,
+          width: 1,
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      hintStyle: IronTypography.bodyMedium(
+        color: IronColors.lightTextTertiary,
+      ),
+    ),
+    dividerTheme: DividerThemeData(
+      color: IronColors.lightTertiary.withOpacity0.2,
+      thickness: 1,
+      space: IronSpacing.md,
+    ),
+    // Glassmorphism effect (applied via GlassCard widget)
   );
 }
 
-/// Returns the Dark ThemeData for IronLink.
 ThemeData ironLinkDarkTheme() {
   return ThemeData(
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: IronColors.darkBackground,
+    // Color scheme
     colorScheme: ColorScheme.dark(
-      primary: IronColors.darkGold,
-      secondary: IronColors.darkAccent,
-      background: IronColors.darkBackground,
-      surface: IronColors.darkSurface,
-      error: IronColors.darkError,
+      primary: IronColors.darkPrimary,
+      secondary: IronColors.darkSecondary,
+      tertiary: IronColors.darkTertiary,
+      background: IronColors.darkPrimary,
+      surface: IronColors.darkSecondary,
+      onPrimary: IronColors.darkTextPrimary,
+      onSecondary: IronColors.darkTextSecondary,
+      onTertiary: IronColors.darkTextTertiary,
+      onBackground: IronColors.darkTextPrimary,
+      onSurface: IronColors.darkTextSecondary,
     ),
-    // We'll define the textTheme explicitly using the colors from the colorScheme
+    // Typography
+    fontFamily: IronTypography.fontPrimary,
     textTheme: TextTheme(
-      displayLarge: GoogleFonts.inter(
-        fontSize: 96,
-        fontWeight: FontWeight.w300,
-        color: IronColors.darkTextPrimary,
-        height: 1.2,
-      ),
-      displayMedium: GoogleFonts.inter(
-        fontSize: 60,
-        fontWeight: FontWeight.w300,
-        color: IronColors.darkTextPrimary,
-        height: 1.2,
-      ),
-      displaySmall: GoogleFonts.inter(
-        fontSize: 48,
-        fontWeight: FontWeight.w400,
-        color: IronColors.darkTextPrimary,
-        height: 1.2,
-      ),
-      headlineMedium: GoogleFonts.inter(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: IronColors.darkTextPrimary,
-      ),
-      titleLarge: GoogleFonts.inter(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: IronColors.darkTextPrimary,
-      ),
-      titleMedium: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: IronColors.darkTextPrimary,
-      ),
-      titleSmall: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: IronColors.darkTextPrimary,
-      ),
-      bodyLarge: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
-        color: IronColors.darkTextPrimary,
-        height: 1.5,
-      ),
-      bodyMedium: GoogleFonts.inter(
-        fontSize: 14
-),
-      bodySmall: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.normal,
-        color: IronColors.darkTextPrimary,
-        height: 1.5,
-      ),
-      labelLarge: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: IronColors.darkTextSecondary,
-      ),
-      labelMedium: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: IronColors.darkTextSecondary,
-      ),
-      labelSmall: GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: FontWeight.w500,
-        color: IronColors.darkTextSecondary,
+      displayLarge: IronTypography.displayLarge(color: IronColors.darkTextPrimary),
+      displayMedium: IronTypography.displayMedium(color: IronColors.darkTextPrimary),
+      displaySmall: IronTypography.displaySmall(color: IronColors.darkTextPrimary),
+      headlineLarge: IronTypography.headlineLarge(color: IronColors.darkTextPrimary),
+      headlineMedium: IronTypography.headlineMedium(color: IronColors.darkTextPrimary),
+      headlineSmall: IronTypography.headlineSmall(color: IronColors.darkTextPrimary),
+      titleLarge: IronTypography.titleLarge(color: IronColors.darkTextPrimary),
+      titleMedium: IronTypography.titleMedium(color: IronColors.darkTextPrimary),
+      titleSmall: IronTypography.titleSmall(color: IronColors.darkTextPrimary),
+      bodyLarge: IronTypography.bodyLarge(color: IronColors.darkTextPrimary),
+      bodyMedium: IronTypography.bodyMedium(color: IronColors.darkTextPrimary),
+      bodySmall: IronTypography.bodySmall(color: IronColors.darkTextPrimary),
+      labelLarge: IronTypography.labelLarge(color: IronColors.darkTextPrimary),
+      labelMedium: IronTypography.labelMedium(color: IronColors.darkTextPrimary),
+      labelSmall: IronTypography.labelSmall(color: IronColors.darkTextPrimary),
+    ),
+    // Component themes
+    cardTheme: CardTheme(
+      color: IronColors.darkSecondary,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: IronColors.darkTertiary.withOpacity(0.3),
+          width: 1,
+        ),
       ),
     ),
-    fontFamily: 'Inter',
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: IronColors.darkAccent,
+        foregroundColor: IronColors.darkTextPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        elevation: 0,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: IronColors.darkTextPrimary,
+        side: BorderSide(
+          color: IronColors.darkAccent,
+          width: 2,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: IronColors.darkAccent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: IronColors.darkSecondary.withOpacity(0.5),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: IronColors.darkAccent,
+          width: 2,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: IronColors.darkTertiary,
+          width: 1,
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      hintStyle: IronTypography.bodyMedium(
+        color: IronColors.darkTextTertiary,
+      ),
+    ),
+    dividerTheme: DividerThemeData(
+      color: IronColors.darkTertiary.withOpacity(0.2),
+      thickness: 1,
+      space: IronSpacing.md,
+    ),
+    // Glassmorphism effect (applied via GlassCard widget)
   );
-}
-
-/// A helper function to get the current theme based on the brightness.
-ThemeData ironLinkTheme(BuildContext context) {
-  return Theme.of(context).brightness == Brightness.dark
-      ? ironLinkDarkTheme()
-      : ironLinkLightTheme();
 }

@@ -1,5 +1,7 @@
 # IronLink
 
+[![Deploy to Fly.io](https://github.com/mohamedelsayedarmy95/IronLink/actions/workflows/deploy.yml/badge.svg)](https://github.com/mohamedelsayedarmy95/IronLink/actions/workflows/deploy.yml)
+
 Secure enterprise messaging platform — 7,000 registered users / 500 concurrent.
 
 ## Stack
@@ -76,3 +78,37 @@ tests/               # plain pytest — no external services needed
 - **Audit log**: PostgreSQL RLS — INSERT-only role; no code path can alter history.
 - **Self-destruct**: `destruct_at` column (worker sweep) + Redis keyspace TTL events.
 - **Transport**: TLS 1.3 exclusively; gzip disabled on TLS (BREACH); HSTS preload.
+
+## Production Deployment
+
+IronLink can be deployed to production using only free services. See the [DEPLOYMENT.md](DEPLOYMENT.md) for a step-by-step guide.
+
+### Overview of Production Services
+
+- **Backend**: Hosted on Fly.io (free tier)
+- **Database**: PostgreSQL provided by Supabase (free 500MB)
+- **Cache**: Redis provided by Upstash (free tier)
+- **Object Storage**: Cloudflare R2 (free 10GB storage + 10GB egress)
+- **Push Notifications**: Firebase Cloud Messaging (free tier)
+- **CI/CD**: GitHub Actions (free for public repos)
+- **Error Tracking**: Sentry (free tier)
+
+### Deployment Steps
+
+1. Set up the required services (Supabase, Upstash, Cloudflare R2, Firebase, Sentry).
+2. Configure the backend environment variables (see `backend/.env.prod.example`).
+3. Deploy the backend to Fly.io using `flyctl launch` and `flyctl deploy`.
+4. Build and distribute the frontend apps (Android/iOS) using Flutter.
+5. Set up GitHub Actions for automated builds and deployments.
+
+### Accessing the Application
+
+- Backend API: `https://<your-flyio-app-name>.fly.dev`
+- Frontend: Distributed via Google Play Store (Android) and TestFlight (iOS)
+
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```

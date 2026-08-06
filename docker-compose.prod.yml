@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL (local equivalent of Supabase)
+  db:
+    image: postgres:16-alpine
+    container_name: ironlink_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: ironlink
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Redis (local equivalent of Upstash)
+  redis:
+    image: redis:7-alpine
+    container_name: ironlink_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  # MinIO (local equivalent of Cloudflare R2)
+  minio:
+    image: minio/minio
+    container_name: ironlink_minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    entrypoint: sh
+    command: -c "minio server /data --console-address :9001"
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ironlink_backend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      # Override for local services
+      DATABASE_URL: postgresql://postgres:postgres_password@db:5432/ironlink
+      UPSTASH_REDIS_REST_URL: http://redis:6379
+      UPSTASH_REDIS_REST_TOKEN: ""  # Not used for local Redis, but we set to empty
+      R2_ENDPOINT: http://minio:9000
+      R2_ACCESS_KEY_ID: minioadmin
+      R2_SECRET_ACCESS_KEY: minioadmin
+      R2_BUCKET_NAME: ironlink
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+      - minio
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
