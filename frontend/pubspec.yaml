@@ -23,6 +23,7 @@ dependencies:
   audio_waveforms: ^2.0.0          # waveform visualization
   flutter_ffmpeg: ^0.4.4           # audio compression
   path_provider: ^2.1.4
+  libsignal_protocol_dart: ^0.1.0  # Signal Protocol for E2EE
 
 dev_dependencies:
   flutter_test:

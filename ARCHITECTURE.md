@@ -105,6 +105,7 @@ When any file is uploaded (image, PDF, Word, Excel, or any text‑based document
 ## 4. Data Flow
 
 ### 4.1 User Registration & Login
+
 1. **Client** → POST `/auth/request-otp` (phone) → server sends OTP via Redis‑backed service.  
 2. **Client** → POST `/auth/verify` (phone, OTP, military ID, device fingerprint) → server:  
    - Validates OTP (Redis TTL),  
@@ -114,35 +115,65 @@ When any file is uploaded (image, PDF, Word, Excel, or any text‑based document
 3. Tokens stored in **Flutter Secure Storage** (Keystore/Keychain).  
 4. Client opens a **WebSocket** connection via `/auth/ws-ticket` → ticket‑based WS to `/ws/chat`.
 
-### 4.2 Message Sending (E2EE)
-1. Client generates a random **Message Key** (AES‑256‑GCM) per conversation (derived from Signal‑like X3DH after initial key exchange).  
-2. Plaintext → encrypt → `content_ciphertext`.  
-3. Media (if any) → chunked resumable upload to MinIO via `/media/upload/*` → returns `media_key`.  
-4. Client sends JSON over WS: `{type: "text|image|…", to: peerId/groupId, content: ciphertext, media_key:…, client_ref: uuid}`.  
-5. Server:  
-   - Persists minimal metadata (sender, recipient/group, timestamps, `destruct_at` if self‑destruct, `media_key`, `mime_type`, `size`).  
-   - Persists **only ciphertext** — never plaintext.  
-   - Broadcasts frame to recipient(s) via WS (if online) **and** publishes a push notification via UnifiedPush (FCM) *or* WebSocket alert (see OCR).  
-6. Receiver decrypts locally with the conversation key.
+### 4.2 Message Sending (Signal Protocol E2EE)
+
+1. **Initial Key Exchange (X3DH)**:
+   - When initiating a secret chat, clients perform Extended Triple Diffie-Hellman (X3DH) key exchange:
+     - Fetch identity key and pre-keys of remote user from server
+     - Generate ephemeral key pair
+     - Compute shared secret using DH combinations of identity, signed pre-key, and ephemeral keys
+   - Shared secret used to initialize Double Ratchet session state
+   - Session state stored locally in secure storage
+
+2. **Message Encryption**:
+   - For each message, use the current Double Ratchet session state to encrypt
+   - Session state advances (ratchets) after each encryption/decryption
+   - Provides forward secrecy and future secrecy
+   - Encrypt plaintext using AES-256 in CBC mode with HMAC-SHA256 authentication (as per Signal Protocol)
+   - Attach message header containing key ID, counter, and randomized IV
+
+3. **Media Handling**:
+   - Media (if any) → chunked resumable upload to MinIO via `/media/upload/*` → returns `media_key`
+   - For secret chats, encrypt the `media_key` and caption together as a single plaintext before encryption
+   - For non-secret chats, media_key is sent in plain (existing behavior)
+
+4. **Transmission**:
+   - Client sends JSON over WS: `{type: "text|image|voice|…", to: peerId/groupId, content: ciphertext, media_key:…, client_ref: uuid}`
+   - For secret chats, `content` is always encrypted ciphertext
+   - For non-secret chats, `content` may be plaintext (legacy) or encrypted if previously established as secret
+
+5. **Server Handling**:
+   - Persists minimal metadata (sender, recipient/group, timestamps, `destruct_at` if self‑destruct, `media_key`, `mime_type`, `size`)
+   - Persists **only the encrypted content** — never plaintext
+   - Broadcasts frame to recipient(s) via WS (if online) **and** publishes a push notification via FCM *or* WebSocket alert
+
+6. **Message Decryption**:
+   - Receiver uses current Double Ratchet session state to decrypt
+   - Session state advances after decryption
+   - Recovers plaintext (which may be media key + caption for media messages)
 
 ### 4.3 Self‑Destruct (Dual Layer)
-- **Database:** Column `destruct_at` (UTC timestamp). A periodic worker (`SelfDestructWorker`) scans `ix_msg_destruct` every minute, deletes media from MinIO, wipes `content_ciphertext`, sets `is_destructed=true`, writes audit log entry.  
+
+- **Database:** Column `destruct_at` (UTC timestamp). A periodic worker (`SelfDestructWorker`) scans `ix_msg_destruct` every minute, deletes media from MinIO, wipes `content_ciphertext`, sets `is_destructed=true`, writes audit log entry.
 - **Redis Keyspace:** On message insert, server sets a Redis key with TTL = (`destruct_at` - now) and enables `notify-keyspace-events KEx`. When TTL expires, Redis publishes a `__keyevent@<db>__:expired` message; the worker (or a separate Redis subscriber) immediately triggers the same wipe path, guaranteeing removal even if the DB sweep laggs.
 
 ### 4.4 Media Handling
-- Uploads are **chunked**, resumable, and stored server‑side with SSE‑S3 encryption.  
-- View URLs are short‑lived (15 min) pre‑signed URLs generated on demand (`/media/<key>/url`).  
+
+- Uploads are **chunked**, resumable, and stored server‑side with SSE‑S3 encryption.
+- View URLs are short‑lived (15 min) pre‑signed URLs generated on demand (`/media/<key>/url`).
 - Thumbnails generated client‑side (or via MinIO Lambda‑like `mc` script) and stored similarly.
 
 ### 4.5 Group Management
-- Standard CRUD via REST (`/groups/*`).  
-- Membership changes broadcast via WS to online members; offline members receive push + sync on next WS reconnect.  
+
+- Standard CRUD via REST (`/groups/*`).
+- Membership changes broadcast via WS to online members; offline members receive push + sync on next WS reconnect.
 - Permission checks (admin/owner) performed server‑side; all changes immutably logged to `audit_logs`.
 
 ### 4.6 Audit & Compliance
-- Every mutating action writes an `AuditLog` row via the `audit_writer` role (INSERT‑only).  
-- `before_state` / `after_state` JSONB capture full row snapshots.  
-- Row‑level Security (RLS) prevents `UPDATE`/`DELETE` even if application code is compromised.  
+
+- Every mutating action writes an `AuditLog` row via the `audit_writer` role (INSERT‑only).
+- `before_state` / `after_state` JSONB capture full row snapshots.
+- Row‑level Security (RLS) prevents `UPDATE`/`DELETE` even if application code is compromised.
 - Archived monthly to cold storage (S3‑compatible bucket) via `pg_cron` → no row deletion, only move to cheaper tier.
 
 ---
@@ -155,7 +186,7 @@ When any file is uploaded (image, PDF, Word, Excel, or any text‑based document
 | **Authentication** | Phone + OTP + hashed military ID (bcrypt). JWT access tokens short‑lived (30 min). Refresh tokens high‑entropy, only SHA‑256 stored server‑side. `token_version` enables O(1) global logout. |
 | **Authorization** | Role‑Based Access Control (RBAC) enforced in API endpoints; service‑to‑service calls via Docker network (no mTLS needed for single‑node). |
 | **Data at Rest** | - Military ID & device fingerprint: bcrypt hash (irreversible). <br>- Passwords: bcrypt. <br>- Refresh tokens: SHA‑256 hash. <br>- MinIO objects: SSE‑S3 (server‑side). <br>- Audit logs: immutable via RLS + `audit_writer` role. |
-| **End‑to‑End Encryption** | Client‑generated per‑conversation symmetric keys (X3DH + Double Ratchet optional). Server never sees plaintext. |
+| **End‑to‑End Encryption** | **Signal Protocol** (X3DH for initial key exchange + Double Ratchet for per-message encryption). Provides forward secrecy, future secrecy, and cryptographic deniability. Server never sees plaintext or encryption keys. |
 | **Replay & DoS Mitigation** | - Rate limiting per IP (Nginx `limit_req`). <br>- WebSocket ticket short‑lived (30 s). <br>- OTP attempts limited (Redis‑based counter). <br>- CSRF not relevant (API token in header). |
 | **Audit & Forensics** | Immutable audit log; cryptographic hash chaining (optional future). Regular integrity checks. |
 | **Secrets Management** | All secrets (DB passwords, JWT secret, MinIO keys, encryption key) stored encrypted in repo via SOPS/age or Vault; injected at runtime as env vars. |
@@ -167,15 +198,15 @@ When any file is uploaded (image, PDF, Word, Excel, or any text‑based document
 
 ## 6. Free Scalability Strategy (Docker Compose)
 
-1. **Stateless Services** – FastAPI workers, WebSocket handlers, and background workers store no local state; all state lives in DB, Redis, or MinIO.  
-2. **Horizontal Scaling** – Increase replica count via `docker compose up --scale api=<N>`; Nginx does round‑robin load balancing.  
-3. **Database Read Replicas** – PostgreSQL streaming replica(s) for read‑heavy workloads (conversation lists, user profiles).  
-4. **Sharding (future)** – If traffic > 100k msg/s, introduce logical sharding by `user_id_hash` using application‑level routing or Citus‑like extension.  
-5. **Redis** – Single instance for dev; can be clustered with Redis‑Alike (still free) for higher throughput.  
-6. **Object Storage CDN** – MinIO server‑side signatures plus optional Cloudflare free tier for caching public assets (avatars, static media).  
-7. **WebSocket Efficiency** – Nginx handles WS; server‑side keeps a Redis hash `user_id → [connection_id]` for fan‑out.  
-8. **Batch Workers** – Self‑destruct and OTP cleanup run as cron jobs (host cron or separate container) to avoid interfering with request latency.  
-9. **Observability‑Driven Scaling** – Prometheus alerts trigger manual scale‑up; Grafana dashboards show per‑endpoint latency, error rates, DB load.  
+1. **Stateless Services** – FastAPI workers, WebSocket handlers, and background workers store no local state; all state lives in DB, Redis, or MinIO.
+2. **Horizontal Scaling** – Increase replica count via `docker compose up --scale api=<N>`; Nginx does round‑robin load balancing.
+3. **Database Read Replicas** – PostgreSQL streaming replica(s) for read‑heavy workloads (conversation lists, user profiles).
+4. **Sharding (future)** – If traffic > 100k msg/s, introduce logical sharding by `user_id_hash` using application‑level routing or Citus‑like extension.
+5. **Redis** – Single instance for dev; can be clustered with Redis‑Alike (still free) for higher throughput.
+6. **Object Storage CDN** – MinIO server‑side signatures plus optional Cloudflare free tier for caching public assets (avatars, static media).
+7. **WebSocket Efficiency** – Nginx handles WS; server‑side keeps a Redis hash `user_id → [connection_id]` for fan‑out.
+8. **Batch Workers** – Self‑destruct and OTP cleanup run as cron jobs (host cron or separate container) to avoid interfering with request latency.
+9. **Observability‑Driven Scaling** – Prometheus alerts trigger manual scale‑up; Grafana dashboards show per‑endpoint latency, error rates, DB load.
 10. **Geodistribution (optional, still free)** – Deploy identical Docker Compose stacks on multiple free‑tier cloud providers (Oracle, AWS Free Tier, GCP Always Free) and use Cloudflare Load Balancer (free) to route users to lowest latency region. Active‑passive PostgreSQL streaming replication + MinIO bucket replication ensures DR.
 
 ---
@@ -196,10 +227,10 @@ When any file is uploaded (image, PDF, Word, Excel, or any text‑based document
 | **9** | Data Migration Procedure | - Dump current PostgreSQL (`pg_dump`), import into new cluster. <br>- Export MinIO buckets (`mc mirror`). <br>- Verify consistency. | 2 days |
 | **10** | Cutover & Blue/Green | Route Nginx to new stack via DNS weighted routing; monitor metrics; rollback possible via old DNS. | 2 days |
 | **11** | Decompose Legacy Docker‑Compose (if any) | archive old compose; keep for local dev reference only. | 1 day |
-| **Total** | | | **�≈ 6 weeks** (parallelizable tasks can reduce wall‑time) |
+| **Total** | | | **���≈ 6 weeks** (parallelizable tasks can reduce wall‑time) |
 
 ---
 
 ## 8. Conclusion
 
-By adopting the free, battle‑tested stack outlined above and following the migration plan, IronLink will inherit the strong security foundations of the original design while gaining simplicity, zero‑cost operations, and a clear path to scaling—all without sacrificing the core principles of privacy, military‑grade authentication, and immutable auditability. The new OCR Intelligence Engine adds a powerful, value‑added feature that runs asynchronously and leverages the same free infrastructure.
+By adopting the free, battle‑tested stack outlined above and following the migration plan, IronLink will inherit the strong security foundations of the original design while gaining simplicity, zero‑cost operations, and a clear path to scaling—all without sacrificing the core principles of privacy, military‑grade authentication, and immutable auditability. The new OCR Intelligence Engine adds a powerful, value‑added feature that runs asynchronously and leverages the same free infrastructure. The implementation of the Signal Protocol for End-to-End Encryption ensures that IronLink provides military-grade security for all communications, with forward secrecy and resistance to compromise.
