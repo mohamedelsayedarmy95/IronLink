@@ -19,6 +19,9 @@ dependencies:
   flutter_local_notifications: ^16.3.0
   image_picker: ^1.1.2
   record: ^5.1.2                   # hold-to-record voice notes
+  just_audio: ^0.9.34              # audio playback
+  audio_waveforms: ^2.0.0          # waveform visualization
+  flutter_ffmpeg: ^0.4.4           # audio compression
   path_provider: ^2.1.4
 
 dev_dependencies:

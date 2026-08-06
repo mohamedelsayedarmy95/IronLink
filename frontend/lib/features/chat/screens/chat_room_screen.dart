@@ -7,7 +7,8 @@ import '../../../core/ws_service.dart';
 import '../bloc/chat_bloc.dart';
 import '../chat_repository.dart';
 import '../widgets/attach_flow.dart';
-import '../widgets/voice_record_button.dart';
+import '../widgets/voice_recorder.dart';
+import 'dart:convert';
 
 class ChatRoomScreen extends StatelessWidget {
   const ChatRoomScreen({
@@ -210,15 +211,23 @@ class _MessageBubble extends StatelessWidget {
                   ],
                 )
               else
-                Text(
-                  message.content ?? '',
-                  style: TextStyle(
-                    // Dark bold text on gold for readability, as specified
-                    color: mine ? const Color(0xFF1A1503) : MilColors.textHi,
-                    fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
-                    fontSize: 15,
+                if (message.kind == 'voice') ...[
+                  VoicePlayer(
+                    mediaKey: (jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['mediaKey'] as String? ?? '',
+                    duration: (jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['duration'] as double? ?? 0,
+                    waveform: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['waveform'] as List<dynamic>?)?.map((e) => (e as double).toDouble()).toList() ?? [],
+                  )
+                ] else ...[
+                  Text(
+                    message.content ?? '',
+                    style: TextStyle(
+                      // Dark bold text on gold for readability, as specified
+                      color: mine ? const Color(0xFF1A1503) : MilColors.textHi,
+                      fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
+                ],
               const SizedBox(height: 4),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -423,17 +432,19 @@ class _InputBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Builder(builder: (context) {
-              final bloc = context.read<ChatBloc>();
-              return VoiceRecordButton(
-                media: context.read<MediaService>(),
-                onRecorded: (key, mime) => bloc.add(MediaSent(
-                  kind: 'file',
-                  mediaKey: key,
-                  mimeType: mime,
-                )),
-              );
-            }),
+            VoiceRecorder(
+              onSend: (mediaKey, duration, waveform) => bloc.add(MediaSent(
+                kind: 'voice',
+                mediaKey: mediaKey,
+                mimeType: 'audio/opus',
+                caption: jsonEncode({
+                  'mediaKey': mediaKey,
+                  'duration': duration,
+                  'waveform': waveform,
+                }),
+              )),
+              onCancel: () {},
+            ),
             CircleAvatar(
               backgroundColor: MilColors.gold,
               child: IconButton(
