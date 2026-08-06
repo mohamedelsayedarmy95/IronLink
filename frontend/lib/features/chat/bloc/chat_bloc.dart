@@ -63,7 +63,7 @@ class _FrameReceived extends ChatEvent {
   List<Object?> get props => [frame];
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ── State ────────────────────────────────────────────────────────────────────
 
 class ChatRoomState extends Equatable {
   const ChatRoomState({
@@ -242,6 +242,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         _ws.sendRead(msg.id);
 
       case 'receipt':
+        // Legacy receipt handling (keep for compatibility)
         final id = f['message_id'] as String;
         final tick = f['status'] == 'read'
             ? MessageTick.read
@@ -251,6 +252,26 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
           // read never downgrades to delivered
           if (tick == MessageTick.read || m.tick == MessageTick.sent) {
             m.tick = tick;
+          }
+        }
+        emit(state.copyWith(messages: updated));
+
+      case 'delivered':
+        final id = f['message_id'] as String;
+        final updated = [...state.messages];
+        for (final m in updated.where((m) => m.id == id)) {
+          if (m.tick == MessageTick.sent) {
+            m.tick = MessageTick.delivered;
+          }
+        }
+        emit(state.copyWith(messages: updated));
+
+      case 'read':
+        final id = f['message_id'] as String;
+        final updated = [...state.messages];
+        for (final m in updated.where((m) => m.id == id)) {
+          if (m.tick == MessageTick.sent || m.tick == MessageTick.delivered) {
+            m.tick = MessageTick.read;
           }
         }
         emit(state.copyWith(messages: updated));

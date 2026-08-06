@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.routes import admin, auth, broadcasts, chats, groups, media, websocket, ocr
+from app.api.routes import admin, auth, broadcasts, chats, groups, media, websocket, ocr, receipts
 from app.api.routes.websocket import manager
 from app.config import settings
 from app.core.redis import close_redis
@@ -54,6 +54,7 @@ app.include_router(media.router, prefix=settings.API_PREFIX)
 app.include_router(broadcasts.router, prefix=settings.API_PREFIX)
 app.include_router(admin.router, prefix=settings.API_PREFIX)
 app.include_router(ocr.router, prefix=settings.API_PREFIX)
+app.include_router(receipts.router, prefix=settings.API_PREFIX)
 app.include_router(websocket.router)
 
 

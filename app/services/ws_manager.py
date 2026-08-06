@@ -10,6 +10,8 @@ from uuid import UUID
 from fastapi import WebSocket
 from redis.asyncio import Redis
 
+from app.core.redis import redis as redis_client
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,3 +106,102 @@ class ConnectionManager:
         finally:
             await pubsub.unsubscribe("ocr:alerts")
             await pubsub.aclose()
+
+    async def broadcast_typing(self, chat_id: UUID, user_id: UUID, is_typing: bool) -> None:
+        """Broadcast typing indicator to other participants in the chat."""
+        from app.models import Group, GroupMember
+        from app.core.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as db:
+            # First, try as group ID
+            group = await db.scalar(select(Group).where(Group.id == chat_id))
+            participant_ids = []
+            if group is not None:
+                # Get all group members except current user
+                result = await db.execute(
+                    select(GroupMember.user_id).where(
+                        GroupMember.group_id == chat_id,
+                        GroupMember.user_id != user_id,
+                    )
+                )
+                participant_ids = [row[0] for row in result]
+            else:
+                # treat as direct message with the other user
+                other_user_id = chat_id
+                # Verify that there is a direct message (or at least that a direct chat exists)
+                from app.models import Message
+                exists = await db.scalar(
+                    select(Message.id).where(
+                        ((Message.sender_id == user_id) & (Message.recipient_id == other_user_id)) |
+                        ((Message.sender_id == other_user_id) & (Message.recipient_id == user_id)),
+                        Message.group_id.is_(None),
+                    ).limit(1)
+                )
+                if exists is None:
+                    # No direct chat; nothing to broadcast
+                    return
+                participant_ids = [other_user_id]
+
+            typing_payload = {
+                "type": "typing_start" if is_typing else "typing_stop",
+                "from": str(user_id),
+            }
+            import json
+            for pid in participant_ids:
+                await self._redis.publish(
+                    f"chan:user:{pid}",
+                    json.dumps(typing_payload),
+                )
+
+    async def broadcast_delivered(self, chat_id: UUID, message_id: UUID, sender_id: UUID) -> None:
+        """Broadcast delivered event to the sender (as per spec)."""
+        payload = {
+            "type": "delivered",
+            "message_id": str(message_id),
+        }
+        import json
+        await self._redis.publish(
+            f"chan:user:{sender_id}",
+            json.dumps(payload),
+        )
+
+    async def broadcast_read(self, chat_id: UUID, message_id: UUID, reader_id: UUID) -> None:
+        """Broadcast read event to group members (as per spec)."""
+        from app.models import Group, GroupMember
+        from app.core.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as db:
+            group = await db.scalar(select(Group).where(Group.id == chat_id))
+            participant_ids = []
+            if group is not None:
+                # Get all group members (including reader? we'll include all)
+                result = await db.execute(
+                    select(GroupMember.user_id).where(
+                        GroupMember.group_id == chat_id,
+                    )
+                )
+                participant_ids = [row[0] for row in result]
+            else:
+                # Direct chat: the other user is the only participant (the sender)
+                # Find the other user
+                from app.models import Message
+                msg = await db.scalar(select(Message).where(Message.id == message_id))
+                if msg is None:
+                    return
+                other_user_id = msg.sender_id if msg.recipient_id == reader_id else msg.recipient_id
+                participant_ids = [other_user_id]
+
+            payload = {
+                "type": "read",
+                "message_id": str(message_id),
+            }
+            import json
+            for pid in participant_ids:
+                await self._redis.publish(
+                    f"chan:user:{pid}",
+                    json.dumps(payload),
+                )
+
+
+# Global instance
+connection_manager = ConnectionManager(redis_client)

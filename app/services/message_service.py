@@ -28,6 +28,7 @@ async def save_message(
     media_mime_type: str | None = None,
     destruct_after_seconds: int | None = None,
 ) -> Message:
+    now = datetime.now(timezone.utc)
     msg = Message(
         sender_id=sender_id,
         recipient_id=recipient_id,
@@ -40,10 +41,11 @@ async def save_message(
         is_self_destruct=destruct_after_seconds is not None,
         destruct_after_seconds=destruct_after_seconds,
         destruct_at=(
-            datetime.now(timezone.utc) + timedelta(seconds=destruct_after_seconds)
+            now + timedelta(seconds=destruct_after_seconds)
             if destruct_after_seconds
             else None
         ),
+        delivered_at=now,  # Server considers message delivered upon successful storage and send
     )
     db.add(msg)
     await db.commit()
@@ -51,30 +53,51 @@ async def save_message(
     return msg
 
 
-async def mark_delivered(db: AsyncSession, message_id: UUID, recipient_id: UUID) -> Message | None:
-    msg = await db.scalar(
-        select(Message).where(
-            Message.id == message_id,
-            Message.recipient_id == recipient_id,
-        )
-    )
-    if msg is None or msg.status == MessageStatus.READ:
+async def mark_delivered(db: AsyncSession, message_id: UUID, user_id: UUID) -> Message | None:
+    """Mark a message as delivered by the given user (recipient or group member)."""
+    msg = await db.scalar(select(Message).where(Message.id == message_id))
+    if msg is None:
         return None
-    if msg.status != MessageStatus.DELIVERED:
-        msg.status = MessageStatus.DELIVERED
+    # Verify user is participant
+    from app.models import GroupMember
+    is_participant = False
+    if msg.group_id is not None:
+        member = await db.scalar(
+            select(GroupMember).where(
+                GroupMember.group_id == msg.group_id,
+                GroupMember.user_id == user_id,
+            )
+        )
+        is_participant = member is not None
+    else:
+        is_participant = (msg.sender_id == user_id) or (msg.recipient_id == user_id)
+    if not is_participant:
+        return None
+    if msg.delivered_at is None:
         msg.delivered_at = datetime.now(timezone.utc)
         await db.commit()
     return msg
 
 
-async def mark_read(db: AsyncSession, message_id: UUID, recipient_id: UUID) -> Message | None:
-    msg = await db.scalar(
-        select(Message).where(
-            Message.id == message_id,
-            Message.recipient_id == recipient_id,
-        )
-    )
+async def mark_read(db: AsyncSession, message_id: UUID, user_id: UUID) -> Message | None:
+    """Mark a message as read by the given user (recipient or group member)."""
+    msg = await db.scalar(select(Message).where(Message.id == message_id))
     if msg is None:
+        return None
+    # Verify user is participant
+    from app.models import GroupMember
+    is_participant = False
+    if msg.group_id is not None:
+        member = await db.scalar(
+            select(GroupMember).where(
+                GroupMember.group_id == msg.group_id,
+                GroupMember.user_id == user_id,
+            )
+        )
+        is_participant = member is not None
+    else:
+        is_participant = (msg.sender_id == user_id) or (msg.recipient_id == user_id)
+    if not is_participant:
         return None
     if msg.status != MessageStatus.READ:
         msg.status = MessageStatus.READ

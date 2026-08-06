@@ -87,10 +87,10 @@ class WsService {
       send({'type': typing ? 'typing_start' : 'typing_stop', 'to': to});
 
   void sendRead(String messageId) =>
-      send({'type': 'message_read', 'message_id': messageId});
+      send({'type': 'read', 'message_id': messageId});
 
   void sendDelivered(String messageId) =>
-      send({'type': 'message_delivered', 'message_id': messageId});
+      send({'type': 'delivered', 'message_id': messageId});
 
   void unsend(String messageId) =>
       send({'type': 'unsend', 'message_id': messageId});

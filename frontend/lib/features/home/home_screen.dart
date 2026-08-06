@@ -11,6 +11,7 @@ import '../chat/chat_repository.dart';
 import '../chat/screens/chats_list_screen.dart';
 import '../groups/groups_repository.dart';
 import '../groups/groups_screen.dart';
+import '../settings/ocr_settings_page.dart';
 
 /// Home: live chats list in tab 0; other tabs land in later sprints.
 class HomeScreen extends StatefulWidget {
@@ -85,20 +86,21 @@ class _HomeScreenState extends State<HomeScreen> {
               myId: widget.user.id,
             ),
           1 => GroupsScreen(repo: context.read<GroupsRepository>()),
-          _ => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(_tabs[_tab].icon,
-                      size: 64, color: MilColors.goldDim),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'قريباً',
-                    style: TextStyle(color: MilColors.textLo),
-                  ),
-                ],
+          2 => const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(_tabs[_tab].icon,
+                        size: 64, color: MilColors.goldDim),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'قريباً',
+                      style: TextStyle(color: MilColors.textLo),
+                    ),
+                  ],
+                ),
               ),
-            ),
+          3 => const OcrSettingsPage(),
         },
       ),
       bottomNavigationBar: NavigationBar(
