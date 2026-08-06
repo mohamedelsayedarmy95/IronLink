@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext HTTP is allowed ONLY for the local development backend, and only
+  for explicitly listed private addresses. Everything else (i.e. production)
+  stays TLS-only under the default config.
+
+  Before shipping a release build, delete the <domain-config> block below.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false"/>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Dev machine on the LAN (see README_Sprint4_DeviceTest.md) -->
+        <domain includeSubdomains="false">10.140.128.63</domain>
+        <!-- Android emulator loopback alias -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

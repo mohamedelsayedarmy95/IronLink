@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IronLink — غرفة العمليات</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Fable5-Enhancement: the ops panel is a SEPARATE app, not a tab in the
+       messenger. Rationale: (1) it can live behind an IP-restricted Nginx
+       location or VPN; (2) zero admin code ships inside the APK where it
+       could be reverse-engineered; (3) it is dependency-free static files —
+       no build step, no supply-chain surface. -->
+
+  <div id="login-view" class="login-wrap">
+    <div class="login-card">
+      <div class="brand-mark">⛨</div>
+      <h1>غرفة العمليات</h1>
+      <p class="muted">IronLink Command Center</p>
+      <input id="token-input" type="password" placeholder="Access Token (JWT)" dir="ltr">
+      <button id="login-btn" class="btn-gold">دخول</button>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+  </div>
+
+  <div id="app-view" class="hidden">
+    <header>
+      <div class="brand"><span class="brand-mark small">⛨</span> غرفة العمليات</div>
+      <nav>
+        <button data-tab="stats" class="tab active">الإحصائيات</button>
+        <button data-tab="users" class="tab">المستخدمون</button>
+        <button data-tab="broadcast" class="tab">إشعار عاجل</button>
+      </nav>
+      <button id="logout-btn" class="btn-ghost">خروج</button>
+    </header>
+
+    <!-- ── Stats ─────────────────────────────────────────────── -->
+    <section id="tab-stats" class="panel">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="s-online">—</div><div class="stat-label">متصل الآن</div></div>
+        <div class="stat-card"><div class="stat-num" id="s-messages">—</div><div class="stat-label">رسائل اليوم</div></div>
+        <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-label">إجمالي المستخدمين</div></div>
+        <div class="stat-card"><div class="stat-num" id="s-active">—</div><div class="stat-label">حسابات نشطة</div></div>
+        <div class="stat-card"><div class="stat-num" id="s-suspended">—</div><div class="stat-label">حسابات معطلة</div></div>
+        <div class="stat-card"><div class="stat-num" id="s-storage">—</div><div class="stat-label">التخزين المستخدم</div></div>
+      </div>
+      <p class="muted center">تحديث تلقائي كل 10 ثوانٍ</p>
+    </section>
+
+    <!-- ── Users ─────────────────────────────────────────────── -->
+    <section id="tab-users" class="panel hidden">
+      <div class="filters">
+        <input id="f-search" placeholder="بحث بالاسم أو الهاتف…">
+        <input id="f-dept" placeholder="القسم">
+        <select id="f-status">
+          <option value="">كل الحالات</option>
+          <option value="active">نشط</option>
+          <option value="suspended">معطل</option>
+        </select>
+        <button id="f-apply" class="btn-gold">تصفية</button>
+      </div>
+      <table id="users-table">
+        <thead>
+          <tr><th>الاسم</th><th>الهاتف</th><th>القسم</th><th>الدور</th><th>الحالة</th><th>آخر ظهور</th><th>إجراء</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- ── Broadcast ─────────────────────────────────────────── -->
+    <section id="tab-broadcast" class="panel hidden">
+      <div class="broadcast-card">
+        <h2>إشعار عاجل</h2>
+        <p class="muted">يظهر كتنبيه دائم فوق كل المحادثات ولا يختفي إلا بعد الضغط عليه.</p>
+        <input id="b-title" placeholder="العنوان" maxlength="120">
+        <textarea id="b-body" placeholder="نص الإشعار…" rows="4" maxlength="2000"></textarea>
+        <input id="b-dept" placeholder="القسم (اتركه فارغاً للجميع)">
+        <button id="b-send" class="btn-danger">إرسال للجميع الآن</button>
+        <p id="b-result" class="muted"></p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Suspend-reason modal -->
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modal-title">تعطيل الحساب</h3>
+      <p class="muted">السبب إجباري ويُسجل في سجل التدقيق باسمك.</p>
+      <textarea id="modal-reason" rows="3" placeholder="سبب الإجراء (5 أحرف على الأقل)…"></textarea>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn-ghost">إلغاء</button>
+        <button id="modal-confirm" class="btn-danger">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

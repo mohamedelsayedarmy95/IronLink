@@ -1,0 +1,33 @@
+# Credentials — never committed
+.env
+*.pem
+*.key
+*.crt
+ssl/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Docker volumes (local)
+pg_data/
+redis_data/
+minio_data/
+nginx_logs/
+
+# Alembic local state
+alembic/versions/*.pyc
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
