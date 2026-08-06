@@ -113,6 +113,9 @@ class Message(Base):
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    is_secret: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     # ── Self-destruct ──────────────────────────────────────────────────────────
     is_self_destruct: Mapped[bool] = mapped_column(
