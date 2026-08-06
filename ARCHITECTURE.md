@@ -16,6 +16,9 @@ IronLink is a **client‑server** messaging system that provides:
 - Media storage with on‑the‑fly signing and size limits  
 - Immutable audit trail with row‑level security and JSONB before/after snapshots  
 - Horizontal scalability via simple Docker Compose (stateless services)  
+- **Channels** (public/private) for broadcasting content to subscribers  
+- **Communities** (like Discord/Reddit) with spaces, roles, events, and resources  
+- **Creator economy** tools for monetization and analytics  
 
 All components run on **free, open‑source software**—no commercial licences or paid SaaS dependencies.
 
@@ -30,8 +33,8 @@ All components run on **free, open‑source software**—no commercial licences 
 | **Service Mesh** | *None* (direct communication over Docker network) | — |
 | **API Server** | **FastAPI** (Python 3.12) + Uvicorn workers | REST endpoints, WebSocket chat server, authentication, token versioning, business logic, OCR Intelligence Engine |
 | **Background Workers** | Python asyncio (embedded in FastAPI via lifespan) | Self‑destruct sweep, OTP cleanup, media garbage collection, OCR processing (via BackgroundTasks) |
-| **Database** | **PostgreSQL 16** + `pgcrypto` + `btree_gin` + `pg_trgm` | Primary relational store (users, sessions, messages, groups, audit logs) |
-| **Cache / PubSub** | **Redis** (7.x) | OTP cache, WebSocket session registry, keyspace notifications for self‑destruct, rate‑limit counters, OCR keyword caching |
+| **Database** | **PostgreSQL 16** + `pgcrypto` + `btree_gin` + `pg_trgm` | Primary relational store (users, sessions, messages, groups, channels, communities, audit logs) |
+| **Cache / PubSub** | **Redis** (7.x) | OTP cache, WebSocket session registry, keyspace notifications for self‑destruct, rate‑limit counters, OCR keyword caching, channel/subscription analytics |
 | **Object Storage** | **MinIO** (AGPLv3) | Encrypted (SSE‑S3) storage of avatars & attachments; pre‑signed URLs (15 min) |
 | **Push Service** | **Firebase Cloud Messaging (FCM)** (free tier) + WebSocket | Register device tokens, send push to Android/iOS/web via FCM; fallback to in‑app WebSocket alerts |
 | **Observability** | **Prometheus** (metrics) + **Grafana** (dashboards) (optional, lightweight) | System health, latency, error rates |
@@ -169,7 +172,91 @@ When any file is uploaded (image, PDF, Word, Excel, or any text‑based document
 - Membership changes broadcast via WS to online members; offline members receive push + sync on next WS reconnect.
 - Permission checks (admin/owner) performed server‑side; all changes immutably logged to `audit_logs`.
 
-### 4.6 Audit & Compliance
+### 4.6 Channels
+
+Channels are designed for broadcasting content to subscribers, similar to Telegram Channels.
+
+#### 4.6.1 Channel Creation & Management
+- Users can create public or private channels.
+- Public channels are discoverable and joinable by any user.
+- Private channels require an invitation or approval to join.
+- Channel owners can appoint admins and moderators to help manage the channel.
+
+#### 4.6.2 Channel Posts
+- Channel posts are created by admins and owners (and optionally members, depending on settings).
+- Posts can include text, media (images, videos), and links.
+- Posts can be scheduled for future publication.
+- Each post increases the view count when seen by subscribers.
+
+#### 4.6.3 Channel Subscriptions
+- Users can subscribe to channels to receive updates.
+- Public channels allow anyone to subscribe.
+- Private channels require approval or invitation.
+- Channels can have subscription plans for monetization (paid content).
+
+#### 4.6.4 Channel Analytics
+- Channels track analytics such as subscriber growth, post views, and engagement rates.
+- Analytics are stored in Redis for fast retrieval and updated periodically.
+
+### 4.7 Communities
+
+Communities are designed for deeper interaction, combining elements of Discord servers and Reddit communities.
+
+#### 4.7.1 Community Structure
+Each community consists of:
+- **General Chat**: Real-time group chat (existing groups feature with optional E2EE).
+- **Channels**: Organized topics within the community (similar to standalone channels but scoped to the community).
+- **Voice Rooms**: Voice chat rooms (future extension).
+- **Events**: Scheduled events with RSVP functionality.
+- **Resources**: Pinned posts, files, links, and other useful materials.
+
+#### 4.7.2 Roles & Permissions
+Communities have a role-based access control system:
+- **Owner**: Full control over the community.
+- **Admin**: Can manage members, channels, events, and settings (except transferring ownership).
+- **Moderator**: Can moderate content, manage members (mute, ban), and oversee channels.
+- **Member**: Can participate in chats, channels, and events according to permissions.
+
+Permissions are granular and configurable per role.
+
+#### 4.7.3 Community Events
+- Events can be created by owners, admins, and moderators.
+- Events include title, description, start/end times, and location (physical or online URL).
+- Members can RSVP to events (going, maybe, not going).
+- Events appear in the community calendar and send reminders.
+
+#### 4.7.4 Community Resources
+- Resources are links or files shared within the community for easy access.
+- Can be pinned to the top of the community for visibility.
+
+#### 4.7.5 Community Discovery & Joining
+- Communities can be public or private.
+- Public communities are discoverable and joinable by any user.
+- Private communities require an invitation or approval to join.
+
+### 4.8 Creator Tools
+
+Creator tools empower users to monetize their content and grow their audience.
+
+#### 4.8.1 Creator Dashboard
+- Provides analytics on earnings, subscribers, views, and posts.
+- Shows subscription plan performance and payout status.
+- Includes insights on audience demographics and engagement.
+
+#### 4.8.2 Subscription Management
+- Creators can create and manage subscription plans for their channels.
+- Subscribers can manage their subscriptions (upgrade, downgrade, cancel).
+- Payouts are processed periodically to creators' linked payment methods.
+
+#### 4.8.3 Content Calendar
+- Allows creators to schedule posts, events, and updates in advance.
+- Integrates with channel and community scheduling features.
+
+#### 4.8.4 Exclusive Content
+- Creators can mark posts as exclusive to paid subscribers.
+- Non-subscribers see a preview or are prompted to subscribe.
+
+### 4.9 Audit & Compliance
 
 - Every mutating action writes an `AuditLog` row via the `audit_writer` role (INSERT‑only).
 - `before_state` / `after_state` JSONB capture full row snapshots.
@@ -227,10 +314,11 @@ When any file is uploaded (image, PDF, Word, Excel, or any text‑based document
 | **9** | Data Migration Procedure | - Dump current PostgreSQL (`pg_dump`), import into new cluster. <br>- Export MinIO buckets (`mc mirror`). <br>- Verify consistency. | 2 days |
 | **10** | Cutover & Blue/Green | Route Nginx to new stack via DNS weighted routing; monitor metrics; rollback possible via old DNS. | 2 days |
 | **11** | Decompose Legacy Docker‑Compose (if any) | archive old compose; keep for local dev reference only. | 1 day |
-| **Total** | | | **���≈ 6 weeks** (parallelizable tasks can reduce wall‑time) |
+| **12** | Implement Channels & Communities (Phase 3) | - Create channel and community models, APIs, and schemas. <br>- Build frontend screens, BLoCs, and widgets. <br>- Update navigation and documentation. | 2 wks |
+| **Total** | | | **�������≈ 7 weeks** (parallelizable tasks can reduce wall‑time) |
 
 ---
 
 ## 8. Conclusion
 
-By adopting the free, battle‑tested stack outlined above and following the migration plan, IronLink will inherit the strong security foundations of the original design while gaining simplicity, zero‑cost operations, and a clear path to scaling—all without sacrificing the core principles of privacy, military‑grade authentication, and immutable auditability. The new OCR Intelligence Engine adds a powerful, value‑added feature that runs asynchronously and leverages the same free infrastructure. The implementation of the Signal Protocol for End-to-End Encryption ensures that IronLink provides military-grade security for all communications, with forward secrecy and resistance to compromise.
+By adopting the free, battle‑tested stack outlined above and following the migration plan, IronLink will inherit the strong security foundations of the original design while gaining simplicity, zero‑cost operations, and a clear path to scaling—all without sacrificing the core principles of privacy, military‑grade authentication, and immutable auditability. The new OCR Intelligence Engine adds a powerful, value‑added feature that runs asynchronously and leverages the same free infrastructure. The implementation of the Signal Protocol for End-to-End Encryption ensures that IronLink provides military-grade security for all communications, with forward secrecy and resistance to compromise. The addition of Channels and Communities transforms IronLink into a full-featured social media platform capable of competing with Discord, Telegram, and Reddit, while maintaining a privacy-first approach and enabling creator monetization.

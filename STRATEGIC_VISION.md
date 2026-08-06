@@ -30,7 +30,7 @@
 | **0** | Foundations & CI | Docker‑Compose setup, basic auth, storage, CI pipeline | PostgreSQL, Redis, MinIO, Nginx, GitHub Actions |
 | **1** | Core Messaging Excellence | **Signal Protocol E2EE** (X3DH + Double Ratchet), message receipts, typing indicators, push notifications (FCM), OCR engine | + Firebase FCM (free tier) |
 | **2** | Privacy & Security | Self‑destruct, disappearing messages, screenshot detection, key verification (safety numbers) | Same stack |
-| **3** | Communities & Creators | Groups, channels, roles, bots, creator monetization, public discovery | Same stack |
+| **3** | Communities & Creators | **Channels** (public/private, posts, subscriptions, analytics), **Communities** (spaces, roles, events, resources), **Creator Tools** (dashboard, monetization, content calendar) | Same stack |
 | **4** | Super App / Bots | AI‑native features, mini‑apps, advanced search, cross‑platform sync | + Hugging Face free inference (optional) |
 
 **Guiding Principle**
