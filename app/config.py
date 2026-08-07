@@ -5,7 +5,15 @@ from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import AnyHttpUrl, Field, PostgresDsn, RedisDsn, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    AnyHttpUrl,
+    Field,
+    PostgresDsn,
+    RedisDsn,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -133,23 +141,64 @@ class Settings(BaseSettings):
         auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
         return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
-    # ── MinIO / S3 ─────────────────────────────────────────────────────────────
-    MINIO_ENDPOINT: str = "minio:9000"
-    MINIO_ROOT_USER: str = "ironlink_minio"
-    MINIO_ROOT_PASSWORD: str = Field(default="", description="Required — never has a default")
-    MINIO_SECURE: bool = False   # Internal network; Nginx terminates TLS externally
-    MINIO_BUCKET_AVATARS: str = "avatars"
-    MINIO_BUCKET_ATTACHMENTS: str = "attachments"
+    # ── Object storage (S3-compatible) ─────────────────────────────────────────
+    # One set of settings drives both backends, because MinIO and Cloudflare R2
+    # both speak S3 — only the endpoint, TLS flag, and region differ:
+    #
+    #   local MinIO : S3_ENDPOINT=minio:9000                       S3_SECURE=false
+    #   Cloudflare R2: S3_ENDPOINT=<ACCOUNT_ID>.r2.cloudflarestorage.com
+    #                  S3_SECURE=true   S3_REGION=auto
+    #
+    # The endpoint is a host[:port] with no scheme — S3_SECURE decides http vs
+    # https. The legacy MINIO_* names are still accepted as aliases so existing
+    # .env files and the docker-compose stack keep working unchanged.
+    S3_ENDPOINT: str = Field(
+        default="minio:9000",
+        validation_alias=AliasChoices("S3_ENDPOINT", "MINIO_ENDPOINT"),
+    )
+    S3_ACCESS_KEY_ID: str = Field(
+        default="ironlink_minio",
+        validation_alias=AliasChoices("S3_ACCESS_KEY_ID", "MINIO_ROOT_USER"),
+    )
+    S3_SECRET_ACCESS_KEY: str = Field(
+        default="",
+        description="Required — never has a default",
+        validation_alias=AliasChoices("S3_SECRET_ACCESS_KEY", "MINIO_ROOT_PASSWORD"),
+    )
+    S3_SECURE: bool = Field(
+        default=False,   # Internal network; Nginx terminates TLS externally
+        validation_alias=AliasChoices("S3_SECURE", "MINIO_SECURE"),
+    )
+    # R2 ignores the region for routing but still folds it into the SigV4
+    # credential scope, so it must be "auto" there or every request comes back
+    # SignatureDoesNotMatch. Empty means "let the client decide", which is what
+    # MinIO wants.
+    S3_REGION: str = ""
+    S3_BUCKET_AVATARS: str = Field(
+        default="avatars",
+        validation_alias=AliasChoices("S3_BUCKET_AVATARS", "MINIO_BUCKET_AVATARS"),
+    )
+    S3_BUCKET_ATTACHMENTS: str = Field(
+        default="attachments",
+        validation_alias=AliasChoices("S3_BUCKET_ATTACHMENTS", "MINIO_BUCKET_ATTACHMENTS"),
+    )
 
-    # Fable5-Enhancement: 15-min pre-signed URL expiry (not the MinIO default of 7 days)
+    # Fable5-Enhancement: 15-min pre-signed URL expiry (not the S3 default of 7 days)
     # prevents URL sharing outside the app session window.
-    MINIO_PRESIGN_EXPIRY_SECONDS: int = 900
+    S3_PRESIGN_EXPIRY_SECONDS: int = Field(
+        default=900,
+        validation_alias=AliasChoices(
+            "S3_PRESIGN_EXPIRY_SECONDS", "MINIO_PRESIGN_EXPIRY_SECONDS"
+        ),
+    )
 
-    @field_validator("MINIO_ROOT_PASSWORD", mode="before")
+    @field_validator("S3_SECRET_ACCESS_KEY", mode="before")
     @classmethod
-    def _require_minio_password(cls, v: str) -> str:
+    def _require_s3_secret(cls, v: str) -> str:
         if not v:
-            raise ValueError("MINIO_ROOT_PASSWORD must be set in the environment")
+            raise ValueError(
+                "S3_SECRET_ACCESS_KEY (or legacy MINIO_ROOT_PASSWORD) must be set"
+            )
         return v
 
     # ── Encryption ─────────────────────────────────────────────────────────────

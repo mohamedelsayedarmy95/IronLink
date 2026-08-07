@@ -78,7 +78,7 @@ class SelfDestructWorker:
                 if msg.media_object_key:
                     try:
                         self._storage.delete_object(
-                            settings.MINIO_BUCKET_ATTACHMENTS, msg.media_object_key
+                            settings.S3_BUCKET_ATTACHMENTS, msg.media_object_key
                         )
                     except Exception as exc:
                         # Keep the message queued for the next sweep rather than

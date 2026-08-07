@@ -197,7 +197,7 @@ async def upload_complete(
         assembled, thumb = _process_image(assembled, mime)
         if thumb is not None:
             thumbnail_key = _storage.put_object(
-                settings.MINIO_BUCKET_ATTACHMENTS, thumb, "image/jpeg", suffix="_thumb.jpg"
+                settings.S3_BUCKET_ATTACHMENTS, thumb, "image/jpeg", suffix="_thumb.jpg"
             )
     elif mime.startswith("video/"):
         # Fable5-Enhancement: video thumbnailing needs ffmpeg, which does not
@@ -208,7 +208,7 @@ async def upload_complete(
         thumbnail_key = None
 
     media_key = _storage.put_object(
-        settings.MINIO_BUCKET_ATTACHMENTS, assembled, mime,
+        settings.S3_BUCKET_ATTACHMENTS, assembled, mime,
         suffix=_ext_for(mime),
     )
     _storage.delete_staging(upload_id, state["total_chunks"])
@@ -239,7 +239,7 @@ async def presigned_view_url(
 ) -> PresignedOut:
     """5-minute pre-signed view link, generated fresh on each open."""
     url = _storage.presign_download_ttl(
-        settings.MINIO_BUCKET_ATTACHMENTS, media_key, PRESIGN_VIEW_TTL
+        settings.S3_BUCKET_ATTACHMENTS, media_key, PRESIGN_VIEW_TTL
     )
     return PresignedOut(url=url, expires_in=PRESIGN_VIEW_TTL)
 

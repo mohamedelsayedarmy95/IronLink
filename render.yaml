@@ -91,12 +91,27 @@ services:
           type: redis
           property: connectionString
 
+      # ── Object storage: Cloudflare R2 (S3-compatible) ──────────────────────
+      # R2 rejects a SigV4 signature scoped to any region other than "auto".
+      - key: S3_SECURE
+        value: "true"
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET_AVATARS
+        value: ironlink-avatars
+      - key: S3_BUCKET_ATTACHMENTS
+        value: ironlink-attachments
+
       # ── Secrets: entered once in the Render UI, never stored in git ─────────
       - key: SECRET_KEY
         generateValue: true          # Render generates a strong random value
       - key: DB_ENCRYPTION_KEY
         sync: false                  # MUST be stable — see warning below
-      - key: MINIO_ROOT_PASSWORD
+      - key: S3_ENDPOINT
+        sync: false                  # <ACCOUNT_ID>.r2.cloudflarestorage.com
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
         sync: false
       - key: HF_API_TOKEN
         sync: false
@@ -110,7 +125,15 @@ services:
 # store it in a password manager, and never rotate it without a re-encryption
 # migration.
 #
-# ── Object storage ────────────────────────────────────────────────────────────
-# MINIO_* is still required for the app to boot but there is no MinIO on Render.
-# Media upload and download will fail until storage_service.py is repointed at
-# S3-compatible storage (Cloudflare R2) or Firebase Storage.
+# ── Object storage: one-time Cloudflare setup ─────────────────────────────────
+# 1. Cloudflare dashboard -> R2 -> create buckets "ironlink-avatars" and
+#    "ironlink-attachments". Leave both PRIVATE; do not attach an r2.dev domain,
+#    or the pre-signed URL expiry stops meaning anything.
+# 2. R2 -> Manage API Tokens -> Create API token, Object Read & Write, scoped to
+#    those two buckets only. Not an account-wide token.
+# 3. Paste the Access Key ID, Secret Access Key, and the endpoint host
+#    (<ACCOUNT_ID>.r2.cloudflarestorage.com, no https://) when Render prompts.
+#
+# R2's free tier has no egress charge, which is the reason to prefer it here:
+# media is served through pre-signed URLs straight from R2, so it never crosses
+# this instance's bandwidth.

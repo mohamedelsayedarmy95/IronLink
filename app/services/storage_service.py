@@ -24,23 +24,39 @@ MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # matches nginx client_max_body_size
 
 
 class StorageService:
-    """MinIO wrapper enforcing short-lived pre-signed URLs and MIME allow-listing.
+    """S3-compatible object storage, enforcing short-lived pre-signed URLs and
+    MIME allow-listing.
+
+    Backend-agnostic: the same code drives Cloudflare R2 in production and the
+    local MinIO container in development, since both speak S3. The `minio`
+    package is simply the S3 client here — it is not tied to a MinIO server,
+    and using it avoids pulling boto3 (~15 MB) onto a 512 MB instance.
 
     All object access goes through pre-signed URLs that expire in
-    MINIO_PRESIGN_EXPIRY_SECONDS (15 min) — no bucket is ever public.
+    S3_PRESIGN_EXPIRY_SECONDS (15 min) — no bucket is ever public. R2 buckets
+    default to private, which is what this relies on: do NOT attach a public
+    r2.dev domain to these buckets, or the expiry stops meaning anything.
     """
 
     def __init__(self) -> None:
         self._client = Minio(
-            settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ROOT_USER,
-            secret_key=settings.MINIO_ROOT_PASSWORD,
-            secure=settings.MINIO_SECURE,
+            settings.S3_ENDPOINT,
+            access_key=settings.S3_ACCESS_KEY_ID,
+            secret_key=settings.S3_SECRET_ACCESS_KEY,
+            secure=settings.S3_SECURE,
+            # None lets the client resolve the region itself (MinIO); R2 needs
+            # the literal "auto" folded into the SigV4 scope.
+            region=settings.S3_REGION or None,
         )
 
     def ensure_buckets(self) -> None:
-        """Idempotent bucket bootstrap — called once at application startup."""
-        for bucket in (settings.MINIO_BUCKET_AVATARS, settings.MINIO_BUCKET_ATTACHMENTS):
+        """Idempotent bucket bootstrap — for local development only.
+
+        Not called at startup. On R2 the API token is normally scoped to
+        existing buckets and lacks CreateBucket, so invoking this in production
+        raises AccessDenied; create the buckets in the Cloudflare dashboard.
+        """
+        for bucket in (settings.S3_BUCKET_AVATARS, settings.S3_BUCKET_ATTACHMENTS):
             if not self._client.bucket_exists(bucket):
                 self._client.make_bucket(bucket)
 
@@ -53,7 +69,7 @@ class StorageService:
         url = self._client.presigned_put_object(
             bucket,
             object_key,
-            expires=timedelta(seconds=settings.MINIO_PRESIGN_EXPIRY_SECONDS),
+            expires=timedelta(seconds=settings.S3_PRESIGN_EXPIRY_SECONDS),
         )
         return object_key, url
 
@@ -61,7 +77,7 @@ class StorageService:
         return self._client.presigned_get_object(
             bucket,
             object_key,
-            expires=timedelta(seconds=settings.MINIO_PRESIGN_EXPIRY_SECONDS),
+            expires=timedelta(seconds=settings.S3_PRESIGN_EXPIRY_SECONDS),
         )
 
     def presign_download_ttl(self, bucket: str, object_key: str, ttl_seconds: int) -> str:
@@ -86,7 +102,7 @@ class StorageService:
 
     def put_staging_chunk(self, upload_id: str, index: int, data: bytes) -> None:
         self._client.put_object(
-            settings.MINIO_BUCKET_ATTACHMENTS,
+            settings.S3_BUCKET_ATTACHMENTS,
             f"staging/{upload_id}/{index}",
             io.BytesIO(data),
             length=len(data),
@@ -97,7 +113,7 @@ class StorageService:
         parts: list[bytes] = []
         for i in range(total_chunks):
             resp = self._client.get_object(
-                settings.MINIO_BUCKET_ATTACHMENTS, f"staging/{upload_id}/{i}"
+                settings.S3_BUCKET_ATTACHMENTS, f"staging/{upload_id}/{i}"
             )
             try:
                 parts.append(resp.read())
@@ -109,7 +125,7 @@ class StorageService:
     def delete_staging(self, upload_id: str, total_chunks: int) -> None:
         for i in range(total_chunks):
             self.delete_object(
-                settings.MINIO_BUCKET_ATTACHMENTS, f"staging/{upload_id}/{i}"
+                settings.S3_BUCKET_ATTACHMENTS, f"staging/{upload_id}/{i}"
             )
 
     def delete_object(self, bucket: str, object_key: str) -> None:
