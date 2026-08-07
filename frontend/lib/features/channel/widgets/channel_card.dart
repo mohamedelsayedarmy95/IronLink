@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../../../core/theme.dart';
 import '../bloc/channel_bloc.dart';
 
 class ChannelCard extends StatelessWidget {
@@ -12,7 +12,7 @@ class ChannelCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.all(8.0),
       child: ListTile(
-        leading: const Icon(Icons.play_circle_outline, color: MilColors.gold),
+        leading: const Icon(Icons.play_circle_outline, color: IronColors.gold),
         title: Text(channel.name),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -22,12 +22,12 @@ class ChannelCard extends StatelessWidget {
             const SizedBox(height: 4.0),
             Row(
               children: [
-                Icon(Icons.people, size: 16, color: MilColors.textLo),
+                Icon(Icons.people, size: 16, color: IronColors.textLo),
                 const SizedBox(width: 4.0),
-                Text('${channel.subscriberCount} ${AppLocalizations.of(context)!.subscribers}'),
+                Text('\${channel.subscriberCount} subscribers'),
                 const SizedBox(width: 16.0),
                 if (channel.isVerified)
-                  const Icon(Icons.verified, color: MilColors.gold, size: 16),
+                  const Icon(Icons.verified, color: IronColors.gold, size: 16),
               ],
             ),
           ],

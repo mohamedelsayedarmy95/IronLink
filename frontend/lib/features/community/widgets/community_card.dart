@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../../../core/theme.dart';
 import '../bloc/community_bloc.dart';
 
 class CommunityCard extends StatelessWidget {
@@ -12,7 +12,7 @@ class CommunityCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.all(8.0),
       child: ListTile(
-        leading: const Icon(Icons.group, color: MilColors.gold),
+        leading: const Icon(Icons.group, color: IronColors.gold),
         title: Text(community.name),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -22,12 +22,12 @@ class CommunityCard extends StatelessWidget {
             const SizedBox(height: 4.0),
             Row(
               children: [
-                Icon(Icons.people, size: 16, color: MilColors.textLo),
+                Icon(Icons.people, size: 16, color: IronColors.textLo),
                 const SizedBox(width: 4.0),
-                Text('${community.memberCount} ${AppLocalizations.of(context)!.members}'),
+                Text('\${community.memberCount} members'),
                 const SizedBox(width: 16.0),
                 if (community.isVerified)
-                  const Icon(Icons.verified, color: MilColors.gold, size: 16),
+                  const Icon(Icons.verified, color: IronColors.gold, size: 16),
               ],
             ),
           ],

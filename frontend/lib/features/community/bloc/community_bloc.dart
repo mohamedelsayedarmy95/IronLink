@@ -86,19 +86,11 @@ abstract class CommunityEvent extends Equatable {
 
 class CommunityFetchStarted extends CommunityEvent {}
 
-class CommunityFetchSuccess extends CommunityEvent {
-  final List<Community> communities;
-  const CommunityFetchSuccess(this.communities);
-  @override
-  List<Object> get props => [communities];
-}
-
-class CommunityFetchFailure extends CommunityEvent {
-  final String error;
-  const CommunityFetchFailure(this.error);
-  @override
-  List<Object> get props => [error];
-}
+// CommunityFetchSuccess / CommunityFetchFailure are STATES, declared at the
+// bottom of this file — they were previously also declared here as events.
+// Dart bound the name to this first declaration, so
+// `emit(CommunityFetchSuccess(...))` was passing an event where a state was
+// required. They describe the outcome of a fetch, not a command into the bloc.
 
 class CommunityCreated extends CommunityEvent {
   final Community community;
@@ -116,8 +108,6 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
       : _apiService = CommunityApiService(baseUrl: baseUrl, token: token),
         super(CommunityInitial()) {
     on<CommunityFetchStarted>(_onCommunityFetchStarted);
-    on<CommunityFetchSuccess>(_onCommunityFetchSuccess);
-    on<CommunityFetchFailure>(_onCommunityFetchFailure);
   }
 
   Future<void> _onCommunityFetchStarted(
@@ -131,15 +121,6 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     }
   }
 
-  void _onCommunityFetchSuccess(
-      CommunityFetchSuccess event, Emitter<CommunityState> emit) {
-    // Already emitted in the fetch started handler
-  }
-
-  void _onCommunityFetchFailure(
-      CommunityFetchFailure event, Emitter<CommunityState> emit) {
-    // Already emitted in the fetch started handler
-  }
 }
 
 // === States ===
