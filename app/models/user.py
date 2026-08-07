@@ -124,8 +124,13 @@ class User(Base):
     audit_logs: Mapped[list[AuditLog]] = relationship(
         "AuditLog", back_populates="actor", foreign_keys="AuditLog.actor_id"
     )
+    # GroupMember has two FKs to users.id (user_id, added_by_id) — the join is
+    # ambiguous unless we pin it to user_id, matching GroupMember.user.
     group_memberships: Mapped[list[GroupMember]] = relationship(
-        "GroupMember", back_populates="user", cascade="all, delete-orphan"
+        "GroupMember",
+        foreign_keys="GroupMember.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (

@@ -6,7 +6,7 @@ from uuid import UUID
 from typing import Optional, Tuple, List
 
 from redis.asyncio import Redis
-from app.core.redis import redis as redis_client
+from app.core.redis import redis_sessions as redis_client
 
 # We'll use a placeholder for the Signal Protocol library.
 # In a real implementation, we would use a library like `python-signal-protocol`

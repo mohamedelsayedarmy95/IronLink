@@ -3,7 +3,7 @@ import logging
 from typing import Set
 import pytesseract
 from PIL import Image
-import pypdf2
+import PyPDF2
 import docx
 import openpyxl
 
@@ -39,7 +39,7 @@ def extract_text(file_path: str, mime_type: str) -> str:
         elif mime_type == 'application/pdf':
             text = []
             with open(file_path, 'rb') as f:
-                reader = pypdf2.PdfReader(f)
+                reader = PyPDF2.PdfReader(f)
                 for page in reader.pages:
                     text.append(page.extract_text())
             return '\n'.join(text)

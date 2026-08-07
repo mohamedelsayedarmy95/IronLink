@@ -132,6 +132,12 @@ class Settings(BaseSettings):
     # Path to the Firebase service-account JSON. Empty = pushes disabled (dev).
     FIREBASE_CREDENTIALS_FILE: str = ""
 
+    # ── AI (Hugging Face Inference API) ───────────────────────────────────────
+    # Empty token = AI features degrade to their fallbacks instead of failing.
+    HF_API_TOKEN: str = ""
+    HF_API_URL: str = "https://api-inference.huggingface.co/models"
+    HF_TIMEOUT_SECONDS: float = 30.0
+
     # ── Audit ─────────────────────────────────────────────────────────────────
     AUDIT_LOG_RETENTION_DAYS: int = 365    # 1 year minimum; immutable append-only
 

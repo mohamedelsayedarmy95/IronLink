@@ -5,6 +5,24 @@ from .message import Message, MessageStatus
 from .group import Group, GroupJoinRequest, GroupMember, GroupRole
 from .broadcast import Broadcast, BroadcastAck
 from .audit_log import AuditLog, AuditAction
+from .channel import (
+    Channel,
+    ChannelAnalytics,
+    ChannelPost,
+    ChannelSubscription,
+    ChannelType,
+)
+from .community import (
+    COMMUNITY_ROLE_RANK,
+    Community,
+    CommunityEvent,
+    CommunityEventRSVP,
+    CommunityMember,
+    CommunityPermission,
+    CommunityResource,
+    CommunityRole,
+)
+from .creator import CreatorDashboard, Payout, PayoutStatus, SubscriptionPlan
 
 __all__ = [
     "Base",
@@ -20,4 +38,21 @@ __all__ = [
     "BroadcastAck",
     "AuditLog",
     "AuditAction",
+    "Channel",
+    "ChannelAnalytics",
+    "ChannelPost",
+    "ChannelSubscription",
+    "ChannelType",
+    "COMMUNITY_ROLE_RANK",
+    "Community",
+    "CommunityEvent",
+    "CommunityEventRSVP",
+    "CommunityMember",
+    "CommunityPermission",
+    "CommunityResource",
+    "CommunityRole",
+    "CreatorDashboard",
+    "Payout",
+    "PayoutStatus",
+    "SubscriptionPlan",
 ]

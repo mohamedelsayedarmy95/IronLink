@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import secrets
 import tempfile
 import os
@@ -15,8 +16,11 @@ from app.config import settings
 from app.core.redis import redis_sessions
 from app.models import User
 from app.services.storage_service import ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES, StorageService
-from app.ocr import extract_text, load_user_keywords, contains_keywords
+from app.ocr import extract_text, load_user_keywords, contains_keywords, normalize_text
 from app.redis import publish_ocr_alert, set_alert_flag
+from app.services import push_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/media", tags=["media"])
 
@@ -280,7 +284,7 @@ def _ext_for(mime: str) -> str:
 
 # ── OCR background task ─────────────────────────────────────────────────────────
 
-def _process_ocr(
+async def _process_ocr(
     file_bytes: bytes,
     mime_type: str,
     user_id: str,
@@ -329,9 +333,11 @@ def _process_ocr(
                 break
 
         if matched_kw:
-            # Publish alert and set flag
+            # Publish alert (live WS ticker) and set flag
             publish_ocr_alert(media_key, user_id, matched_kw)
             set_alert_flag(media_key)
+            # FCM fallback for backgrounded/killed apps not on the live WS
+            await push_service.send_ocr_push(user_id, media_key, matched_kw)
     except Exception as e:
         logger.error(f"OCR background task failed for file {media_key}: {e}")
     finally:
