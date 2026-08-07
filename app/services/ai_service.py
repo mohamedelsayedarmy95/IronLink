@@ -72,6 +72,26 @@ class AIService:
     # The Redis pools are created with decode_responses=True, so reads already
     # come back as str — no .decode() anywhere below.
 
+    async def _cache_get(self, key: str) -> str | None:
+        """Read through the cache, treating any Redis failure as a miss.
+
+        A cache must never be able to break the feature it accelerates. These
+        reads used to sit outside the try block guarding the HF call, so an
+        unreachable Redis raised ConnectionError straight out of the endpoint —
+        turning a degraded-but-working feature into a 500.
+        """
+        try:
+            return await self._redis.get(key)
+        except Exception as exc:
+            logger.warning("ai_cache_read_failed: %s", exc)
+            return None
+
+    async def _cache_set(self, key: str, ttl: int, value: str) -> None:
+        try:
+            await self._redis.setex(key, ttl, value)
+        except Exception as exc:
+            logger.warning("ai_cache_write_failed: %s", exc)
+
     async def summarize_messages(self, messages: list[str], max_length: int = 150) -> str:
         if not messages:
             return ""
@@ -80,7 +100,7 @@ class AIService:
         fallback = combined[:200] + "..." if len(combined) > 200 else combined
 
         key = _cache_key("summary", combined, str(max_length))
-        cached = await self._redis.get(key)
+        cached = await self._cache_get(key)
         if cached:
             return cached
 
@@ -101,7 +121,7 @@ class AIService:
             )
             if not summary:
                 return fallback
-            await self._redis.setex(key, 300, summary)
+            await self._cache_set(key, 300, summary)
             return summary
         except Exception as exc:
             logger.error("Summarization failed: %s", exc)
@@ -113,7 +133,7 @@ class AIService:
             return ""
 
         key = _cache_key("translate", text, target_lang)
-        cached = await self._redis.get(key)
+        cached = await self._cache_get(key)
         if cached:
             return cached
 
@@ -131,7 +151,7 @@ class AIService:
             )
             if not translation:
                 return text
-            await self._redis.setex(key, 86400, translation)
+            await self._cache_set(key, 86400, translation)
             return translation
         except Exception as exc:
             logger.error("Translation failed: %s", exc)
@@ -144,7 +164,7 @@ class AIService:
             return []
 
         key = _cache_key("smartreply", context, str(num_replies))
-        cached = await self._redis.get(key)
+        cached = await self._cache_get(key)
         if cached:
             return json.loads(cached)
 
@@ -172,7 +192,7 @@ class AIService:
             if not replies:
                 return list(_DEFAULT_REPLIES)
             replies = replies[:num_replies]
-            await self._redis.setex(key, 600, json.dumps(replies))
+            await self._cache_set(key, 600, json.dumps(replies))
             return replies
         except Exception as exc:
             logger.error("Smart reply generation failed: %s", exc)
@@ -185,7 +205,7 @@ class AIService:
             return {}
 
         key = _cache_key("moderation", text)
-        cached = await self._redis.get(key)
+        cached = await self._cache_get(key)
         if cached:
             return json.loads(cached)
 
@@ -204,7 +224,7 @@ class AIService:
                     if label:
                         scores[label] = float(item.get("score", 0.0))
             if scores:
-                await self._redis.setex(key, 3600, json.dumps(scores))
+                await self._cache_set(key, 3600, json.dumps(scores))
             return scores
         except Exception as exc:
             logger.error("Moderation failed: %s", exc)

@@ -230,8 +230,18 @@ class Settings(BaseSettings):
     RATE_LIMIT_WS_PER_USER: int = 3        # max concurrent WS connections per user
 
     # ── Push notifications (FCM) ──────────────────────────────────────────────
-    # Path to the Firebase service-account JSON. Empty = pushes disabled (dev).
+    # Two ways to supply the Firebase service account, because a PaaS has no
+    # filesystem to drop a JSON file onto:
+    #   FIREBASE_CREDENTIALS_JSON  the file's contents, as a single env var
+    #                              (Render, Fly, Heroku — this is the one to use)
+    #   FIREBASE_CREDENTIALS_FILE  a path on disk (local dev, docker-compose)
+    # JSON wins when both are set. Neither set = pushes silently disabled.
+    FIREBASE_CREDENTIALS_JSON: str = ""
     FIREBASE_CREDENTIALS_FILE: str = ""
+
+    @property
+    def firebase_configured(self) -> bool:
+        return bool(self.FIREBASE_CREDENTIALS_JSON or self.FIREBASE_CREDENTIALS_FILE)
 
     # ── AI (Hugging Face Inference API) ───────────────────────────────────────
     # Empty token = AI features degrade to their fallbacks instead of failing.

@@ -10,6 +10,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.routes import (
     admin,
+    ai,
     auth,
     broadcasts,
     channels,
@@ -74,6 +75,7 @@ app.include_router(receipts.router, prefix=settings.API_PREFIX)
 app.include_router(keys.router, prefix=settings.API_PREFIX)
 app.include_router(channels.router, prefix=settings.API_PREFIX)
 app.include_router(communities.router, prefix=settings.API_PREFIX)
+app.include_router(ai.router, prefix=settings.API_PREFIX)
 app.include_router(websocket.router)
 
 
