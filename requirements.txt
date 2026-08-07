@@ -26,7 +26,11 @@ bcrypt==4.2.1
 cryptography==43.0.3
 
 # ── Signal Protocol for E2EE ───────────────────────────────────────────
-signal-protocol==0.1.0
+# Intentionally absent. signal-protocol==0.1.0 was pinned here and broke every
+# build — that version has never existed on PyPI (only 0.2.1 / 0.2.2), and
+# nothing in app/ imports it: app/services/encryption_service.py is still a
+# mock. Add a real pin here when that mock is replaced with a working
+# implementation, not before.
 
 # ── Media processing ───────────────────────────────────────────────────
 Pillow==11.0.0

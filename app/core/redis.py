@@ -1,13 +1,32 @@
 from __future__ import annotations
 
+from urllib.parse import urlsplit, urlunsplit
+
 from redis.asyncio import Redis, ConnectionPool
 
 from app.config import settings
 
 
+def _url_with_db(url: str, db: int) -> str:
+    """Point a Redis URL at a specific database index.
+
+    This replaces the path component outright. The previous approach —
+    str.replace(f"/{REDIS_DB}", f"/{db}") — silently did nothing against a
+    managed connection string that carries no path (Render hands out a bare
+    redis://host:port), collapsing all three pools onto database 0 and letting
+    OTP, session, and pub/sub keys share one keyspace.
+
+    Note that credentials containing "/" must be percent-encoded, as in any
+    URL; an unencoded slash breaks netloc parsing here and everywhere else.
+    """
+    return urlunsplit(urlsplit(url)._replace(path=f"/{db}"))
+
+
 def _make_pool(db: int) -> ConnectionPool:
+    # from_url lets URL-derived options override **kwargs, so the index has to
+    # be baked into the URL rather than passed as db=.
     return ConnectionPool.from_url(
-        settings.redis_url.replace(f"/{settings.REDIS_DB}", f"/{db}"),
+        _url_with_db(settings.redis_url, db),
         max_connections=50,
         decode_responses=True,
     )

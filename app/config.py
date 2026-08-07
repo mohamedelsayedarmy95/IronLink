@@ -3,8 +3,9 @@ from __future__ import annotations
 import secrets
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlparse
 
-from pydantic import AnyHttpUrl, Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import AnyHttpUrl, Field, PostgresDsn, RedisDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +29,40 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_PREFIX: str = "/api/v1"
     ALLOWED_ORIGINS: list[str] = Field(default_factory=list)
+
+    # TrustedHostMiddleware matches the Host header, which carries no scheme and
+    # no path — so the ALLOWED_ORIGINS URLs can never match it. Passing them
+    # straight through (as this used to) rejects 100% of production traffic with
+    # an opaque 400. Leave this empty to derive the hostnames from
+    # ALLOWED_ORIGINS; set it explicitly to add hosts that are not CORS origins,
+    # e.g. a platform health-check hostname or a wildcard like "*.onrender.com".
+    ALLOWED_HOSTS: list[str] = Field(default_factory=list)
+
+    @property
+    def allowed_hosts(self) -> list[str]:
+        if self.ALLOWED_HOSTS:
+            return self.ALLOWED_HOSTS
+        hosts: set[str] = set()
+        for origin in self.ALLOWED_ORIGINS:
+            # Bare hostnames parse with an empty .hostname, so fall back to the
+            # raw value rather than silently dropping the entry.
+            hosts.add(urlparse(origin).hostname or origin)
+        return sorted(h for h in hosts if h)
+
+    @model_validator(mode="after")
+    def _require_hosts_in_production(self) -> Settings:
+        """Fail fast instead of serving a service that 400s every request.
+
+        With ENV=production and nothing to trust, TrustedHostMiddleware would
+        reject everything — a failure that looks like a routing or TLS problem
+        and costs hours to trace back to config.
+        """
+        if self.ENV == "production" and not self.allowed_hosts:
+            raise ValueError(
+                "ALLOWED_ORIGINS (or ALLOWED_HOSTS) must be set when ENV=production — "
+                "otherwise TrustedHostMiddleware rejects every incoming request"
+            )
+        return self
 
     # ── Security ───────────────────────────────────────────────────────────────
     SECRET_KEY: str = Field(default="", description="Min 64-char random secret")
@@ -86,8 +121,15 @@ class Settings(BaseSettings):
     OTP_TTL_SECONDS: int = 300   # 5 minutes
     OTP_MAX_ATTEMPTS: int = 5
 
+    # Managed Redis (Render, Upstash, Redis Cloud) hands out a single connection
+    # string, often rediss:// with credentials embedded. When set it wins over
+    # the discrete host/port/password fields above.
+    REDIS_URL: str = Field(default="", description="Full Redis URL; overrides REDIS_HOST/PORT/PASSWORD")
+
     @property
     def redis_url(self) -> str:
+        if self.REDIS_URL:
+            return self.REDIS_URL
         auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
         return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 

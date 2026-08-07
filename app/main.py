@@ -58,7 +58,9 @@ app.add_middleware(
 )
 
 if settings.ENV == "production":
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_ORIGINS)
+    # settings.allowed_hosts, not ALLOWED_ORIGINS — the middleware compares
+    # against the Host header, which has no scheme. See config.allowed_hosts.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
 
 app.include_router(auth.router, prefix=settings.API_PREFIX)

@@ -1,0 +1,116 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Declares the API, its PostgreSQL database, and its Redis instance as code, so
+# the deployment is reviewable and reproducible instead of a sequence of
+# dashboard clicks. Apply with: Render Dashboard -> New -> Blueprint.
+#
+# Secrets are deliberately declared with `sync: false`. Render prompts for those
+# values once at apply time and stores them encrypted; they are never written
+# to this file and never reach the git history.
+
+databases:
+  - name: ironlink-db
+    databaseName: ironlink
+    user: ironlink_user
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  # ── Redis: pub/sub fan-out, OTP store, WS session registry ──────────────────
+  # noeviction matters. The default allkeys-lru would silently discard OTP codes
+  # and live WebSocket session keys under memory pressure, which surfaces as
+  # random logout and "invalid code" bugs rather than as an obvious failure.
+  - type: redis
+    name: ironlink-redis
+    plan: free
+    region: oregon
+    ipAllowList: []          # internal-only; no public access
+    maxmemoryPolicy: noeviction
+
+  # ── FastAPI application ─────────────────────────────────────────────────────
+  - type: web
+    name: ironlink
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: fix/boot-crashes-and-backend-merge
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+
+    # Runs after the image builds and before traffic shifts to it. A failure
+    # here aborts the release, so a broken migration cannot take the API down.
+    preDeployCommand: alembic upgrade head
+
+    envVars:
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: API_PREFIX
+        value: /api/v1
+
+      # One worker is deliberate on a 512 MB instance — see the Dockerfile.
+      - key: WEB_CONCURRENCY
+        value: "1"
+
+      # CORS origins (scheme included) and the Host allow-list (scheme excluded)
+      # are different things; ALLOWED_HOSTS is set explicitly so the platform
+      # health check is not rejected by TrustedHostMiddleware.
+      - key: ALLOWED_ORIGINS
+        value: '["https://ironlink-erfx.onrender.com"]'
+      - key: ALLOWED_HOSTS
+        value: '["ironlink-erfx.onrender.com","*.onrender.com"]'
+
+      # ── Database (injected by Render from the managed instance) ─────────────
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: ironlink-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: ironlink-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: ironlink-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: ironlink-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: ironlink-db
+          property: database
+
+      # ── Redis ──────────────────────────────────────────────────────────────
+      - key: REDIS_URL
+        fromService:
+          name: ironlink-redis
+          type: redis
+          property: connectionString
+
+      # ── Secrets: entered once in the Render UI, never stored in git ─────────
+      - key: SECRET_KEY
+        generateValue: true          # Render generates a strong random value
+      - key: DB_ENCRYPTION_KEY
+        sync: false                  # MUST be stable — see warning below
+      - key: MINIO_ROOT_PASSWORD
+        sync: false
+      - key: HF_API_TOKEN
+        sync: false
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+
+# ── DB_ENCRYPTION_KEY warning ─────────────────────────────────────────────────
+# This key encrypts columns at rest (hashed_military_id, device_fingerprint).
+# It is `sync: false` rather than `generateValue: true` on purpose: a regenerated
+# key makes every previously encrypted row permanently unreadable. Set it once,
+# store it in a password manager, and never rotate it without a re-encryption
+# migration.
+#
+# ── Object storage ────────────────────────────────────────────────────────────
+# MINIO_* is still required for the app to boot but there is no MinIO on Render.
+# Media upload and download will fail until storage_service.py is repointed at
+# S3-compatible storage (Cloudflare R2) or Firebase Storage.
