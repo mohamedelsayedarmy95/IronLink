@@ -21,15 +21,22 @@ from app.api.schemas import (
 from app.config import settings
 from app.core.database import get_db
 from app.core.redis import redis_otp, redis_sessions
+import structlog
+
 from app.core.security import (
+    constant_time_compare,
     create_access_token,
     generate_refresh_token,
+    hash_military_id,
+    hash_password,
     hash_refresh_token,
     verify_military_id,
 )
 from app.models import AuditLog, User, UserSession
 from app.models.audit_log import AuditAction
-from app.models.user import UserStatus
+from app.models.user import UserRole, UserStatus
+
+logger = structlog.get_logger("auth")
 from app.services.otp_service import OtpService
 from app.services.sms_gateway import SmsGateway
 
@@ -82,13 +89,46 @@ async def request_otp(
 
     user = await db.scalar(select(User).where(User.phone_number == body.phone_number))
 
+    # Dev bypass: provision unknown numbers so the app is reachable without an
+    # SMS provider or a registration endpoint. Gated in config; see _dev_user.
+    if settings.DEV_AUTH_BYPASS and user is None:
+        user = await _provision_dev_user(db, body.phone_number)
+
     # Fable5-Enhancement: the response is IDENTICAL whether the user exists or not,
     # and takes a comparable code path — no user-enumeration oracle via timing or body.
     if user is not None and user.status == UserStatus.ACTIVE:
         code = await OtpService(redis_otp).issue(user.id)
-        await SmsGateway().send_otp(body.phone_number, code)
+        if settings.DEV_AUTH_BYPASS:
+            # No SMS provider exists, and SmsGateway raises outside development.
+            # The code is not logged — DEV_OTP_CODE is what /auth/verify accepts.
+            logger.warning("dev_auth_bypass_otp_skipped", phone=body.phone_number[:5] + "****")
+        else:
+            await SmsGateway().send_otp(body.phone_number, code)
 
     return RequestOtpOut(retry_after_seconds=retry_after)
+
+
+async def _provision_dev_user(db: AsyncSession, phone_number: str) -> User:
+    """Create a throwaway ACTIVE user for the dev bypass.
+
+    hashed_military_id and hashed_password are NOT NULL, so they get random
+    values rather than a shared constant — the bypass skips both checks anyway,
+    and a predictable hash would still be a real credential if the bypass were
+    ever switched off with these rows left behind.
+    """
+    user = User(
+        phone_number=phone_number,
+        full_name=f"Dev User {phone_number[-4:]}",
+        hashed_military_id=hash_military_id(secrets.token_hex(16)),
+        hashed_password=hash_password(secrets.token_hex(16)),
+        status=UserStatus.ACTIVE,
+        role=UserRole.SOLDIER,
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+    logger.warning("dev_auth_bypass_user_provisioned", user_id=str(user.id))
+    return user
 
 
 @router.post("/verify", response_model=VerifyOut)
@@ -113,11 +153,19 @@ async def verify(
     if user.expiry_date is not None and user.expiry_date < datetime.now(timezone.utc).date():
         raise generic_error
 
-    # 1. OTP — consumed on success, burned after max attempts
-    otp_ok = await OtpService(redis_otp).verify(user.id, body.otp_code)
+    if settings.DEV_AUTH_BYPASS:
+        # Fixed code, no military-ID check. constant_time_compare keeps the
+        # comparison uniform even here, so the bypass path does not become a
+        # timing oracle if someone leaves it on by mistake.
+        otp_ok = constant_time_compare(body.otp_code, settings.DEV_OTP_CODE)
+        mil_ok = True
+        logger.warning("dev_auth_bypass_verify", user_id=str(user.id), accepted=otp_ok)
+    else:
+        # 1. OTP — consumed on success, burned after max attempts
+        otp_ok = await OtpService(redis_otp).verify(user.id, body.otp_code)
 
-    # 2. Military ID against the bcrypt hash
-    mil_ok = verify_military_id(body.military_id, user.hashed_military_id)
+        # 2. Military ID against the bcrypt hash
+        mil_ok = verify_military_id(body.military_id, user.hashed_military_id)
 
     if not (otp_ok and mil_ok):
         db.add(AuditLog(

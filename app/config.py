@@ -77,6 +77,12 @@ class Settings(BaseSettings):
                 "ALLOWED_ORIGINS (or ALLOWED_HOSTS) must be set when ENV=production — "
                 "otherwise TrustedHostMiddleware rejects every incoming request"
             )
+        if self.ENV == "production" and self.DEV_AUTH_BYPASS:
+            raise ValueError(
+                "DEV_AUTH_BYPASS cannot be enabled when ENV=production — it "
+                "provisions any phone number on demand and accepts a fixed OTP, "
+                "which would make every account trivially reachable"
+            )
         return self
 
     # ── Security ───────────────────────────────────────────────────────────────
@@ -135,6 +141,20 @@ class Settings(BaseSettings):
 
     OTP_TTL_SECONDS: int = 300   # 5 minutes
     OTP_MAX_ATTEMPTS: int = 5
+
+    # ── Development authentication bypass ─────────────────────────────────────
+    # There is no SMS provider wired up (see SmsGateway) and no self-registration
+    # endpoint, so without this nobody can get past the login screen on a
+    # deployed build. With it enabled, /auth/request-otp provisions any unknown
+    # phone number and /auth/verify accepts DEV_OTP_CODE in place of a real code
+    # and skips the military-ID check.
+    #
+    # This is a deliberate hole. It is gated twice: it defaults to off, and the
+    # validator below refuses to start at all if it is switched on while
+    # ENV=production — a misconfiguration should crash the deploy loudly rather
+    # than quietly leave the front door open.
+    DEV_AUTH_BYPASS: bool = False
+    DEV_OTP_CODE: str = "000000"
 
     # Managed Redis (Render, Upstash, Redis Cloud) hands out a single connection
     # string, often rediss:// with credentials embedded. When set it wins over

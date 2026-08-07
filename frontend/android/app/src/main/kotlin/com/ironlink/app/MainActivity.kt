@@ -1,4 +1,4 @@
-package com.example.ironlink
+package com.ironlink.app
 
 import io.flutter.embedding.android.FlutterActivity
 
