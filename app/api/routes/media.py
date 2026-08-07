@@ -15,7 +15,12 @@ from app.api.deps import get_current_user
 from app.config import settings
 from app.core.redis import redis_sessions
 from app.models import User
-from app.services.storage_service import ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES, StorageService
+from app.services.storage_service import (
+    ALLOWED_MIME_TYPES,
+    MAX_UPLOAD_BYTES,
+    StorageNotConfigured,
+    StorageService,
+)
 from app.ocr import extract_text, load_user_keywords, contains_keywords, normalize_text
 from app.redis import publish_ocr_alert, set_alert_flag
 from app.services import push_service
@@ -23,6 +28,11 @@ from app.services import push_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/media", tags=["media"])
+
+
+def _storage_unavailable(exc: StorageNotConfigured) -> HTTPException:
+    """503, not 500 — the request is well-formed, the backend is unprovisioned."""
+    return HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc))
 
 CHUNK_SIZE = 5 * 1024 * 1024          # 5 MiB per chunk
 UPLOAD_STATE_TTL = 24 * 3600          # incomplete uploads survive 24h for resume
@@ -143,7 +153,10 @@ async def upload_chunk(
     if not data:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "empty chunk")
 
-    _storage.put_staging_chunk(upload_id, chunk_index, data)
+    try:
+        _storage.put_staging_chunk(upload_id, chunk_index, data)
+    except StorageNotConfigured as exc:
+        raise _storage_unavailable(exc) from exc
     await redis_sessions.sadd(_chunks_key(upload_id), str(chunk_index))
     await redis_sessions.expire(_chunks_key(upload_id), UPLOAD_STATE_TTL)
 
@@ -185,7 +198,10 @@ async def upload_complete(
             f"upload incomplete — missing chunks: {missing[:20]}",
         )
 
-    assembled = _storage.assemble_staging(upload_id, state["total_chunks"])
+    try:
+        assembled = _storage.assemble_staging(upload_id, state["total_chunks"])
+    except StorageNotConfigured as exc:
+        raise _storage_unavailable(exc) from exc
     if len(assembled) != state["total_size"]:
         _storage.delete_staging(upload_id, state["total_chunks"])
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "size mismatch — re-upload")
@@ -238,9 +254,12 @@ async def presigned_view_url(
     user: User = Depends(get_current_user),
 ) -> PresignedOut:
     """5-minute pre-signed view link, generated fresh on each open."""
-    url = _storage.presign_download_ttl(
-        settings.S3_BUCKET_ATTACHMENTS, media_key, PRESIGN_VIEW_TTL
-    )
+    try:
+        url = _storage.presign_download_ttl(
+            settings.S3_BUCKET_ATTACHMENTS, media_key, PRESIGN_VIEW_TTL
+        )
+    except StorageNotConfigured as exc:
+        raise _storage_unavailable(exc) from exc
     return PresignedOut(url=url, expires_in=PRESIGN_VIEW_TTL)
 
 

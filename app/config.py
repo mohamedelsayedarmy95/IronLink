@@ -192,14 +192,17 @@ class Settings(BaseSettings):
         ),
     )
 
-    @field_validator("S3_SECRET_ACCESS_KEY", mode="before")
-    @classmethod
-    def _require_s3_secret(cls, v: str) -> str:
-        if not v:
-            raise ValueError(
-                "S3_SECRET_ACCESS_KEY (or legacy MINIO_ROOT_PASSWORD) must be set"
-            )
-        return v
+    @property
+    def storage_configured(self) -> bool:
+        """Object storage is optional at boot, unlike the database.
+
+        Requiring it here used to abort startup, which meant the whole API was
+        unreachable until an R2 bucket existed — even though storage is only
+        touched by media upload and download. It now fails at the point of use
+        instead (see StorageService), so auth, chat, and everything else can run
+        before storage is provisioned.
+        """
+        return bool(self.S3_ENDPOINT and self.S3_ACCESS_KEY_ID and self.S3_SECRET_ACCESS_KEY)
 
     # ── Encryption ─────────────────────────────────────────────────────────────
     # Used by pgcrypto pgp_sym_encrypt for column-level encryption

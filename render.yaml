@@ -38,9 +38,11 @@ services:
     healthCheckPath: /health
     autoDeploy: true
 
-    # Runs after the image builds and before traffic shifts to it. A failure
-    # here aborts the release, so a broken migration cannot take the API down.
-    preDeployCommand: alembic upgrade head
+    # preDeployCommand is deliberately absent: it is a paid-plan feature, and so
+    # are Shell and One-Off Jobs, which leaves the free tier with no way to run
+    # migrations except at container start. docker-entrypoint.sh runs
+    # `alembic upgrade head` before uvicorn instead. On a paid plan, move it
+    # here and set RUN_MIGRATIONS_ON_START=false so replicas cannot race.
 
     envVars:
       - key: ENV
@@ -91,6 +93,10 @@ services:
           type: redis
           property: connectionString
 
+      # Migrations run at container start — see docker-entrypoint.sh.
+      - key: RUN_MIGRATIONS_ON_START
+        value: "true"
+
       # ── Object storage: Cloudflare R2 (S3-compatible) ──────────────────────
       # R2 rejects a SigV4 signature scoped to any region other than "auto".
       - key: S3_SECURE
@@ -103,20 +109,24 @@ services:
         value: ironlink-attachments
 
       # ── Secrets: entered once in the Render UI, never stored in git ─────────
+      # Only DB_ENCRYPTION_KEY is needed for the service to start. The rest may
+      # be left blank now and filled in later: without S3 the media endpoints
+      # return 503 and everything else runs; without HF_API_TOKEN the AI
+      # features fall back to canned responses.
       - key: SECRET_KEY
         generateValue: true          # Render generates a strong random value
       - key: DB_ENCRYPTION_KEY
-        sync: false                  # MUST be stable — see warning below
+        sync: false                  # REQUIRED — and see the warning below
       - key: S3_ENDPOINT
-        sync: false                  # <ACCOUNT_ID>.r2.cloudflarestorage.com
+        sync: false                  # optional — <ACCOUNT_ID>.r2.cloudflarestorage.com
       - key: S3_ACCESS_KEY_ID
-        sync: false
+        sync: false                  # optional
       - key: S3_SECRET_ACCESS_KEY
-        sync: false
+        sync: false                  # optional
       - key: HF_API_TOKEN
-        sync: false
+        sync: false                  # optional
       - key: FIREBASE_CREDENTIALS_JSON
-        sync: false
+        sync: false                  # optional
 
 # ── DB_ENCRYPTION_KEY warning ─────────────────────────────────────────────────
 # This key encrypts columns at rest (hashed_military_id, device_fingerprint).

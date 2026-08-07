@@ -24,25 +24,19 @@ RUN apt-get update && apt-get install -y \
 
 COPY . .
 
+# chmod +x explicitly: the executable bit does not survive a clone from a
+# Windows working tree, so relying on the committed mode would break the build.
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Non-root user for principle of least privilege
 RUN addgroup --system ironlink && adduser --system --ingroup ironlink mil_api
 USER mil_api
 
 EXPOSE 8000
 
-# Render (and most PaaS) inject the listening port as $PORT and will not route
-# to a hardcoded one, so it has to be read at runtime — hence the sh -c form.
-# `exec` hands PID 1 to uvicorn so SIGTERM reaches it and shutdown stays
-# graceful instead of being killed after the grace period.
-#
-# WEB_CONCURRENCY defaults to 1: this previously ran 4 workers, which on a
-# 512 MB instance means four copies of the interpreter plus four Redis pools
-# and an OOM kill. Raise it only alongside the instance size.
-CMD ["sh", "-c", "exec uvicorn app.main:app \
-     --host 0.0.0.0 \
-     --port ${PORT:-8000} \
-     --workers ${WEB_CONCURRENCY:-1} \
-     --loop uvloop \
-     --http h11 \
-     --proxy-headers \
-     --forwarded-allow-ips '*'"]
+# The entrypoint applies migrations and then execs uvicorn. It reads $PORT at
+# runtime, because Render and most PaaS inject the listening port and will not
+# route to a hardcoded one. WEB_CONCURRENCY defaults to 1: this previously ran
+# 4 workers, which on a 512 MB instance means four interpreters plus four Redis
+# pools and an OOM kill. Raise it only alongside the instance size.
+CMD ["/app/docker-entrypoint.sh"]

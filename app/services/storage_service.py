@@ -23,6 +23,14 @@ ALLOWED_MIME_TYPES: dict[str, str] = {
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # matches nginx client_max_body_size
 
 
+class StorageNotConfigured(RuntimeError):
+    """Raised when a storage operation is attempted with no S3 credentials.
+
+    Surfaced as 503 by the media routes rather than 500: the request is valid,
+    the capability is simply not provisioned yet.
+    """
+
+
 class StorageService:
     """S3-compatible object storage, enforcing short-lived pre-signed URLs and
     MIME allow-listing.
@@ -39,15 +47,31 @@ class StorageService:
     """
 
     def __init__(self) -> None:
-        self._client = Minio(
-            settings.S3_ENDPOINT,
-            access_key=settings.S3_ACCESS_KEY_ID,
-            secret_key=settings.S3_SECRET_ACCESS_KEY,
-            secure=settings.S3_SECURE,
-            # None lets the client resolve the region itself (MinIO); R2 needs
-            # the literal "auto" folded into the SigV4 scope.
-            region=settings.S3_REGION or None,
-        )
+        # Built lazily. This class is instantiated at import time in media.py
+        # and self_destruct_worker.py, so constructing a client here would make
+        # missing storage credentials an import-time crash — taking down auth,
+        # chat, and every other route with it.
+        self._client_instance: Minio | None = None
+
+    @property
+    def _client(self) -> Minio:
+        if not settings.storage_configured:
+            raise StorageNotConfigured(
+                "Object storage is not configured — set S3_ENDPOINT, "
+                "S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY. Media upload and "
+                "download are unavailable until then; the rest of the API works."
+            )
+        if self._client_instance is None:
+            self._client_instance = Minio(
+                settings.S3_ENDPOINT,
+                access_key=settings.S3_ACCESS_KEY_ID,
+                secret_key=settings.S3_SECRET_ACCESS_KEY,
+                secure=settings.S3_SECURE,
+                # None lets the client resolve the region itself (MinIO); R2
+                # needs the literal "auto" folded into the SigV4 scope.
+                region=settings.S3_REGION or None,
+            )
+        return self._client_instance
 
     def ensure_buckets(self) -> None:
         """Idempotent bucket bootstrap — for local development only.
