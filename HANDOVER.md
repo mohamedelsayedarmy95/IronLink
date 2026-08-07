@@ -1,7 +1,7 @@
 # IronLink — Handover Report
 
 **Date:** 2026-08-07
-**Branch:** `fix/boot-crashes-and-backend-merge` (9 commits ahead of `main`, all pushed)
+**Branch:** `fix/boot-crashes-and-backend-merge` (11 commits ahead of `main`, all pushed)
 **Live API:** https://ironlink-api.onrender.com
 **Status:** Backend is deployed and healthy. The product is not finished.
 
@@ -165,36 +165,64 @@ Also fixed: `const Container()` in both list screens. `Container` has no const
 constructor, so this was a hard compile error that would have failed
 `flutter build apk`.
 
+### 3.8 AI endpoints and Firebase credentials
+
+`ai_service.py` had been ported but **no route imported it**, so
+`chat_bloc.dart` was calling four endpoints that returned 404. Now registered in
+[`app/api/routes/ai.py`](app/api/routes/ai.py):
+
+```
+POST /api/v1/chats/{peer_id}/summary   {messages}             -> {summary}
+POST /api/v1/ai/smart-replies          {context,num_replies}  -> {replies}
+POST /api/v1/ai/translate              {text,target_lang}     -> {translation}
+POST /api/v1/ai/moderate               {text}                 -> {scores}
+```
+
+Field names were read out of the shipped client, not invented. They are frozen
+by `tests/test_ai_routes.py`, because a rename here is a silent runtime break in
+an app that is already built — not a compile error anywhere.
+
+**Firebase:** `render.yaml` declared `FIREBASE_CREDENTIALS_JSON` while
+`push_service.py` read `FIREBASE_CREDENTIALS_FILE`, a *path*. A managed platform
+can inject an env var but cannot place a file in the image, so the variable was
+inert and push could never have worked in production. Config now accepts the
+service-account JSON inline and prefers it over the path.
+
+**Bug found while verifying:** `AIService` promised graceful degradation in its
+docstring but its cache reads sat *outside* the `try` guarding the Hugging Face
+call, so an unreachable Redis raised `ConnectionError` straight out of the
+endpoint — a 500 for a feature designed to fall back. Reads and writes now go
+through `_cache_get` / `_cache_set`, which treat any Redis failure as a miss.
+This matters because the Redis instance is free-tier.
+
 ---
 
 ## 4. What works now
 
 - API live, `/health` returns `{"status":"ok","env":"production"}`
-- 44 registered paths (auth, chats, groups, media, broadcasts, admin, ocr, receipts, keys, channels, communities)
+- **48** registered paths (auth, chats, groups, media, broadcasts, admin, ocr, receipts, keys, channels, communities, ai)
 - 22 database tables created by migration
 - Redis connected, three isolated DB indices
-- 50 tests passing on the pinned FastAPI
+- **62** tests passing on the pinned FastAPI
 - Flutter builds and targets the live backend
+- AI endpoints answer, using built-in fallbacks until `HF_API_TOKEN` is set
+- Push notification wiring is correct; needs `FIREBASE_CREDENTIALS_JSON` set
 
 ---
 
 ## 5. What does NOT work — prioritised
 
+> §5.1 (AI routes missing) and §5.2 (Firebase variable inert) were **fixed** in
+> commit `e93c8aa`. Both now need only a credential pasted into Render — see
+> §5.10. The numbering below is kept stable so earlier notes still resolve.
+
 ### P1 — blocks core features
 
-**5.1 The `/ai/*` endpoints do not exist.**
-`frontend/lib/features/chat/bloc/chat_bloc.dart` calls:
-```
-/ai/smart-replies      /ai/translate      /ai/moderate      /chats/{id}/summary
-```
-None are registered. `app/services/ai_service.py` was ported and works, but **no
-route imports it**. Needs a router (~1 hour). Also needs `HF_API_TOKEN`.
+**5.1 ~~The `/ai/*` endpoints do not exist.~~ FIXED** — `e93c8aa`. All four
+registered and contract-tested. Returns fallbacks until `HF_API_TOKEN` is set.
 
-**5.2 Push notifications are dead.**
-`render.yaml:142` declares `FIREBASE_CREDENTIALS_JSON`, but
-`app/services/push_service.py:26` reads `FIREBASE_CREDENTIALS_FILE` — a file
-*path*. A PaaS cannot supply a file. The env var is inert. Config must accept the
-JSON blob directly (~20 minutes).
+**5.2 ~~Push notifications are dead.~~ FIXED** — `e93c8aa`. Config now reads
+`FIREBASE_CREDENTIALS_JSON`. Needs the service-account JSON pasted into Render.
 
 **5.3 File upload returns 503.**
 Needs three values from Cloudflare: `S3_ENDPOINT`
@@ -227,6 +255,26 @@ assembles server-side.
 
 **5.9 Deployed from a feature branch,** not `main`.
 
+**5.10 Credentials still to paste into Render** (no code change needed):
+
+| Variable | Where to get it | Effect while unset |
+|---|---|---|
+| `HF_API_TOKEN` | huggingface.co → Settings → Access Tokens (read) | AI returns canned fallbacks |
+| `FIREBASE_CREDENTIALS_JSON` | Firebase console → service account JSON, **one line** | push silently disabled |
+| `S3_ENDPOINT` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Cloudflare R2 | media returns 503 |
+
+**5.11 The summary endpoint sends conversation text to Hugging Face.** The
+client posts message bodies because the server holds no plaintext. That is a
+real privacy cost in a product that presents itself as end-to-end encrypted, and
+it compounds §5.7. It should be opt-in per conversation with the UI saying so;
+right now it is neither. Documented in the route docstring, not yet enforced.
+
+**5.12 There is no rate limiting on the AI endpoints.** `config.py` defines
+`RATE_LIMIT_REQUESTS_PER_MINUTE` but no middleware reads it. Each AI call is a
+slow, paid round-trip to Hugging Face, so an authenticated client can run up
+cost and pin the single worker. Payload ceilings are enforced; call frequency is
+not.
+
 ---
 
 ## 6. Critical warnings
@@ -252,7 +300,7 @@ prototype.
 
 ```bash
 # Backend
-.venv/Scripts/python.exe -m pytest -q          # expect 50 passed
+.venv/Scripts/python.exe -m pytest -q          # expect 62 passed
 .venv/Scripts/python.exe -c "import app.main"  # must not raise
 
 # Frontend
@@ -291,10 +339,14 @@ the local `alembic/` directory rather than the package.
 
 ## 9. Recommended next steps, in order
 
-1. **Fix Firebase naming** (5.2) — smallest, unblocks push
-2. **Add the `/ai/*` router** (5.1) — the Flutter UI already calls it
-3. **Cloudflare R2** (5.3) — unblocks media
-4. **Decide on E2EE** (5.7) — implement it or remove the claim from the UI
+1. **Paste the three credential sets into Render** (5.10) — no code, unblocks
+   AI, push, and media in one pass
+2. **Cloudflare R2 buckets** (5.3) — create `ironlink-avatars` and
+   `ironlink-attachments`, private, token scoped to those two only
+3. **Decide on E2EE** (5.7) — implement it or remove the claim from the UI.
+   This is the largest gap between what the product says and what it does, and
+   §5.11 makes it worse.
+4. **Rate-limit the AI endpoints** (5.12) — before any real user traffic
 5. **Release engineering** (5.4–5.6) — app id, signing, iOS
 6. **Merge to `main`**, delete the dead service
 7. **Multipart upload** (5.8) before real traffic
@@ -304,6 +356,8 @@ the local `alembic/` directory rather than the package.
 ## 10. Commits
 
 ```
+e93c8aa  feat(ai): register the AI endpoints and load Firebase credentials from env
+9dd13aa  docs: add handover report
 a505685  fix(frontend): route every screen through Env instead of hardcoded hosts
 5902994  fix(api): declare response_model=None on every 204 route
 5915be8  chore: pin LF line endings for shell scripts and Linux-consumed config
