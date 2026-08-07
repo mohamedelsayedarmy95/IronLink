@@ -46,15 +46,22 @@ class Settings(BaseSettings):
     # e.g. a platform health-check hostname or a wildcard like "*.onrender.com".
     ALLOWED_HOSTS: list[str] = Field(default_factory=list)
 
+    # Render injects this at runtime with the hostname it assigned. The name is
+    # generated (a random suffix is appended), so it cannot be written into
+    # config ahead of time — reading it back is the only way to trust the host
+    # without falling back to a blanket wildcard.
+    RENDER_EXTERNAL_HOSTNAME: str = ""
+
     @property
     def allowed_hosts(self) -> list[str]:
-        if self.ALLOWED_HOSTS:
-            return self.ALLOWED_HOSTS
-        hosts: set[str] = set()
-        for origin in self.ALLOWED_ORIGINS:
-            # Bare hostnames parse with an empty .hostname, so fall back to the
-            # raw value rather than silently dropping the entry.
-            hosts.add(urlparse(origin).hostname or origin)
+        hosts: set[str] = set(self.ALLOWED_HOSTS)
+        if not hosts:
+            for origin in self.ALLOWED_ORIGINS:
+                # Bare hostnames parse with an empty .hostname, so fall back to
+                # the raw value rather than silently dropping the entry.
+                hosts.add(urlparse(origin).hostname or origin)
+        if self.RENDER_EXTERNAL_HOSTNAME:
+            hosts.add(self.RENDER_EXTERNAL_HOSTNAME)
         return sorted(h for h in hosts if h)
 
     @model_validator(mode="after")

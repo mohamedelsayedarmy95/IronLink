@@ -28,8 +28,13 @@ services:
     maxmemoryPolicy: noeviction
 
   # ── FastAPI application ─────────────────────────────────────────────────────
+  # Named ironlink-api, not ironlink: a manually created service already holds
+  # "IronLink" in this workspace. Render's collision behaviour there is
+  # unpredictable — it may refuse the apply, silently adopt the existing
+  # service, or create a second one with a suffixed slug. A distinct name makes
+  # the outcome deterministic instead.
   - type: web
-    name: ironlink
+    name: ironlink-api
     runtime: docker
     plan: free
     region: oregon
@@ -57,12 +62,21 @@ services:
         value: "1"
 
       # CORS origins (scheme included) and the Host allow-list (scheme excluded)
-      # are different things; ALLOWED_HOSTS is set explicitly so the platform
-      # health check is not rejected by TrustedHostMiddleware.
-      - key: ALLOWED_ORIGINS
-        value: '["https://ironlink-erfx.onrender.com"]'
+      # are different things.
+      #
+      # ALLOWED_HOSTS is a wildcard because the assigned hostname is not known
+      # until Render creates the service. The app also reads
+      # RENDER_EXTERNAL_HOSTNAME at runtime, so the exact host is trusted even
+      # if this is later tightened. Narrow it to the real hostname once known.
       - key: ALLOWED_HOSTS
-        value: '["ironlink-erfx.onrender.com","*.onrender.com"]'
+        value: '["*.onrender.com"]'
+
+      # Empty on purpose. The Flutter client is not a browser and sends no
+      # Origin header, so CORS is irrelevant to it — a wildcard here would be
+      # rejected by browsers anyway, since allow_credentials is True. Add the
+      # admin panel's exact origin here when it is deployed.
+      - key: ALLOWED_ORIGINS
+        value: "[]"
 
       # ── Database (injected by Render from the managed instance) ─────────────
       - key: POSTGRES_HOST
