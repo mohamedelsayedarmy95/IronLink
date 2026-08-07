@@ -103,7 +103,7 @@ async def update_channel(
     return channel
 
 
-@router.delete("/{channel_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{channel_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_channel(
     channel_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -203,7 +203,7 @@ async def subscribe_to_channel(
     return subscription
 
 
-@router.delete("/{channel_id}/subscribe", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{channel_id}/subscribe", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def unsubscribe_from_channel(
     channel_id: UUID,
     db: AsyncSession = Depends(get_db),

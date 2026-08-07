@@ -35,7 +35,7 @@ async def set_ocr_keywords(
     return KeywordList(keywords=normalized)
 
 
-@router.delete("/ocr/keywords", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/ocr/keywords", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_ocr_keywords(current_user: User = Depends(get_current_user)):
     """Remove all OCR keywords for the authenticated user."""
     await set_user_keywords(str(current_user.id), set())

@@ -232,7 +232,7 @@ async def list_sessions(
     return [SessionOut.model_validate(s) for s in sessions]
 
 
-@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def revoke_session(
     session_id: UUID,
     user: User = Depends(get_current_user),

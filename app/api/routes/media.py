@@ -136,7 +136,7 @@ async def upload_init(
     )
 
 
-@router.put("/upload/{upload_id}/chunk/{chunk_index}", status_code=status.HTTP_204_NO_CONTENT)
+@router.put("/upload/{upload_id}/chunk/{chunk_index}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def upload_chunk(
     upload_id: str,
     chunk_index: int,

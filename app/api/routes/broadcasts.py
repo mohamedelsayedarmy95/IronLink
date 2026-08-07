@@ -51,7 +51,7 @@ async def unacked_broadcasts(
     return [BroadcastItemOut.model_validate(b) for b in rows]
 
 
-@router.post("/{broadcast_id}/ack", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/{broadcast_id}/ack", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def ack_broadcast(
     broadcast_id: UUID,
     user: User = Depends(get_current_user),
@@ -72,7 +72,7 @@ async def ack_broadcast(
         await db.commit()
 
 
-@router.post("/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/fcm-token", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def register_fcm_token(
     body: FcmTokenIn,
     user: User = Depends(get_current_user),

@@ -195,7 +195,7 @@ async def update_community(
     return community
 
 
-@router.delete("/{community_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{community_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_community(
     community_id: UUID,
     db: AsyncSession = Depends(get_db),
