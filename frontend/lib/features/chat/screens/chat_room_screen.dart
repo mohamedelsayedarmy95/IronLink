@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
+import '../../../core/env.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
@@ -13,8 +13,8 @@ import '../chat_repository.dart';
 import '../widgets/attach_flow.dart';
 import '../widgets/smart_replies.dart';
 import '../widgets/summary_banner.dart';
+import '../widgets/voice_player.dart';
 import '../widgets/voice_recorder.dart';
-import 'dart:convert';
 
 class ChatRoomScreen extends StatelessWidget {
   const ChatRoomScreen({
@@ -38,8 +38,7 @@ class ChatRoomScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // In a real app, these would come from secure storage/config
-    final baseUrl = 'https://api.ironlink.app';
+    final baseUrl = Env.apiBaseUrl;
     final authToken = ''; // TODO: get from secure storage
 
     return BlocProvider(
@@ -97,16 +96,16 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: MilColors.navySurface,
+        backgroundColor: IronColors.navySurface,
         title: Row(
           children: [
             CircleAvatar(
               radius: 17,
-              backgroundColor: MilColors.navyDeep,
+              backgroundColor: IronColors.navyDeep,
               child: Text(
                 widget.peerName.characters.first,
                 style: const TextStyle(
-                    color: MilColors.gold, fontWeight: FontWeight.w700),
+                    color: IronColors.gold, fontWeight: FontWeight.w700),
               ),
             ),
             const SizedBox(width: 10),
@@ -115,11 +114,11 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
               children: [
                 Text(widget.peerName,
                     style: const TextStyle(
-                        fontSize: 16, color: MilColors.textHi)),
+                        fontSize: 16, color: IronColors.textHi)),
                 if (widget.peerOnline)
                   const Text('متصل الآن',
                       style: TextStyle(
-                          fontSize: 11, color: MilColors.gold)),
+                          fontSize: 11, color: IronColors.gold)),
               ],
             ),
           ],
@@ -130,14 +129,14 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
             builder: (context, state) {
               return IconButton(
                 tooltip: 'بدء محادثة سرية',
-                icon: const Icon(Icons.lock, color: MilColors.gold),
+                icon: const Icon(Icons.lock, color: IronColors.gold),
                 onPressed: () {
                   // In a full implementation, we would restart the bloc with isSecret=true
                   // For now, just show a snack bar
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('تم تفعيل المحادثة السرية (سيتم تطبيقها في التحديث التالي)'),
-                      backgroundColor: MilColors.gold,
+                      backgroundColor: IronColors.gold,
                     ),
                   );
                 },
@@ -158,7 +157,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
               builder: (context, state) {
                 if (state.loading) {
                   return const Center(
-                      child: CircularProgressIndicator(color: MilColors.gold));
+                      child: CircularProgressIndicator(color: IronColors.gold));
                 }
                 return Column(
                   children: [
@@ -168,7 +167,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                         summary: '',
                         isLoading: true,
                         onRefresh: () {
-                          context.read<ChatBloc>().add(const ChatFetchSummaryStarted());
+                          context.read<ChatBloc>().add(ChatFetchSummaryStarted());
                         },
                       )
                     else if (state.summary.isNotEmpty)
@@ -176,7 +175,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                         summary: state.summary,
                         isLoading: false,
                         onRefresh: () {
-                          context.read<ChatBloc>().add(const ChatFetchSummaryStarted());
+                          context.read<ChatBloc>().add(ChatFetchSummaryStarted());
                         },
                       )
                     else
@@ -289,13 +288,13 @@ class _MessageBubble extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: mine && !message.deleted
                 ? const LinearGradient(
-                    colors: [MilColors.goldBright, MilColors.gold],
+                    colors: [IronColors.goldBright, IronColors.gold],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
                 : null,
             color: mine
-                ? (message.deleted ? MilColors.navySurface : null)
+                ? (message.deleted ? IronColors.navySurface : null)
                 : _slateGrey,
             borderRadius: BorderRadiusDirectional.only(
               topStart: const Radius.circular(16),
@@ -312,11 +311,11 @@ class _MessageBubble extends StatelessWidget {
                 const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.block, size: 14, color: MilColors.textLo),
+                    Icon(Icons.block, size: 14, color: IronColors.textLo),
                     SizedBox(width: 6),
                     Text('تم حذف هذه الرسالة',
                         style: TextStyle(
-                            color: MilColors.textLo,
+                            color: IronColors.textLo,
                             fontStyle: FontStyle.italic,
                             fontSize: 13)),
                   ],
@@ -325,15 +324,15 @@ class _MessageBubble extends StatelessWidget {
                 if (message.kind == 'voice') ...[
                   VoicePlayer(
                     mediaKey: (jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['mediaKey'] as String? ?? '',
-                    duration: (jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['duration'] as double? ?? 0,
-                    waveform: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['waveform'] as List<dynamic>?)?.map((e) => (e as double).toDouble()).toList() ?? [],
+                    duration: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['duration'] as num?)?.toDouble() ?? 0,
+                    waveform: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['waveform'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? [],
                   )
                 ] else ...[
                   Text(
                     message.content ?? '',
                     style: TextStyle(
                       // Dark bold text on gold for readability, as specified
-                      color: mine ? const Color(0xFF1A1503) : MilColors.textHi,
+                      color: mine ? const Color(0xFF1A1503) : IronColors.textHi,
                       fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
                       fontSize: 15,
                     ),
@@ -349,7 +348,7 @@ class _MessageBubble extends StatelessWidget {
                       fontSize: 10,
                       color: mine
                           ? const Color(0x991A1503)
-                          : MilColors.textLo,
+                          : IronColors.textLo,
                     ),
                   ),
                   if (mine && !message.deleted) ...[
@@ -368,7 +367,7 @@ class _MessageBubble extends StatelessWidget {
   void _showMessageOptions(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: MilColors.navySurface,
+      backgroundColor: IronColors.navySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -377,7 +376,7 @@ class _MessageBubble extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.translate, color: MilColors.gold),
+              leading: const Icon(Icons.translate, color: IronColors.gold),
               title: const Text('ترجمة'),
               onTap: () {
                 Navigator.pop(context);
@@ -390,7 +389,7 @@ class _MessageBubble extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.shield, color: MilColors.gold),
+              leading: const Icon(Icons.shield, color: IronColors.gold),
               title: const Text('إبلاغ عن رسالة'),
               onTap: () {
                 Navigator.pop(context);
@@ -400,15 +399,15 @@ class _MessageBubble extends StatelessWidget {
                 }
               },
             ),
-            if (mine && !message.deleted) ...[
-              const Divider(color: MilColors.navyDeep),
+            if (message.isMine && !message.deleted) ...[
+              const Divider(color: IronColors.navyDeep),
               ListTile(
                 leading: const Icon(Icons.delete_forever_outlined,
-                    color: MilColors.errorRed),
+                    color: IronColors.errorRed),
                 title: const Text('حذف لدى الجميع',
-                    style: TextStyle(color: MilColors.textHi)),
+                    style: TextStyle(color: IronColors.textHi)),
                 subtitle: const Text('متاح خلال 5 دقائق من الإرسال',
-                    style: TextStyle(color: MilColors.textLo, fontSize: 12)),
+                    style: TextStyle(color: IronColors.textLo, fontSize: 12)),
                 onTap: () {
                   Navigator.pop(context);
                   // Find the bloc and send unsend event
@@ -486,7 +485,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         children: [
           Text(
             '${widget.peerName} يكتب',
-            style: const TextStyle(color: MilColors.gold, fontSize: 13),
+            style: const TextStyle(color: IronColors.gold, fontSize: 13),
           ),
           const SizedBox(width: 6),
           AnimatedBuilder(
@@ -502,7 +501,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                         width: 5,
                         height: 5,
                         decoration: const BoxDecoration(
-                          color: MilColors.gold,
+                          color: IronColors.gold,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -510,10 +509,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                   ),
               ],
             ),
-          ),
-        ],
-      );
-    }
+          )
+        ]
+      ),
+    );
   }
 
   double _dotOpacity(int i) {
@@ -536,17 +535,17 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<ChatBloc>();
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        color: MilColors.navySurface,
+        color: IronColors.navySurface,
         child: Row(
           children: [
             IconButton(
               tooltip: 'إرفاق',
-              icon: const Icon(Icons.attach_file, color: MilColors.gold),
+              icon: const Icon(Icons.attach_file, color: IronColors.gold),
               onPressed: () async {
-                final bloc = context.read<ChatBloc>();
                 final media = context.read<MediaService>();
                 final result =
                     await showAttachFlow(context, media: media);
@@ -568,7 +567,7 @@ class _InputBar extends StatelessWidget {
                 maxLines: 4,
                 decoration: const InputDecoration(
                   hintText: 'اكتب رسالة…',
-                  fillColor: MilColors.navyDeep,
+                  fillColor: IronColors.navyDeep,
                 ),
               ),
             ),
@@ -587,11 +586,11 @@ class _InputBar extends StatelessWidget {
               onCancel: () {},
             ),
             CircleAvatar(
-              backgroundColor: MilColors.gold,
+              backgroundColor: IronColors.gold,
               child: IconButton(
                 tooltip: 'إرسال',
                 icon: const Icon(Icons.send,
-                    color: MilColors.navyDeep, size: 20),
+                    color: IronColors.navyDeep, size: 20),
                 onPressed: onSend,
               ),
             ),

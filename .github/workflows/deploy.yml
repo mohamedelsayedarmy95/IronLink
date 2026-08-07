@@ -46,7 +46,12 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Build Flutter APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=https://your-flyio-app-name.fly.dev --dart-define=WS_BASE_URL=wss://your-flyio-app-name.fly.dev
+        # API_BASE_URL must include the /api/v1 prefix; WS_BASE_URL must not,
+        # since the WebSocket routes are mounted at the application root.
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL=https://ironlink-api.onrender.com/api/v1 \
+            --dart-define=WS_BASE_URL=wss://ironlink-api.onrender.com
         working-directory: frontend
 
       - name: Upload APK as artifact

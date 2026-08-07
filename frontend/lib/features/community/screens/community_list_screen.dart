@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../../../core/env.dart';
 import '../bloc/community_bloc.dart';
 import '../widgets/community_card.dart';
 
@@ -11,11 +11,11 @@ class CommunityListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.communities),
+        title: Text('Communities'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: AppLocalizations.of(context)!.createCommunity,
+            tooltip: 'Create Community',
             onPressed: () {
               // Navigate to create community screen
               // TODO: Implement create community screen
@@ -25,7 +25,7 @@ class CommunityListScreen extends StatelessWidget {
       ),
       body: BlocProvider(
         create: (_) => CommunityBloc(
-          baseUrl: 'http://localhost:8000', // TODO: Get from config
+          baseUrl: Env.apiBaseUrl,
           token: '', // TODO: Get token from auth state
         )..add(CommunityFetchStarted()),
         child: BlocBuilder<CommunityBloc, CommunityState>(
@@ -40,7 +40,7 @@ class CommunityListScreen extends StatelessWidget {
               final communities = state.communities;
               if (communities.isEmpty) {
                 return Center(
-                  child: Text(AppLocalizations.of(context)!.noCommunitiesFound),
+                  child: Text('No communities found'),
                 );
               }
               return ListView.builder(
@@ -51,7 +51,10 @@ class CommunityListScreen extends StatelessWidget {
                 },
               );
             } else {
-              return const Container();
+              // Container has no const constructor — `const Container()` is a
+              // compile error. SizedBox.shrink() is the const-friendly empty
+              // widget and allocates nothing.
+              return const SizedBox.shrink();
             }
           },
         ),

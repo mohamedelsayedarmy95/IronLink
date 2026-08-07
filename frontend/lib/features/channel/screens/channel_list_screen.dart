@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../../../core/env.dart';
 import '../bloc/channel_bloc.dart';
 import '../widgets/channel_card.dart';
 
@@ -11,11 +11,11 @@ class ChannelListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.channels),
+        title: Text('Channels'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: AppLocalizations.of(context)!.createChannel,
+            tooltip: 'Create Channel',
             onPressed: () {
               // Navigate to create channel screen
               // TODO: Implement create channel screen
@@ -25,7 +25,7 @@ class ChannelListScreen extends StatelessWidget {
       ),
       body: BlocProvider(
         create: (_) => ChannelBloc(
-          baseUrl: 'http://localhost:8000', // TODO: Get from config
+          baseUrl: Env.apiBaseUrl,
           token: '', // TODO: Get token from auth state
         )..add(ChannelFetchStarted()),
         child: BlocBuilder<ChannelBloc, ChannelState>(
@@ -40,7 +40,7 @@ class ChannelListScreen extends StatelessWidget {
               final channels = state.channels;
               if (channels.isEmpty) {
                 return Center(
-                  child: Text(AppLocalizations.of(context)!.noChannelsFound),
+                  child: Text('No channels found'),
                 );
               }
               return ListView.builder(
@@ -51,7 +51,10 @@ class ChannelListScreen extends StatelessWidget {
                 },
               );
             } else {
-              return const Container();
+              // Container has no const constructor — `const Container()` is a
+              // compile error. SizedBox.shrink() is the const-friendly empty
+              // widget and allocates nothing.
+              return const SizedBox.shrink();
             }
           },
         ),
