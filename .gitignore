@@ -4,6 +4,10 @@
 *.key
 *.crt
 ssl/
+google-services.json
+GoogleService-Info.plist
+secrets/
+firebase-service-account*.json
 
 # Python
 __pycache__/

@@ -118,23 +118,23 @@ class _BroadcastBannerHostState extends State<BroadcastBannerHost> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: MilColors.navySurface,
+        backgroundColor: IronColors.navySurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: MilColors.gold),
+          side: const BorderSide(color: IronColors.gold),
         ),
         title: Row(
           children: [
-            const Icon(Icons.campaign, color: MilColors.gold),
+            const Icon(Icons.campaign, color: IronColors.gold),
             const SizedBox(width: 10),
             Expanded(
               child: Text(item.title,
-                  style: const TextStyle(color: MilColors.gold)),
+                  style: const TextStyle(color: IronColors.gold)),
             ),
           ],
         ),
         content: Text(item.body,
-            style: const TextStyle(color: MilColors.textHi)),
+            style: const TextStyle(color: IronColors.textHi)),
         actions: [
           TextButton(
             onPressed: () {
@@ -142,7 +142,7 @@ class _BroadcastBannerHostState extends State<BroadcastBannerHost> {
               _ack(item);
             },
             child: const Text('علمت',
-                style: TextStyle(color: MilColors.gold)),
+                style: TextStyle(color: IronColors.gold)),
           ),
         ],
       ),
@@ -159,7 +159,7 @@ class _UrgentBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MilColors.errorRed,
+      color: IronColors.errorRed,
       child: InkWell(
         onTap: onTap,
         child: Container(
@@ -168,12 +168,12 @@ class _UrgentBanner extends StatelessWidget {
               const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: const BoxDecoration(
             border: BorderDirectional(
-              bottom: BorderSide(color: MilColors.gold, width: 1.5),
+              bottom: BorderSide(color: IronColors.gold, width: 1.5),
             ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.campaign, color: MilColors.gold, size: 20),
+              const Icon(Icons.campaign, color: IronColors.gold, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -183,19 +183,19 @@ class _UrgentBanner extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: MilColors.textHi,
+                            color: IronColors.textHi,
                             fontWeight: FontWeight.w800,
                             fontSize: 14)),
                     Text(item.body,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: MilColors.textHi, fontSize: 12)),
+                            color: IronColors.textHi, fontSize: 12)),
                   ],
                 ),
               ),
               const Icon(Icons.touch_app_outlined,
-                  color: MilColors.gold, size: 18),
+                  color: IronColors.gold, size: 18),
             ],
           ),
         ),

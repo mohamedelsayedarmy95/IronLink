@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/media_service.dart';
@@ -39,7 +40,7 @@ Future<AttachmentReady?> showAttachFlow(
           SnackBar(
             content: Text(
                 'Ключевое слово "$keyword" найдено в загруженном файле $fileId'),
-            backgroundColor: MilColors.navySurface,
+            backgroundColor: IronColors.navySurface,
           ),
         );
       }
@@ -49,7 +50,7 @@ Future<AttachmentReady?> showAttachFlow(
   try {
     final source = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MilColors.navySurface,
+      backgroundColor: IronColors.navySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -83,9 +84,9 @@ Future<AttachmentReady?> showAttachFlow(
 
     if (source == 'pdf') {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: MilColors.navySurface,
+        backgroundColor: IronColors.navySurface,
         content: Text('Выбор PDF будет реализован в следующем обновлении',
-            style: TextStyle(color: MilColors.textHi)),
+            style: TextStyle(color: IronColors.textHi)),
       ));
       return null;
     }
@@ -134,13 +135,13 @@ class _AttachOption extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 26,
-              backgroundColor: MilColors.navyDeep,
-              child: Icon(icon, color: MilColors.gold),
+              backgroundColor: IronColors.navyDeep,
+              child: Icon(icon, color: IronColors.gold),
             ),
             const SizedBox(height: 8),
             Text(label,
                 style:
-                    const TextStyle(color: MilColors.textLo, fontSize: 12)),
+                    const TextStyle(color: IronColors.textLo, fontSize: 12)),
           ],
         ),
       ),
@@ -198,7 +199,7 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: MilColors.textHi),
+          icon: const Icon(Icons.close, color: IronColors.textHi),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -212,8 +213,8 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
           if (_progress != null)
             LinearProgressIndicator(
               value: _progress,
-              color: MilColors.gold,
-              backgroundColor: MilColors.navySurface,
+              color: IronColors.gold,
+              backgroundColor: IronColors.navySurface,
             ),
           SafeArea(
             child: Padding(
@@ -231,16 +232,16 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
                   const SizedBox(width: 10),
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: MilColors.gold,
+                    backgroundColor: IronColors.gold,
                     child: _progress != null
                         ? const Padding(
                             padding: EdgeInsets.all(10),
                             child: CircularProgressIndicator(
-                                color: MilColors.navyDeep, strokeWidth: 2),
+                                color: IronColors.navyDeep, strokeWidth: 2),
                           )
                         : IconButton(
                             icon: const Icon(Icons.send,
-                                color: MilColors.navyDeep),
+                                color: IronColors.navyDeep),
                             onPressed: _send,
                           ),
                   ),

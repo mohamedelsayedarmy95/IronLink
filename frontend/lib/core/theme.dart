@@ -25,6 +25,19 @@ class IronColors {
   static const Color warning = Color(0xFFFAB005);
   static const Color error = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
+
+  // Legacy fixed dark/gold palette aliases, used throughout the existing
+  // screens which predate the light/dark theme split above.
+  static const Color navyDeep = darkPrimary;
+  static const Color navySurface = darkSecondary;
+  static const Color navyBorder = darkTertiary;
+  static const Color gold = darkAccent;
+  static const Color goldBright = Color(0xFFE9CB6B);
+  static const Color goldDim = Color(0xFF8A7638);
+  static const Color textHi = darkTextPrimary;
+  static const Color textLo = darkTextTertiary;
+  static const Color errorRed = error;
+  static const Color white = Colors.white;
 }
 
 class IronTypography {
@@ -199,7 +212,7 @@ ThemeData ironLinkLightTheme() {
       labelSmall: IronTypography.labelSmall(color: IronColors.lightTextPrimary),
     ),
     // Component themes
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: IronColors.lightSecondary,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -267,7 +280,7 @@ ThemeData ironLinkLightTheme() {
       ),
     ),
     dividerTheme: DividerThemeData(
-      color: IronColors.lightTertiary.withOpacity0.2,
+      color: IronColors.lightTertiary.withOpacity(0.2),
       thickness: 1,
       space: IronSpacing.md,
     ),
@@ -310,7 +323,7 @@ ThemeData ironLinkDarkTheme() {
       labelSmall: IronTypography.labelSmall(color: IronColors.darkTextPrimary),
     ),
     // Component themes
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: IronColors.darkSecondary,
       elevation: 0,
       shape: RoundedRectangleBorder(

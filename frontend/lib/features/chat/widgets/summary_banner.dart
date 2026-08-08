@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../../core/theme.dart';
 
 class SummaryBanner extends StatelessWidget {
@@ -21,18 +20,18 @@ class SummaryBanner extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: MilColors.navySurface.withOpacity(0.8),
+      color: IronColors.navySurface.withOpacity(0.8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.summary, color: MilColors.gold, size: 20),
+              const Icon(Icons.summarize, color: IronColors.gold, size: 20),
               const SizedBox(width: 8),
               Text(
-                AppLocalizations.of(context)!.aiSummary,
+                'AI Summary',
                 style: const TextStyle(
-                  color: MilColors.gold,
+                  color: IronColors.gold,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -42,12 +41,12 @@ class SummaryBanner extends StatelessWidget {
           isLoading
               ? const SizedBox(
                   height: 20,
-                  child: CircularProgressIndicator(color: MilColors.gold, strokeWidth: 2),
+                  child: CircularProgressIndicator(color: IronColors.gold, strokeWidth: 2),
                 )
               : Text(
                   summary,
                   style: const TextStyle(
-                    color: MilColors.textHi,
+                    color: IronColors.textHi,
                     fontSize: 14,
                   ),
                 ),
@@ -58,8 +57,8 @@ class SummaryBanner extends StatelessWidget {
               child: TextButton(
                 onPressed: onRefresh,
                 child: Text(
-                  AppLocalizations.of(context)!.refresh,
-                  style: TextStyle(color: MilColors.gold, fontSize: 12),
+                  'Refresh',
+                  style: TextStyle(color: IronColors.gold, fontSize: 12),
                 ),
               ),
             ),

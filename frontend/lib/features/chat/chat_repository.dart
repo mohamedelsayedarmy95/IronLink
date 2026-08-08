@@ -11,6 +11,7 @@ class ChatMessage {
     required this.content,
     required this.createdAt,
     required this.isMine,
+    this.kind = 'text',
     this.tick = MessageTick.sent,
     this.deleted = false,
     this.pending = false,
@@ -21,6 +22,7 @@ class ChatMessage {
   String? content;
   final DateTime createdAt;
   final bool isMine;
+  String kind; // 'text' | 'voice' | 'image' | ...
   MessageTick tick;
   bool deleted;
   bool pending; // optimistic — awaiting server ack
@@ -34,6 +36,7 @@ class ChatMessage {
       content: json['content_ciphertext'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       isMine: json['sender_id'] == myId,
+      kind: json['kind'] as String? ?? 'text',
       tick: switch (status) {
         'read' => MessageTick.read,
         'delivered' => MessageTick.delivered,

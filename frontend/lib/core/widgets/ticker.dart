@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/notification/ticker_bloc.dart';
 import '../../features/notification/ticker_event.dart';
 import '../../features/notification/ticker_state.dart';
 import '../theme.dart';
+import 'glass_card.dart';
 
 /// A premium news ticker with glassmorphism background that displays OCR alerts.
 /// It shows a horizontally scrolling marquee of alerts.
@@ -66,7 +69,7 @@ class _NewsTickerState extends State<NewsTicker>
         }
         return GlassCard.dark(
           child: Padding(
-            padding: IronSpacing.symmetric(horizontal: IronSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: IronSpacing.lg),
             child: SizedBox(
               height: 40.0, // Fixed height for the ticker
               child: ListView.builder(
@@ -75,16 +78,15 @@ class _NewsTickerState extends State<NewsTicker>
                 itemCount: alerts.length * 2, // Duplicate to create seamless loop
                 itemBuilder: (context, index) {
                   final alert = alerts[index % alerts.length];
-                  final keyword = alert['matched_keyword'] ?? '';
+                  final keyword = alert['keyword'] ?? '';
                   final fileName = alert['file_name'] ?? 'unknown file';
                   final text =
-                      '��🔔 $keyword found in $fileName   '; // Extra spacing for gap
+                      '🔔 $keyword found in $fileName   '; // Extra spacing for gap
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: Text(
                       text,
-                      style: IronTypography.bodyLarge(context: context)
-                          .copyWith(color: IronColors.textPrimary(context)),
+                      style: IronTypography.bodyLarge(color: IronColors.textHi),
                     ),
                   );
                 },

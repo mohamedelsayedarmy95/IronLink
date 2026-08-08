@@ -50,7 +50,7 @@ class MilAcademyApp extends StatelessWidget {
             navigatorKey: PushService.navigatorKey,
             title: 'IronLink',
             debugShowCheckedModeBanner: false,
-            theme: milTheme(),
+            theme: ironLinkDarkTheme(),
             // RTL-first: Arabic is the primary language
             locale: const Locale('ar'),
             builder: (context, child) => Directionality(

@@ -12,11 +12,23 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1800),
   )..forward();
+
+  // Slow, endless breathing glow behind the logo — the "professional hover"
+  // effect the badge sits in once the intro animation settles.
+  late final AnimationController _pulseController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _pulse = CurvedAnimation(
+    parent: _pulseController,
+    curve: Curves.easeInOut,
+  );
 
   late final Animation<double> _logoFade = CurvedAnimation(
     parent: _controller,
@@ -36,6 +48,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -54,25 +67,33 @@ class _SplashScreenState extends State<SplashScreen>
                   opacity: _logoFade,
                   child: Column(
                     children: [
-                      // Gold laurel shield mark
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: MilColors.gold, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: MilColors.gold.withValues(alpha: 0.25),
-                              blurRadius: 40,
-                              spreadRadius: 4,
-                            ),
-                          ],
+                      // Brand mark — breathing glow, matches the app icon
+                      AnimatedBuilder(
+                        animation: _pulse,
+                        builder: (context, child) => Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: IronColors.gold
+                                    .withValues(alpha: 0.18 + 0.14 * _pulse.value),
+                                blurRadius: 36 + 20 * _pulse.value,
+                                spreadRadius: 2 + 4 * _pulse.value,
+                              ),
+                            ],
+                          ),
+                          child: Transform.scale(
+                            scale: 1.0 + 0.03 * _pulse.value,
+                            child: child,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.shield_outlined,
-                          size: 56,
-                          color: MilColors.gold,
+                        child: Image.asset(
+                          'assets/icons/logo_mark.png',
+                          width: 140,
+                          height: 140,
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: 28),
@@ -81,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen>
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: MilColors.gold,
+                          color: IronColors.gold,
                           letterSpacing: 2,
                         ),
                       ),
@@ -90,7 +111,7 @@ class _SplashScreenState extends State<SplashScreen>
                         'منظومة التراسل المؤمَّنة',
                         style: TextStyle(
                           fontSize: 16,
-                          color: MilColors.textLo,
+                          color: IronColors.textLo,
                           letterSpacing: 1,
                         ),
                       ),

@@ -1,9 +1,8 @@
-import 'dart:typed_data';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
-import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 import '../../../core/theme.dart';
 
 class VoiceRecorder extends StatefulWidget {
@@ -21,40 +20,30 @@ class VoiceRecorder extends StatefulWidget {
 }
 
 class _VoiceRecorderState extends State<VoiceRecorder> {
-  final Record _audioRecorder = Record();
-  final FlutterFFmpeg _flutterFFmpeg = FlutterFFmpeg();
+  final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
   double _duration = 0;
   Timer? _timer;
   List<double> _waveform = [];
   String? _recordingPath;
 
-  @override
-  void initState() {
-    super.initState();
-    _initRecorder();
-  }
-
-  Future<void> _initRecorder() async {
-    if (await _audioRecorder.hasPermission()) {
-      // Permission granted
-    } else {
-      // Request permission - in a real app, we'd handle this properly
-      await _audioRecorder.requestPermission();
-    }
-  }
-
   void _startRecording() async {
     try {
+      if (!await _audioRecorder.hasPermission()) return;
       final path = await _getTempPath(suffix: '.aac');
       _recordingPath = path;
-      await _audioRecorder.record(
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 16000,
+          sampleRate: 16000,
+        ),
         path: path,
-        encoder: AudioEncoder.AAC,
-        bitRate: 16000,
-        samplingRate: 16000,
       );
-      setState(() => _isRecording = true);
+      setState(() {
+        _isRecording = true;
+        _duration = 0;
+      });
       _startDurationTimer();
       _startWaveformUpdate();
     } catch (e) {
@@ -67,36 +56,24 @@ class _VoiceRecorderState extends State<VoiceRecorder> {
 
     _timer?.cancel();
     await _audioRecorder.stop();
+    final duration = _duration;
     setState(() => _isRecording = false);
 
     if (_recordingPath == null) return;
 
     final file = File(_recordingPath!);
-    final duration = await _audioRecorder.getDuration(_recordingPath!);
 
-    if (duration.inSeconds < 1) {
+    if (duration < 1) {
       // Too short -> cancel
-      await file.delete();
+      if (await file.exists()) await file.delete();
       widget.onCancel();
       return;
     }
 
-    // Compress audio to OPUS using flutter_ffmpeg
-    final compressedPath = await _getTempPath(suffix: '.opus');
-    final rc = await _flutterFFmpeg.execute(
-        '-i ${_recordingPath!} -c:a libopus -b:a 16k -vbr off $compressedPath');
-
-    if (rc == 0) {
-      // Upload compressed file
-      await _uploadVoiceMessage(File(compressedPath), duration.inSeconds.toDouble());
-    } else {
-      // Fallback: upload raw AAC
-      await _uploadVoiceMessage(file, duration.inSeconds.toDouble());
-    }
+    await _uploadVoiceMessage(file, duration);
 
     // Cleanup
-    await file.delete();
-    if (File(compressedPath).existsSync()) await File(compressedPath).delete();
+    if (await file.exists()) await file.delete();
 
     setState(() {
       _recordingPath = null;
@@ -115,7 +92,7 @@ class _VoiceRecorderState extends State<VoiceRecorder> {
     // The actual upload would happen via the media API
 
     // Simulate media key (in reality, this comes from the server after upload)
-    final mediaKey = 'voice_${DateTime.now().millisecondsSinceEpoch}.opus';
+    final mediaKey = 'voice_${DateTime.now().millisecondsSinceEpoch}.aac';
 
     // Generate mock waveform data (in reality, we'd extract this from the audio)
     final waveform = List.generate(20, (_) => 0.5 + 0.5 * (_.isEven ? 1 : -1));
@@ -160,17 +137,17 @@ class _VoiceRecorderState extends State<VoiceRecorder> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             decoration: BoxDecoration(
-              color: MilColors.errorRed,
+              color: IronColors.errorRed,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.mic, color: MilColors.white),
+                Icon(Icons.mic, color: IronColors.white),
                 const SizedBox(width: 8),
                 Text(
                   '${_duration.toStringAsFixed(0)}s',
-                  style: const TextStyle(color: MilColors.white, fontSize: 16),
+                  style: const TextStyle(color: IronColors.white, fontSize: 16),
                 ),
               ],
             ),
@@ -185,21 +162,29 @@ class _VoiceRecorderState extends State<VoiceRecorder> {
               height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: MilColors.gold,
+                color: IronColors.gold,
               ),
-              child: const Icon(Icons.mic, color: MilColors.navyDeep),
+              child: const Icon(Icons.mic, color: IronColors.navyDeep),
             ),
           ),
         if (_isRecording)
           SizedBox(
             height: 100,
-            child: AudioWaveforms(
-              size: Size(double.infinity, 80),
-              waveformData: _waveform,
-              waveColor: MilColors.gold,
-              waveWidth: 4,
-              showLerpLine: false,
-              enableCache: true,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (final amplitude in _waveform)
+                  Container(
+                    width: 4,
+                    height: 8 + amplitude.clamp(0.0, 1.0) * 72,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      color: IronColors.gold,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+              ],
             ),
           ),
       ],

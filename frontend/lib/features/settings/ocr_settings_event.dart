@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+part of 'ocr_settings_bloc.dart';
 
 abstract class OcrSettingsEvent extends Equatable {
   const OcrSettingsEvent();

@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _tabs = [
     (icon: Icons.chat_bubble_outline, label: 'المحادثات'),
-    (icon: Icons.groups_outlain, label: 'المجموعات'),
+    (icon: Icons.groups_outlined, label: 'المجموعات'),
     (icon: Icons.campaign_outlined, label: 'التعميمات'),
     (icon: Icons.settings_outlined, label: 'الإعدادات'),
   ];
@@ -47,19 +47,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: MilColors.navyDeep,
+        backgroundColor: IronColors.navyDeep,
         elevation: 0,
         title: Text(
           _tabs[_tab].label,
           style: const TextStyle(
-              color: MilColors.gold, fontWeight: FontWeight.w700),
+              color: IronColors.gold, fontWeight: FontWeight.w700),
         ),
         actions: [
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 16),
             child: CircleAvatar(
               radius: 18,
-              backgroundColor: MilColors.navySurface,
+              backgroundColor: IronColors.navySurface,
               backgroundImage: widget.user.avatarUrl != null
                   ? NetworkImage(widget.user.avatarUrl!)
                   : null,
@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? Text(
                       widget.user.fullName.characters.first,
                       style: const TextStyle(
-                          color: MilColors.gold,
+                          color: IronColors.gold,
                           fontWeight: FontWeight.w700),
                     )
                   : null,
@@ -92,36 +92,37 @@ class _HomeScreenState extends State<HomeScreen> {
                     myId: widget.user.id,
                   ),
                 1 => GroupsScreen(repo: context.read<GroupsRepository>()),
-                2 => const Center(
+                2 => Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(_tabs[_tab].icon,
-                              size: 64, color: MilColors.goldDim),
+                              size: 64, color: IronColors.goldDim),
                           const SizedBox(height: 16),
                           const Text(
                             'قريباً',
-                            style: TextStyle(color: MilColors.textLo),
+                            style: TextStyle(color: IronColors.textLo),
                           ),
                         ],
                       ),
                     ),
                 3 => const OcrSettingsPage(),
+                _ => const SizedBox.shrink(),
               },
             ),
           ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: MilColors.navySurface,
-        indicatorColor: MilColors.gold.withValues(alpha: 0.15),
+        backgroundColor: IronColors.navySurface,
+        indicatorColor: IronColors.gold.withValues(alpha: 0.15),
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: [
           for (final t in _tabs)
             NavigationDestination(
-              icon: Icon(t.icon, color: MilColors.textLo),
-              selectedIcon: Icon(t.icon, color: MilColors.gold),
+              icon: Icon(t.icon, color: IronColors.textLo),
+              selectedIcon: Icon(t.icon, color: IronColors.gold),
               label: t.label,
             ),
         ],

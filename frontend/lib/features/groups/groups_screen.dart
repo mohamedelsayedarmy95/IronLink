@@ -19,8 +19,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      color: MilColors.gold,
-      backgroundColor: MilColors.navySurface,
+      color: IronColors.gold,
+      backgroundColor: IronColors.navySurface,
       onRefresh: () async {
         setState(() => _future = widget.repo.myGroups());
         await _future;
@@ -30,18 +30,18 @@ class _GroupsScreenState extends State<GroupsScreen> {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(
-                child: CircularProgressIndicator(color: MilColors.gold));
+                child: CircularProgressIndicator(color: IronColors.gold));
           }
           final groups = snap.data ?? [];
           if (groups.isEmpty) {
             return ListView(children: const [
               SizedBox(height: 160),
               Icon(Icons.groups_outlined,
-                  size: 64, color: MilColors.goldDim),
+                  size: 64, color: IronColors.goldDim),
               SizedBox(height: 16),
               Center(
                 child: Text('لست عضواً في أي مجموعة بعد',
-                    style: TextStyle(color: MilColors.textLo)),
+                    style: TextStyle(color: IronColors.textLo)),
               ),
             ]);
           }
@@ -62,7 +62,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
   void _showMembers(BuildContext context, GroupInfo group) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: MilColors.navySurface,
+      backgroundColor: IronColors.navySurface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -82,7 +82,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   child: Text(
                     '${group.name} — ${group.memberCount} عضو',
                     style: const TextStyle(
-                        color: MilColors.gold,
+                        color: IronColors.gold,
                         fontSize: 17,
                         fontWeight: FontWeight.w700),
                   ),
@@ -91,7 +91,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   child: snap.connectionState != ConnectionState.done
                       ? const Center(
                           child: CircularProgressIndicator(
-                              color: MilColors.gold))
+                              color: IronColors.gold))
                       : ListView.builder(
                           controller: scrollController,
                           itemCount: members.length,
@@ -117,7 +117,7 @@ class _GroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MilColors.navySurface,
+      color: IronColors.navySurface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -126,18 +126,18 @@ class _GroupCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: MilColors.navyBorder),
+            border: Border.all(color: IronColors.navyBorder),
           ),
           child: Row(
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: MilColors.navyDeep,
+                backgroundColor: IronColors.navyDeep,
                 child: Icon(
                   group.isAnnouncement
                       ? Icons.campaign_outlined
                       : Icons.groups_outlined,
-                  color: MilColors.gold,
+                  color: IronColors.gold,
                 ),
               ),
               const SizedBox(width: 14),
@@ -158,7 +158,7 @@ class _GroupCard extends StatelessWidget {
                             group.myRole == 'owner') ...[
                           const SizedBox(width: 6),
                           const Icon(Icons.star,
-                              size: 15, color: MilColors.gold),
+                              size: 15, color: IronColors.gold),
                         ],
                       ],
                     ),
@@ -168,12 +168,12 @@ class _GroupCard extends StatelessWidget {
                           ? 'قناة إعلانات — للقراءة فقط'
                           : '${group.memberCount} عضو',
                       style: const TextStyle(
-                          color: MilColors.textLo, fontSize: 12),
+                          color: IronColors.textLo, fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_left, color: MilColors.textLo),
+              const Icon(Icons.chevron_left, color: IronColors.textLo),
             ],
           ),
         ),
@@ -191,11 +191,11 @@ class _MemberTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: MilColors.navyDeep,
+        backgroundColor: IronColors.navyDeep,
         child: Text(
           member.fullName.characters.first,
           style: const TextStyle(
-              color: MilColors.gold, fontWeight: FontWeight.w700),
+              color: IronColors.gold, fontWeight: FontWeight.w700),
         ),
       ),
       title: Row(
@@ -203,15 +203,15 @@ class _MemberTile extends StatelessWidget {
           Flexible(
             child: Text(member.fullName,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: MilColors.textHi)),
+                style: const TextStyle(color: IronColors.textHi)),
           ),
           const SizedBox(width: 6),
           // Rank icon: gold star = admin/owner, eye = observer
           if (member.isAdmin)
-            const Icon(Icons.star, size: 15, color: MilColors.gold)
+            const Icon(Icons.star, size: 15, color: IronColors.gold)
           else if (member.isObserver)
             const Icon(Icons.visibility_outlined,
-                size: 15, color: MilColors.textLo),
+                size: 15, color: IronColors.textLo),
         ],
       ),
       subtitle: Text(
@@ -222,7 +222,7 @@ class _MemberTile extends StatelessWidget {
           'observer' => 'مراقب — قراءة فقط',
           _ => 'عضو',
         },
-        style: const TextStyle(color: MilColors.textLo, fontSize: 12),
+        style: const TextStyle(color: IronColors.textLo, fontSize: 12),
       ),
     );
   }

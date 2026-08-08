@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api_client.dart';
-import 'env.dart';
 
 /// FCM wiring: token registration + notification-tap routing.
 ///
@@ -29,14 +28,8 @@ class PushService {
 
   Future<void> init() async {
     try {
-      await Firebase.initializeApp(
-        options: FirebaseOptions(
-          apiKey: Env.firebaseApiKey,
-          appId: Env.firebaseAppId,
-          messagingSenderId: Env.firebaseMessagingSenderId,
-          projectId: Env.firebaseProjectId,
-        ),
-      );
+      // Reads android/app/google-services.json natively — no manual options needed.
+      await Firebase.initializeApp();
     } catch (_) {
       // No Firebase config yet (local dev) — push silently disabled.
       return;

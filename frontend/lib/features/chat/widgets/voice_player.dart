@@ -1,7 +1,9 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/theme.dart';
 import '../../../core/api_client.dart';
 import 'package:dio/dio.dart';
@@ -52,14 +54,18 @@ class _VoicePlayerState extends State<VoicePlayer> {
       // Get media URL from server
       final api = ApiClient();
       final response = await api.dio.get(
-        '/media/$mediaKey',
+        '/media/${widget.mediaKey}',
         options: Options(
           headers: {'Authorization': 'Bearer ${await api.accessToken}'},
           responseType: ResponseType.bytes,
         ),
       );
       final bytes = response.data as Uint8List;
-      await _audioPlayer.setAudioData(bytes);
+      final dir = await getTemporaryDirectory();
+      final tempFile = File(
+          '${dir.path}/voice_playback_${DateTime.now().millisecondsSinceEpoch}.tmp');
+      await tempFile.writeAsBytes(bytes);
+      await _audioPlayer.setFilePath(tempFile.path);
       _audioPlayer.setSpeed(_speed);
       await _audioPlayer.play();
       setState(() {
@@ -76,7 +82,7 @@ class _VoicePlayerState extends State<VoicePlayer> {
     if (_audioPlayer.playing) {
       _audioPlayer.pause();
     } else {
-      _audioPlayer.resume();
+      _audioPlayer.play();
     }
     setState(() => _isPlaying = !_isPlaying);
   }
@@ -100,7 +106,7 @@ class _VoicePlayerState extends State<VoicePlayer> {
       return const SizedBox(
         height: 80,
         child: Center(
-          child: CircularProgressIndicator(color: MilColors.gold),
+          child: CircularProgressIndicator(color: IronColors.gold),
         ),
       );
     }
@@ -108,7 +114,7 @@ class _VoicePlayerState extends State<VoicePlayer> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: MilColors.navySurface,
+        color: IronColors.navySurface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -117,25 +123,31 @@ class _VoicePlayerState extends State<VoicePlayer> {
           // Waveform with progress indicator
           SizedBox(
             height: 60,
-            child: AudioWaveforms(
-              size: Size(double.infinity, 50),
-              waveformData: widget.waveform,
-              waveColor: MilColors.gold,
-              waveWidth: 3,
-              showLerpLine: false,
-              enableCache: true,
-              // We could add a progress indicator here by coloring part of the waveform
-              // based on current position, but for simplicity we'll just show the waveform
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (final amplitude in widget.waveform)
+                  Container(
+                    width: 3,
+                    height: 6 + amplitude.clamp(0.0, 1.0) * 44,
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    decoration: BoxDecoration(
+                      color: IronColors.gold,
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisSize.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
                 icon: Icon(
                   _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                  color: MilColors.gold,
+                  color: IronColors.gold,
                 ),
                 onPressed: _togglePlayPause,
                 iconSize: 32,
@@ -144,9 +156,9 @@ class _VoicePlayerState extends State<VoicePlayer> {
               Text(
                 '${_position.inMinutes.toString().padLeft(2, '0')}:'
                     '${(_position.inSeconds % 60).toString().padLeft(2, '0')} / '
-                    '${widget.duration.inMinutes.toString().padLeft(2, '0')}:'
-                    '${(widget.duration.inSeconds % 60).toString().padLeft(2, '0')}',
-                style: const TextStyle(color: MilColors.textHi),
+                    '${(widget.duration ~/ 60).toString().padLeft(2, '0')}:'
+                    '${(widget.duration.toInt() % 60).toString().padLeft(2, '0')}',
+                style: const TextStyle(color: IronColors.textHi),
               ),
               const SizedBox(width: 16),
               PopupMenuButton<double>(
@@ -157,7 +169,7 @@ class _VoicePlayerState extends State<VoicePlayer> {
                   const PopupMenuItem(value: 1.5, child: Text('1.5x')),
                   const PopupMenuItem(value: 2.0, child: Text('2.0x')),
                 ],
-                child: Icon(Icons.speed, color: MilColors.gold),
+                child: Icon(Icons.speed, color: IronColors.gold),
               ),
             ],
           ),

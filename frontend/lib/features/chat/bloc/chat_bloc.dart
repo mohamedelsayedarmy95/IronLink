@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
-import '../../core/crypto/signal.dart';
+import '../../../core/crypto/signal.dart';
 
 // ── Events ─────────────────────────────────────────────────────────────────────
 
@@ -246,7 +246,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     required WsService ws,
     required this.myId,
     required this.peerId,
-    this.isSecret = false,
+    bool isSecret = false,
     required String baseUrl,
     required String authToken,
   })  : _repo = repo,
@@ -390,6 +390,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       content: contentToSend,
       createdAt: DateTime.now(),
       isMine: true,
+      kind: e.kind,
       pending: true,
     );
     _ws.sendMedia(
@@ -429,7 +430,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     emit(state.copyWith(messages: updated));
   }
 
-  void _onFrame(_FrameReceived e, Emitter<ChatRoomState> emit) {
+  Future<void> _onFrame(_FrameReceived e, Emitter<ChatRoomState> emit) async {
     final f = e.frame;
     switch (f['type']) {
       case 'ack':
@@ -443,6 +444,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
                 content: m.content,
                 createdAt: DateTime.parse(f['created_at'] as String),
                 isMine: true,
+                kind: m.kind,
               )
             else
               m
@@ -451,7 +453,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
 
       case 'message':
         if (f['from'] != peerId) return; // other conversation
-        String content = f['content'] as String?;
+        String? content = f['content'] as String?;
 
         if (_isSecret) {
           try {
@@ -473,6 +475,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
           content: content,
           createdAt: DateTime.parse(f['created_at'] as String),
           isMine: false,
+          kind: f['kind'] as String? ?? 'text',
         );
         emit(state.copyWith(
           messages: [...state.messages, msg],
@@ -542,7 +545,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     try {
       // Fetch recent messages from the chat
       final messages = await _repo.history(peerId, myId: myId, limit: 100);
-      final messageTexts = messages.where((m) => m.content.isNotEmpty).map((m) => m.content).toList();
+      final messageTexts = messages
+          .where((m) => (m.content ?? '').isNotEmpty)
+          .map((m) => m.content!)
+          .toList();
       if (messageTexts.isEmpty) {
         emit(state.copyWith(summaryLoading: false, summary: ''));
         return;

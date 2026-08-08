@@ -101,7 +101,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
               _cancelZone ? 'اترك للإلغاء' : '← اسحب للإلغاء',
               style: TextStyle(
                 fontSize: 12,
-                color: _cancelZone ? MilColors.errorRed : MilColors.textLo,
+                color: _cancelZone ? IronColors.errorRed : IronColors.textLo,
               ),
             ),
             const SizedBox(width: 8),
@@ -115,8 +115,8 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: (_cancelZone
-                                ? MilColors.errorRed
-                                : MilColors.gold)
+                                ? IronColors.errorRed
+                                : IronColors.gold)
                             .withValues(alpha: 0.3 + 0.5 * _pulse.value),
                         width: 3,
                       ),
@@ -125,13 +125,13 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
               child: CircleAvatar(
                 radius: _recording ? 26 : 20,
                 backgroundColor: _recording
-                    ? (_cancelZone ? MilColors.errorRed : MilColors.gold)
+                    ? (_cancelZone ? IronColors.errorRed : IronColors.gold)
                     : Colors.transparent,
                 child: Icon(
                   _recording ? Icons.mic : Icons.mic_none,
                   color: _recording
-                      ? MilColors.navyDeep
-                      : MilColors.gold,
+                      ? IronColors.navyDeep
+                      : IronColors.gold,
                 ),
               ),
             ),

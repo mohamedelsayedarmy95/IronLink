@@ -23,7 +23,7 @@ class AuthScreen extends StatelessWidget {
             ..showSnackBar(SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.gpp_bad_outlined, color: MilColors.textHi),
+                  const Icon(Icons.gpp_bad_outlined, color: IronColors.textHi),
                   const SizedBox(width: 12),
                   Expanded(child: Text(state.errorMessage!)),
                 ],
@@ -48,7 +48,7 @@ class AuthScreen extends StatelessWidget {
                 children: [
                   const SizedBox(height: 24),
                   const Icon(Icons.shield_outlined,
-                      size: 40, color: MilColors.gold),
+                      size: 40, color: IronColors.gold),
                   const SizedBox(height: 16),
                   const Text(
                     'تسجيل الدخول الآمن',
@@ -60,7 +60,7 @@ class AuthScreen extends StatelessWidget {
                   Text(
                     _subtitleFor(state.step),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: MilColors.textLo),
+                    style: const TextStyle(color: IronColors.textLo),
                   ),
                   const SizedBox(height: 32),
 
@@ -92,7 +92,7 @@ class AuthScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     const Center(
                       child: CircularProgressIndicator(
-                          color: MilColors.gold),
+                          color: IronColors.gold),
                     ),
                   ],
                 ],
@@ -150,18 +150,18 @@ class _StepContainer extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: MilColors.navySurface,
+                      color: IronColors.navySurface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: MilColors.navyBorder),
+                      border: Border.all(color: IronColors.navyBorder),
                     ),
                     child: Row(
                       children: [
                         const Icon(Icons.check_circle,
-                            color: MilColors.success, size: 20),
+                            color: IronColors.success, size: 20),
                         const SizedBox(width: 10),
                         Text(doneSummary,
                             style:
-                                const TextStyle(color: MilColors.textLo)),
+                                const TextStyle(color: IronColors.textLo)),
                       ],
                     ),
                   ),
@@ -202,22 +202,22 @@ class _PhoneStepState extends State<_PhoneStep> {
             // Country code — dropdown, +20 default
             Container(
               decoration: BoxDecoration(
-                color: MilColors.navySurface,
+                color: IronColors.navySurface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: MilColors.navyBorder),
+                border: Border.all(color: IronColors.navyBorder),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _countryCode,
-                  dropdownColor: MilColors.navySurface,
+                  dropdownColor: IronColors.navySurface,
                   items: [
                     for (final c in _codes)
                       DropdownMenuItem(
                         value: c,
                         child: Text(c,
                             style:
-                                const TextStyle(color: MilColors.textHi)),
+                                const TextStyle(color: IronColors.textHi)),
                       ),
                   ],
                   onChanged: (v) =>
@@ -336,7 +336,7 @@ class _OtpStepState extends State<_OtpStep> {
                 : 'إعادة الإرسال بعد ${state.resendCountdown} ثانية',
             style: TextStyle(
               color:
-                  state.canResend ? MilColors.gold : MilColors.textLo,
+                  state.canResend ? IronColors.gold : IronColors.textLo,
             ),
           ),
         ),
@@ -359,10 +359,10 @@ class _DigitBox extends StatelessWidget {
       height: 56,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: MilColors.navySurface,
+        color: IronColors.navySurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: focused ? MilColors.gold : MilColors.navyBorder,
+          color: focused ? IronColors.gold : IronColors.navyBorder,
           width: focused ? 1.6 : 1,
         ),
       ),
@@ -371,7 +371,7 @@ class _DigitBox extends StatelessWidget {
         style: const TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
-          color: MilColors.goldBright,
+          color: IronColors.goldBright,
         ),
       ),
     );
@@ -411,14 +411,14 @@ class _MilitaryIdStepState extends State<_MilitaryIdStep> {
           decoration: InputDecoration(
             hintText: 'الرقم العسكري',
             prefixIcon:
-                const Icon(Icons.badge_outlined, color: MilColors.textLo),
+                const Icon(Icons.badge_outlined, color: IronColors.textLo),
             suffixIcon: IconButton(
               tooltip: _obscured ? 'إظهار' : 'إخفاء',
               icon: Icon(
                 _obscured
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
-                color: MilColors.textLo,
+                color: IronColors.textLo,
               ),
               onPressed: () => setState(() => _obscured = !_obscured),
             ),

@@ -33,15 +33,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      color: MilColors.gold,
-      backgroundColor: MilColors.navySurface,
+      color: IronColors.gold,
+      backgroundColor: IronColors.navySurface,
       onRefresh: _refresh,
       child: FutureBuilder<List<Conversation>>(
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(
-                child: CircularProgressIndicator(color: MilColors.gold));
+                child: CircularProgressIndicator(color: IronColors.gold));
           }
           final chats = snap.data ?? [];
           if (chats.isEmpty) {
@@ -50,11 +50,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               children: const [
                 SizedBox(height: 160),
                 Icon(Icons.forum_outlined,
-                    size: 64, color: MilColors.goldDim),
+                    size: 64, color: IronColors.goldDim),
                 SizedBox(height: 16),
                 Center(
                   child: Text('لا توجد محادثات بعد',
-                      style: TextStyle(color: MilColors.textLo)),
+                      style: TextStyle(color: IronColors.textLo)),
                 ),
               ],
             );
@@ -74,6 +74,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     peerId: chats[i].peerId,
                     peerName: chats[i].peerName,
                     peerOnline: chats[i].isOnline,
+                    isSecret: false,
                   ),
                 ),
               ),
@@ -94,7 +95,7 @@ class _ChatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MilColors.navySurface,
+      color: IronColors.navySurface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -103,7 +104,7 @@ class _ChatCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: MilColors.navyBorder),
+            border: Border.all(color: IronColors.navyBorder),
           ),
           child: Row(
             children: [
@@ -112,11 +113,11 @@ class _ChatCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 26,
-                    backgroundColor: MilColors.navyDeep,
+                    backgroundColor: IronColors.navyDeep,
                     child: Text(
                       chat.peerName.characters.first,
                       style: const TextStyle(
-                        color: MilColors.gold,
+                        color: IronColors.gold,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
@@ -130,10 +131,10 @@ class _ChatCard extends StatelessWidget {
                         width: 14,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: MilColors.gold,
+                          color: IronColors.gold,
                           shape: BoxShape.circle,
                           border: Border.all(
-                              color: MilColors.navySurface, width: 2.5),
+                              color: IronColors.navySurface, width: 2.5),
                         ),
                       ),
                     ),
@@ -153,14 +154,14 @@ class _ChatCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: MilColors.textHi,
+                              color: IronColors.textHi,
                             ),
                           ),
                         ),
                         if (chat.isOnline) ...[
                           const SizedBox(width: 6),
                           const Icon(Icons.bolt,
-                              size: 14, color: MilColors.gold),
+                              size: 14, color: IronColors.gold),
                         ],
                       ],
                     ),
@@ -170,7 +171,7 @@ class _ChatCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          color: MilColors.textLo, fontSize: 13),
+                          color: IronColors.textLo, fontSize: 13),
                     ),
                   ],
                 ),
@@ -180,13 +181,13 @@ class _ChatCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: MilColors.gold,
+                    color: IronColors.gold,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${chat.unreadCount}',
                     style: const TextStyle(
-                      color: MilColors.navyDeep,
+                      color: IronColors.navyDeep,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),

@@ -24,5 +24,5 @@ class TickerState extends Equatable {
       );
 
   @override
-  List<Object> get props => [alerts, isLoading, error];
+  List<Object?> get props => [alerts, isLoading, error];
 }

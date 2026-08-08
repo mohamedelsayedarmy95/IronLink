@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -17,6 +18,11 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
     on<RemoveKeyword>(_onRemoveKeyword);
   }
 
+  Future<Options> _auth() async {
+    final token = await _apiClient.accessToken;
+    return Options(headers: {'Authorization': 'Bearer $token'});
+  }
+
   Future<void> _onLoadKeywords(
     LoadKeywords event,
     Emitter<OcrSettingsState> emit,
@@ -25,7 +31,7 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
     try {
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/ocr/keywords',
-        options: await _apiClient._auth(),
+        options: await _auth(),
       );
       final List<dynamic>? keywordsData = response.data?['keywords'];
       final List<String> keywords =
@@ -44,14 +50,14 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
     Emitter<OcrSettingsState> emit,
   ) async {
     // Optimistically update the UI
-    final newKeywords = List<String>.from(state.keywords)..[add] = event.keyword;
+    final newKeywords = List<String>.from(state.keywords)..add(event.keyword);
     emit(state.copyWith(keywords: newKeywords));
 
     try {
       await _apiClient.dio.post<Map<String, dynamic>>(
         '/ocr/keywords',
         data: {'keywords': [event.keyword]},
-        options: await _apiClient._auth(),
+        options: await _auth(),
       );
       // If the server returns an error, we'll revert in the catch block
     } catch (e) {
@@ -75,7 +81,7 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
     try {
       await _apiClient.dio.delete(
         '/ocr/keywords',
-        options: await _apiClient._auth(),
+        options: await _auth(),
         data: {'keyword': event.keyword},
       );
     } catch (e) {

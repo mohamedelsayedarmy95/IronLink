@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ironlink/core/api_client.dart';
-import 'package:ironlink/core/flavor_config.dart';
 import 'package:ironlink/core/theme.dart';
 import 'package:ironlink/features/settings/ocr_settings_bloc.dart';
-import 'package:ironlink/features/settings/ocr_settings_event.dart';
 import 'package:ironlink/features/settings/ocr_settings_state.dart';
 
 class OcrSettingsPage extends StatelessWidget {
@@ -30,15 +29,15 @@ class _OcrSettingsView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('OCR Keywords'),
-        backgroundColor: MilColors.navyDeep,
-        foregroundColor: MilColors.textHi,
+        backgroundColor: IronColors.navyDeep,
+        foregroundColor: IronColors.textHi,
       ),
       body: BlocBuilder<OcrSettingsBloc, OcrSettingsState>(
         builder: (context, state) {
           if (state.isLoading) {
             return const Center(
               child: CircularProgressIndicator(
-                color: MilColors.gold,
+                color: IronColors.gold,
               ),
             );
           }
@@ -47,7 +46,7 @@ class _OcrSettingsView extends StatelessWidget {
             return Center(
               child: Text(
                 state.errorMessage!,
-                style: const TextStyle(color: MilColors.errorRed),
+                style: const TextStyle(color: IronColors.errorRed),
               ),
             );
           }
@@ -92,7 +91,7 @@ class _OcrSettingsView extends StatelessWidget {
                       ? const Center(
                           child: Text(
                             'No keywords added yet.',
-                            style: TextStyle(color: MilColors.textLo),
+                            style: TextStyle(color: IronColors.textLo),
                           ),
                         )
                       : ListView.builder(
@@ -103,14 +102,14 @@ class _OcrSettingsView extends StatelessWidget {
                               key: Key(keyword),
                               direction: DismissDirection.endToStart,
                               background: Container(
-                                color: MilColors.errorRed,
+                                color: IronColors.errorRed,
                                 alignment: Alignment.centerRight,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                 ),
                                 child: const Icon(
                                   Icons.delete,
-                                  color: MilColors.textHi,
+                                  color: IronColors.textHi,
                                 ),
                               ),
                               onDismissed: (_) {
