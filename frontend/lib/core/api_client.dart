@@ -9,8 +9,11 @@ class ApiClient {
   ApiClient({String? baseUrl})
       : _dio = Dio(BaseOptions(
           baseUrl: baseUrl ?? Env.apiBaseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 15),
+          // Render's free tier sleeps after inactivity and takes ~50s to wake
+          // on the first request — a short timeout here fails that request
+          // even though the server is fine, it just hasn't booted yet.
+          connectTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
         ));
 
   final Dio _dio;
