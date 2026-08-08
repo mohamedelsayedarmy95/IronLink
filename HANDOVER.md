@@ -1,75 +1,93 @@
-# IronLink — Handover Report
+# IronLink — Project Status & Release Readiness
 
-**Date:** 2026-08-07
-**Branch:** `fix/boot-crashes-and-backend-merge` (11 commits ahead of `main`, all pushed)
-**Live API:** https://ironlink-api.onrender.com
-**Status:** Backend is deployed and healthy. The product is not finished.
+**Last updated:** 2026-08-07
+**Branch:** `fix/boot-crashes-and-backend-merge` — 15 commits ahead of `main`, all pushed
+**Live API:** https://ironlink-api.onrender.com → `{"status":"ok","env":"production"}`
+**Android package:** `com.ironlink.app`
 
-> Written as a handover to another Claude session. Everything below is verified
-> unless explicitly marked otherwise. Where something is unverified, that is
-> stated rather than glossed over.
+> Written so a fresh session can pick this up cold. Everything marked ✅ was
+> verified by running it, not by reading the code. Where something is unverified
+> or uncertain, it says so.
 
 ---
 
-## 1. Current state in one paragraph
+## 1. Executive summary
 
-This repository could not start. `import app.main` raised, so every deploy died
-before binding a port. Nine boot-level defects were fixed, an orphaned parallel
-codebase was merged, the database schema was created from nothing, and the
-service was deployed to Render with managed PostgreSQL and Redis. The API now
-returns `{"status":"ok","env":"production"}` and the Flutter client points at
-it. What remains is feature work — object storage, push notifications, the AI
-endpoints — plus release engineering for the mobile app.
+The backend is deployed and healthy. The Android app builds, installs, and runs
+on a physical device. **The product is not releasable**, and the gap is larger
+than it looks from the outside.
+
+Two facts matter more than anything else in this document:
+
+1. **Nobody can log in.** There is no SMS provider and no self-registration
+   endpoint. A temporary dev bypass exists but is switched off in production.
+2. **The encryption is fake.** `encryption_service.py` returns the literal
+   strings `"mock_ciphertext"` and `"mock_plaintext"`. The UI presents IronLink
+   as end-to-end encrypted messaging. It is not.
+
+Item 2 is the single most serious thing in this project. It is a claim the
+product makes to users and does not keep.
+
+**Realistic distance to a releasable app:** 3–6 weeks, dominated by E2EE and
+real authentication.
 
 ---
 
 ## 2. Live infrastructure
 
-| Resource | Name | Type | Plan | Status |
+| Resource | Name | Type | Plan | State |
 |---|---|---|---|---|
-| API | `ironlink-api` | Docker web service | Free | Live |
-| Database | `ironlink-db` | PostgreSQL 16 | Free | Available |
-| Cache / PubSub | `ironlink-redis` | Valkey 8 (Render "Key Value") | Free | Available |
+| API | `ironlink-api` | Docker web service | Free | ✅ Live |
+| Database | `ironlink-db` | PostgreSQL 16 | Free | ✅ Available |
+| Cache / PubSub | `ironlink-redis` | Valkey 8 | Free | ✅ Available |
+| Push | Firebase `ironlink-1fd4c` | FCM | Spark (free) | ✅ Initialises |
 
 Declared as code in [`render.yaml`](render.yaml). Region: Oregon.
 
-**Dead service — ignore it:** `srv-d9qq6tqjobas738ip930`, named `IronLink`. It
-was a manual attempt, has no database and no environment variables, and every
-deploy on it failed. It is abandoned, not broken. Any log or error mentioning
-that service ID is irrelevant. Safe to delete.
+**Dead service — ignore it:** `srv-d9qq6tqjobas738ip930`, named `IronLink`. A
+manual attempt with no database and no variables; every deploy on it failed.
+Any log mentioning that ID is irrelevant. Safe to delete.
+
+### Environment variables set in Render
+
+| Variable | State |
+|---|---|
+| `POSTGRES_*`, `REDIS_URL`, `SECRET_KEY` | ✅ auto-wired by the blueprint |
+| `DB_ENCRYPTION_KEY` | ✅ set — **never rotate, see §7** |
+| `HF_API_TOKEN` | ✅ set |
+| `FIREBASE_CREDENTIALS_JSON` | ✅ set |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | ❌ empty — media returns 503 |
+| `DEV_AUTH_BYPASS` | ❌ off — cannot be on while `ENV=production` |
 
 ---
 
-## 3. What was fixed
+## 3. What was done — 15 commits
 
-### 3.1 Nine boot-level defects
+### 3.1 The app could not start (`d4e732d`)
 
-The application raised on import. Fixing each error revealed the next.
+`import app.main` raised. Nine defects; fixing each revealed the next.
 
 | # | Location | Defect |
 |---|---|---|
-| 1 | `app/main.py:23` | `asyncio` used in lifespan, never imported |
-| 2 | `app/api/routes/media.py` | `logger` undefined |
-| 3 | `app/api/routes/media.py` | `normalize_text` undefined |
-| 4 | `app/services/ws_manager.py:13` | imported name `redis` that `app.core.redis` does not export |
+| 1 | `app/main.py:23` | `asyncio` used, never imported |
+| 2–3 | `app/api/routes/media.py` | `logger` and `normalize_text` undefined |
+| 4 | `app/services/ws_manager.py:13` | imported a name `redis` that `app.core.redis` does not export |
 | 5 | `app/ocr.py:6` | `import pypdf2` — the PyPI name; the module is `PyPDF2` |
-| 6 | `app/api/routes/ocr.py:4` | `List` imported from `pydantic` instead of `typing` |
+| 6 | `app/api/routes/ocr.py:4` | `List` imported from `pydantic`, not `typing` |
 | 7 | `app/api/routes/keys.py:37` | `List` used without import |
 | 8 | `app/services/encryption_service.py:9` | same bad `redis` import as #4 |
-| 9 | `app/models/user.py:127` | **latent** — `User.group_memberships` ambiguous |
+| 9 | `app/models/user.py:127` | **latent** — ambiguous FK, see below |
 
-**#9 deserves attention.** `GroupMember` has two foreign keys to `users.id`
+**#9 is worth understanding.** `GroupMember` has two foreign keys to `users.id`
 (`user_id`, `added_by_id`) and the `User` side never said which to join on.
-SQLAlchemy raised `AmbiguousForeignKeysError` during mapper configuration,
-meaning **every group-membership query would have failed at runtime**. It was
-invisible because nothing ever called `configure_mappers()`.
+SQLAlchemy raised `AmbiguousForeignKeysError` at mapper configuration, so
+**every group-membership query would have failed at runtime**. It was invisible
+because nothing ever called `configure_mappers()`.
 
-### 3.2 The orphaned `backend/app/` tree
+### 3.2 An orphaned parallel codebase (`d4e732d`)
 
-A second, parallel copy of the application existed at `backend/app/`, containing
-the only implementations of Channels, Communities, and the AI service — none of
-which `app/main.py` imported. It was **not** a newer version; it was written
-against different assumptions:
+`backend/app/` held the only implementations of Channels, Communities and the AI
+service — none of which `app/main.py` imported. It was **not** a newer version:
 
 | | `app/` (real) | `backend/app/` (orphan) |
 |---|---|---|
@@ -79,244 +97,245 @@ against different assumptions:
 | Primary keys | UUID | Integer |
 | Pydantic | v2 | v1 (`orm_mode`) |
 
-It also contained a `SyntaxError` (`from sqlalchemy.orm relationship`) and
-imports of modules that do not exist (`app.models.chat`, `app.core.minio`).
-
+It also contained a `SyntaxError` and imports of modules that do not exist.
 Copying it over `app/` — the obvious reading of "merge" — would have replaced
-working code with broken code. Instead the genuinely new features were **ported**
-onto the real stack (async, UUID, Pydantic v2) and the orphan deleted. It remains
-recoverable from git history.
+working code with broken code. The genuinely new features were **ported** onto
+the real stack and the orphan deleted (recoverable from git history).
 
-### 3.3 Database
+### 3.3 The database had no schema (`7c59a3b`)
 
-`alembic/versions/` was **empty**. No table had ever been created by a migration,
-and `scripts/init_db.sql` provisions only extensions and roles — so the schema
-existed nowhere.
+`alembic/versions/` was **empty**, and `scripts/init_db.sql` provisions only
+extensions and roles — so the schema existed nowhere.
 
-- [`alembic/versions/0001_initial_schema.py`](alembic/versions/0001_initial_schema.py) creates all **22 tables**.
-- Generated offline (no database was available at the time), then verified in
-  production: the deploy log shows `[entrypoint] migrations applied`.
-- `alembic/env.py` had a second bug: it set the URL to `sync_database_url`
-  (psycopg2) and passed it to `async_engine_from_config`, which rejects a sync
-  driver. Online migrations could never have run.
+- [`alembic/versions/0001_initial_schema.py`](alembic/versions/0001_initial_schema.py) creates all **22 tables**
+- Generated offline (no database was available), then **confirmed in production**:
+  the deploy log shows `[entrypoint] migrations applied`
+- `alembic/env.py` had a second bug — it fed a psycopg2 URL to
+  `async_engine_from_config`, which rejects sync drivers. Online migrations
+  could never have run.
 
-### 3.4 Deployment
+### 3.4 Deployment (`b060a6e`, `faec629`, `16119ef`, `5915be8`)
 
 | Problem | Fix |
 |---|---|
-| `requirements.txt` pinned `signal-protocol==0.1.0` — a version that never existed on PyPI | removed (nothing imports it) |
+| `signal-protocol==0.1.0` — a version that never existed on PyPI | removed; nothing imports it |
 | Dockerfile hardcoded `--port 8000`; Render injects `$PORT` | read at runtime via `sh -c` + `exec` |
 | `--workers 4` on a 512 MB instance | `WEB_CONCURRENCY`, default 1 |
-| `TrustedHostMiddleware` was given `ALLOWED_ORIGINS` (URLs) but matches the `Host` header (no scheme) — rejected 100% of production traffic | `settings.allowed_hosts` derives hostnames; `RENDER_EXTERNAL_HOSTNAME` read at runtime |
-| Redis DB index selected by `str.replace("/0","/2")` — matched nothing against a pathless managed URL, silently collapsing all three pools onto DB 0 | path component replaced outright |
-| Migrations had nowhere to run (pre-deploy, Shell, and One-Off Jobs are all paid features) | [`docker-entrypoint.sh`](docker-entrypoint.sh) runs `alembic upgrade head` before uvicorn |
-| `COPY . .` copied the entire Flutter app into a Python image | [`.dockerignore`](.dockerignore) |
+| `TrustedHostMiddleware` given URLs, but it matches the `Host` header — rejected **100%** of production traffic | `settings.allowed_hosts` derives hostnames; reads `RENDER_EXTERNAL_HOSTNAME` |
+| Redis DB index picked via `str.replace("/0","/2")` — matched nothing against a pathless managed URL, silently collapsing all three pools onto DB 0 | path component replaced outright |
+| Migrations had nowhere to run (pre-deploy, Shell, One-Off Jobs are all paid) | [`docker-entrypoint.sh`](docker-entrypoint.sh) runs `alembic upgrade head` before uvicorn |
+| Blueprint name collided with the existing service | renamed to `ironlink-api` |
+| `COPY . .` copied the whole Flutter app into a Python image | [`.dockerignore`](.dockerignore) |
 
-### 3.5 Object storage
+### 3.5 Object storage → Cloudflare R2 (`5a05a68`, `faec629`)
 
-MinIO does not exist on Render. Since MinIO and Cloudflare R2 both speak S3, the
-settings were generalised rather than a second backend added: one `S3_*` block
-drives both. Legacy `MINIO_*` names are kept as validation aliases, so existing
-`.env` files and the docker-compose stack work unchanged.
+MinIO does not exist on Render. Since MinIO and R2 both speak S3, the settings
+were generalised rather than adding a second backend: one `S3_*` block drives
+both, with legacy `MINIO_*` names kept as aliases so existing `.env` files and
+docker-compose keep working.
 
-Storage is **optional at boot**. It used to abort startup, meaning no R2 bucket
-meant no API at all. Media routes now return `503` when unconfigured and
-everything else runs.
+Storage is **optional at boot** — it used to abort startup, meaning no R2 bucket
+meant no API at all. Media routes now return `503` and everything else runs.
 
-### 3.6 The 204 crash (found in production)
+### 3.6 The 204 crash, found in production (`5902994`)
 
 The container built, migrated the database, then died on import:
 
 ```
 AssertionError: Status code 204 must not have a response body
-app/api/routes/auth.py:235
 ```
 
-Root cause is indirect. Every route module uses `from __future__ import
-annotations`, which stores `-> None` as the string `"None"`. FastAPI resolves the
-return annotation through `get_type_hints`, which normalises `None` to the
-**class** `NoneType`. FastAPI infers `response_model` from that annotation, and
-`NoneType` is truthy — so it concludes the route returns a body and trips the
-assertion, killing the whole app on import.
+Every route module uses `from __future__ import annotations`, so `-> None` is
+stored as the string `"None"`, which `get_type_hints` normalises to the **class**
+`NoneType`. FastAPI infers `response_model` from it, and `NoneType` is truthy —
+so it concluded the route returns a body and tripped the assertion, killing the
+whole app on import.
 
-Fixed with explicit `response_model=None` on all **11** 204 routes.
+Fixed with explicit `response_model=None` on all 11 204 routes.
 
-**Why it was not caught locally:** the dev venv had FastAPI 0.139.2 while
-`requirements.txt` pins **0.115.5**. The newer version tolerates it. See §8.
+**Why it was missed locally:** the dev venv had FastAPI 0.139.2 against a
+**0.115.5** pin. See §8.
 
-### 3.7 Frontend
+### 3.7 AI endpoints + Firebase credentials (`e93c8aa`)
 
-Three screens bypassed `Env` and pointed at unreachable addresses:
+`ai_service.py` had been ported but no route imported it, so the client was
+calling four endpoints that returned 404. Now registered, with field names read
+out of the shipped client and frozen by contract tests.
 
-```
-channel_list_screen.dart:27     http://localhost:8000
-community_list_screen.dart:27   http://localhost:8000
-chat_room_screen.dart:41        https://api.ironlink.app
-```
+Firebase: `render.yaml` declared `FIREBASE_CREDENTIALS_JSON` while the code read
+`FIREBASE_CREDENTIALS_FILE`, a *path* — a PaaS cannot supply a file, so the
+variable was inert and push could never have worked. Config now takes the JSON
+inline.
 
-`localhost` on a handset is the handset. `api.ironlink.app` is not owned by this
-project. All three now use `Env.apiBaseUrl`.
+Also fixed: `AIService` promised graceful degradation but its cache reads sat
+**outside** the `try` guarding the HF call, so an unreachable Redis produced a
+500 for a feature designed to fall back.
 
-`Env` gained `API_BASE_URL` / `WS_BASE_URL` overrides. **The CI workflow had been
-passing exactly those flags since it was written, but nothing read them** — so
-every release APK it produced silently shipped pointing at the emulator loopback.
+### 3.8 Frontend (`a505685`, `f8ccea1`, `95effc1`, `966ae67`)
 
-Also fixed: `const Container()` in both list screens. `Container` has no const
-constructor, so this was a hard compile error that would have failed
-`flutter build apk`.
-
-### 3.8 AI endpoints and Firebase credentials
-
-`ai_service.py` had been ported but **no route imported it**, so
-`chat_bloc.dart` was calling four endpoints that returned 404. Now registered in
-[`app/api/routes/ai.py`](app/api/routes/ai.py):
-
-```
-POST /api/v1/chats/{peer_id}/summary   {messages}             -> {summary}
-POST /api/v1/ai/smart-replies          {context,num_replies}  -> {replies}
-POST /api/v1/ai/translate              {text,target_lang}     -> {translation}
-POST /api/v1/ai/moderate               {text}                 -> {scores}
-```
-
-Field names were read out of the shipped client, not invented. They are frozen
-by `tests/test_ai_routes.py`, because a rename here is a silent runtime break in
-an app that is already built — not a compile error anywhere.
-
-**Firebase:** `render.yaml` declared `FIREBASE_CREDENTIALS_JSON` while
-`push_service.py` read `FIREBASE_CREDENTIALS_FILE`, a *path*. A managed platform
-can inject an env var but cannot place a file in the image, so the variable was
-inert and push could never have worked in production. Config now accepts the
-service-account JSON inline and prefers it over the path.
-
-**Bug found while verifying:** `AIService` promised graceful degradation in its
-docstring but its cache reads sat *outside* the `try` guarding the Hugging Face
-call, so an unreachable Redis raised `ConnectionError` straight out of the
-endpoint — a 500 for a feature designed to fall back. Reads and writes now go
-through `_cache_get` / `_cache_set`, which treat any Redis failure as a miss.
-This matters because the Redis instance is free-tier.
+- **Three screens pointed at dead hosts** (`localhost:8000`, `api.ironlink.app`)
+  → now `Env.apiBaseUrl`
+- **`Env` ignored `API_BASE_URL`** although CI had been passing it since it was
+  written — every release APK silently shipped pointing at the emulator loopback
+- **Native splash** from the brand animation; logo cropped, background made
+  transparent on a luminance ramp, Android 12+ circle-mask variant
+- **19 analyzer errors**, three root causes: state classes declared twice as
+  events, `IronColors` used without importing the theme, and a dead import.
+  These blocked `flutter build apk` entirely
+- **Package renamed** `com.example.ironlink` → `com.ironlink.app`
 
 ---
 
-## 4. What works now
+## 4. Verified working ✅
 
-- API live, `/health` returns `{"status":"ok","env":"production"}`
-- **48** registered paths (auth, chats, groups, media, broadcasts, admin, ocr, receipts, keys, channels, communities, ai)
-- 22 database tables created by migration
-- Redis connected, three isolated DB indices
-- **62** tests passing on the pinned FastAPI
-- Flutter builds and targets the live backend
-- AI endpoints answer, using built-in fallbacks until `HF_API_TOKEN` is set
-- Push notification wiring is correct; needs `FIREBASE_CREDENTIALS_JSON` set
+Confirmed by execution, not inspection.
 
----
+**Backend**
+```
+/health                      200, {"status":"ok","env":"production"}, 0.98s
+48 API paths registered
+22 database tables (migration applied in production)
+62 tests passing on the pinned FastAPI 0.115.5
+rate limiting                429 on rapid repeat  ✅
+input validation             422 on short device_fingerprint  ✅
+```
 
-## 5. What does NOT work — prioritised
-
-> §5.1 (AI routes missing) and §5.2 (Firebase variable inert) were **fixed** in
-> commit `e93c8aa`. Both now need only a credential pasted into Render — see
-> §5.10. The numbering below is kept stable so earlier notes still resolve.
-
-### P1 — blocks core features
-
-**5.1 ~~The `/ai/*` endpoints do not exist.~~ FIXED** — `e93c8aa`. All four
-registered and contract-tested. Returns fallbacks until `HF_API_TOKEN` is set.
-
-**5.2 ~~Push notifications are dead.~~ FIXED** — `e93c8aa`. Config now reads
-`FIREBASE_CREDENTIALS_JSON`. Needs the service-account JSON pasted into Render.
-
-**5.3 File upload returns 503.**
-Needs three values from Cloudflare: `S3_ENDPOINT`
-(`<ACCOUNT_ID>.r2.cloudflarestorage.com`), `S3_ACCESS_KEY_ID`,
-`S3_SECRET_ACCESS_KEY`. Create buckets `ironlink-avatars` and
-`ironlink-attachments`, keep them **private**, scope the API token to those two
-buckets only. `S3_REGION=auto` is mandatory — R2 rejects any other region in the
-SigV4 scope.
-
-### P2 — blocks release
-
-**5.4 `applicationId = "com.example.ironlink"`** — Google Play rejects any
-`com.example.*` id. Changing it requires regenerating `google-services.json`.
-
-**5.5 Release APK is signed with debug keys** (`build.gradle.kts:39`).
-
-**5.6 iOS push is impossible** — no `GoogleService-Info.plist`, no APNs key.
-
-### P3 — correctness and scale
-
-**5.7 E2EE is a mock.** `app/services/encryption_service.py` returns
-`"mock_ciphertext"` and `"mock_plaintext"`. The Signal Protocol is **not
-implemented**. `signal-protocol` was removed from `requirements.txt` because the
-pinned version never existed and nothing imported it. **The app is not
-end-to-end encrypted despite the UI implying it is.**
-
-**5.8 `assemble_staging()` loads whole files into memory.** A 50 MB upload costs
-~100 MB transient on a 512 MB instance. Fix is S3 multipart upload so R2
-assembles server-side.
-
-**5.9 Deployed from a feature branch,** not `main`.
-
-**5.10 Credentials still to paste into Render** (no code change needed):
-
-| Variable | Where to get it | Effect while unset |
-|---|---|---|
-| `HF_API_TOKEN` | huggingface.co → Settings → Access Tokens (read) | AI returns canned fallbacks |
-| `FIREBASE_CREDENTIALS_JSON` | Firebase console → service account JSON, **one line** | push silently disabled |
-| `S3_ENDPOINT` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Cloudflare R2 | media returns 503 |
-
-**5.11 The summary endpoint sends conversation text to Hugging Face.** The
-client posts message bodies because the server holds no plaintext. That is a
-real privacy cost in a product that presents itself as end-to-end encrypted, and
-it compounds §5.7. It should be opt-in per conversation with the UI saying so;
-right now it is neither. Documented in the route docstring, not yet enforced.
-
-**5.12 There is no rate limiting on the AI endpoints.** `config.py` defines
-`RATE_LIMIT_REQUESTS_PER_MINUTE` but no middleware reads it. Each AI call is a
-slow, paid round-trip to Hugging Face, so an authenticated client can run up
-cost and pin the single worker. Payload ceilings are enforced; call frequency is
-not.
+**Android app** (JSN L22, Android 10, arm64)
+```
+flutter analyze              0 errors
+flutter build apk --release  62.2 MB
+install + launch             no crash
+FirebaseApp initialization successful   (under com.ironlink.app)
+native splash                renders
+login UI                     3 steps: phone → OTP → military ID
+network                      reaches the deployed backend
+error handling               shows a message, does not crash
+```
 
 ---
 
-## 6. Critical warnings
+## 5. What is missing — by priority
 
-**`DB_ENCRYPTION_KEY`** encrypts columns at rest. It is set in Render and must be
-stored in a password manager. **If it is lost or changed, every encrypted row
+### 🔴 P0 — blocks any real use
+
+**5.1 Nobody can log in.**
+`SmsGateway.send_otp` raises `NotImplementedError` outside development
+([sms_gateway.py:29](app/services/sms_gateway.py:29)), and there is **no
+registration endpoint** — users only exist via `scripts/seed_dev_users.py`.
+Verified live: `/auth/verify` returns **401**.
+
+*Decision taken:* **Firebase Phone Auth** (option B). Free quota, project already
+exists. Needs the SHA-1 below added in the Firebase console, plus a backend
+endpoint that exchanges a Firebase ID token for an IronLink JWT.
+
+```
+debug SHA-1: 5E:2B:21:E7:4F:7A:B6:7D:55:0D:2D:7C:1C:09:CE:70:2B:97:DB:90
+```
+⚠️ The **release** SHA-1 must also be added once release signing exists, or
+Phone Auth works in testing and breaks in production.
+
+*Interim:* `DEV_AUTH_BYPASS` is implemented and gated. To test today, set on
+Render: `ENV=staging` **first**, then `DEV_AUTH_BYPASS=true`. Login becomes: any
+phone → any military ID → code `000000`. Setting the bypass while
+`ENV=production` makes the service refuse to start — by design.
+
+**5.2 End-to-end encryption is a mock.**
+[`encryption_service.py`](app/services/encryption_service.py) returns
+`"mock_ciphertext"` and `"mock_plaintext"`. The Signal Protocol is not
+implemented. `signal-protocol` was removed from requirements because the pinned
+version never existed and nothing imported it.
+
+The app is branded *منظومة التراسل المؤمَّنة* ("secure messaging system"). Either
+implement real E2EE or remove the claim. This is the largest single piece of
+remaining work.
+
+**5.3 The summary endpoint sends conversation text to Hugging Face.**
+The client posts message bodies because the server holds no plaintext. In a
+product claiming E2EE this is a real privacy cost, and it compounds 5.2. Should
+be opt-in per conversation with the UI saying so. Documented in the route,
+**not enforced**.
+
+### 🟠 P1 — blocks publication
+
+**5.4 Release signing** — [build.gradle.kts:39](frontend/android/app/build.gradle.kts:39)
+still uses debug keys. Play Store requires a real keystore.
+
+**5.5 iOS is unconfigured** — no `GoogleService-Info.plist`, no APNs key. iOS
+push cannot work. The bundle id was renamed but nothing else is done.
+
+**5.6 APK is 62.2 MB** — bundles all ABIs. `--split-per-abi` cuts it to ~20 MB.
+
+**5.7 No privacy policy / store listing** — Play requires both, and a data-safety
+declaration that must honestly describe 5.2 and 5.3.
+
+### 🟡 P2 — quality and cost
+
+**5.8 File upload returns 503** — needs three Cloudflare R2 values. Create
+buckets `ironlink-avatars` and `ironlink-attachments`, keep them **private**,
+scope the token to those two only. `S3_REGION=auto` is mandatory — R2 rejects
+any other region in the SigV4 scope.
+
+**5.9 No rate limiting on AI endpoints** — `RATE_LIMIT_REQUESTS_PER_MINUTE`
+exists in config but no middleware reads it. Each AI call is a slow, paid
+round-trip that can pin the single worker.
+
+**5.10 `assemble_staging()` buffers whole files in memory** — a 50 MB upload
+costs ~100 MB transient on a 512 MB instance. Fix is S3 multipart upload.
+
+**5.11 Backend error strings are English** in an Arabic UI. Verified on device:
+*"Verification failed. Check your code and credentials."* appears inside an
+otherwise fully Arabic screen.
+
+**5.12 Free Postgres on Render expires.** Check the date on `ironlink-db`. Do
+not put real user data on it.
+
+**5.13 Free instance sleeps** — first request after idle takes ~50 s.
+
+**5.14 Deployed from a feature branch,** not `main`.
+
+---
+
+## 6. Release checklist
+
+```
+[ ] Real authentication (Firebase Phone Auth)          P0
+[ ] Real E2EE, or remove the security claim            P0
+[ ] Opt-in gate on AI summary                          P0
+[ ] Release keystore + signing config                  P1
+[ ] iOS: GoogleService-Info.plist + APNs key           P1
+[ ] --split-per-abi                                    P1
+[ ] Privacy policy + data-safety declaration           P1
+[ ] Cloudflare R2 for media                            P2
+[ ] Rate limiting on AI endpoints                      P2
+[ ] Localise backend error strings                     P2
+[ ] Paid Postgres before real users                    P2
+[ ] Merge to main, delete the dead service             P2
+```
+
+---
+
+## 7. Critical warnings
+
+**`DB_ENCRYPTION_KEY`** encrypts columns at rest. It is set in Render and must
+live in a password manager. **If it is lost or changed, every encrypted row
 becomes permanently unreadable.** It is deliberately `sync: false` rather than
-`generateValue: true` for this reason. It is not recorded in this repository and
-must never be.
+`generateValue: true` for exactly this reason, and it appears nowhere in this
+repository.
 
-**Render's free PostgreSQL expires.** Check the expiry on `ironlink-db`. Do not
-put data you care about on it.
+**Secrets that were exposed during setup.** Two Hugging Face tokens were pasted
+into a chat and have been revoked. If any other token or key was ever pasted
+anywhere outside Render, revoke and reissue it. Deleting a *file* does not
+revoke a *key* — Firebase service-account keys must be revoked in the console.
 
-**Free instances sleep.** First request after idle takes ~50 s. Not a bug.
-
-**This is described as secure military/enterprise messaging** but currently has
-mock encryption (5.7) and runs on free-tier infrastructure. Treat it as a
-prototype.
-
----
-
-## 7. How to verify
-
-```bash
-# Backend
-.venv/Scripts/python.exe -m pytest -q          # expect 62 passed
-.venv/Scripts/python.exe -c "import app.main"  # must not raise
-
-# Frontend
-cd frontend && flutter analyze                 # no errors
-flutter test test/env_test.dart
-
-# Live
-curl https://ironlink-api.onrender.com/health
-```
+**`DEV_AUTH_BYPASS` must never reach production.** It provisions any phone
+number on demand and accepts a fixed OTP. The settings validator refuses to
+start when it is enabled with `ENV=production`; do not weaken that guard.
 
 ---
 
 ## 8. Environment traps — read before debugging
 
-**The local venv drifted from `requirements.txt` and that hid a production
-crash.** Always verify against pinned versions:
+**The local venv drifted from `requirements.txt` and hid a production crash.**
 
 | Package | Pinned | Was installed locally |
 |---|---|---|
@@ -324,50 +343,61 @@ crash.** Always verify against pinned versions:
 | `sqlalchemy` | 2.0.36 | 2.0.51 (2.0.36 lacks Python 3.14 support) |
 
 Local Python is **3.14**; the Docker image is **3.12**. Some pins have no 3.14
-wheels (Pillow, asyncpg) and were installed unpinned locally. `requirements.txt`
-is untouched and correct for the image.
+wheels and were installed unpinned locally. `requirements.txt` is untouched and
+correct for the image.
 
 **The test suite was blind.** Nothing imported `app.main`, so 43 tests passed
-against code that could not start — and every deploy failure in this project has
-been an import-time crash. `tests/test_app_boot.py` now closes that gap and was
-validated by mutation: removing the fix turns all 7 tests red.
+against code that could not start — and *every* deploy failure in this project
+has been an import-time crash. `tests/test_app_boot.py` closes that gap and was
+validated by mutation.
 
-**`alembic` shadowing.** Running from the repo root, `import alembic` resolves to
-the local `alembic/` directory rather than the package.
+**`alembic` shadowing.** From the repo root, `import alembic` resolves to the
+local `alembic/` directory rather than the package.
+
+**Firebase config holds two packages.** `google-services.json` contains both
+`com.example.ironlink` and `com.ironlink.app`, so builds work either way.
 
 ---
 
-## 9. Recommended next steps, in order
+## 9. Useful commands
 
-1. **Paste the three credential sets into Render** (5.10) — no code, unblocks
-   AI, push, and media in one pass
-2. **Cloudflare R2 buckets** (5.3) — create `ironlink-avatars` and
-   `ironlink-attachments`, private, token scoped to those two only
-3. **Decide on E2EE** (5.7) — implement it or remove the claim from the UI.
-   This is the largest gap between what the product says and what it does, and
-   §5.11 makes it worse.
-4. **Rate-limit the AI endpoints** (5.12) — before any real user traffic
-5. **Release engineering** (5.4–5.6) — app id, signing, iOS
-6. **Merge to `main`**, delete the dead service
-7. **Multipart upload** (5.8) before real traffic
+```bash
+# Backend
+.venv/Scripts/python.exe -m pytest -q            # expect 62 passed
+.venv/Scripts/python.exe -c "import app.main"    # must not raise
+
+# Frontend
+cd frontend && flutter analyze lib                # expect 0 errors
+flutter build apk --release \
+  --dart-define=API_BASE_URL=https://ironlink-api.onrender.com/api/v1 \
+  --dart-define=WS_BASE_URL=wss://ironlink-api.onrender.com
+flutter install --release -d <device-id>
+
+# Live
+curl https://ironlink-api.onrender.com/health
+```
 
 ---
 
 ## 10. Commits
 
 ```
-e93c8aa  feat(ai): register the AI endpoints and load Firebase credentials from env
+966ae67  feat(auth): gated dev login + package rename to com.ironlink.app
+95effc1  fix(frontend): repair 19 analyzer errors blocking the APK build
+f8ccea1  feat(frontend): native splash screen from the brand animation
+5dc08e5  docs: update handover after AI routes and Firebase fix
+e93c8aa  feat(ai): register the AI endpoints, load Firebase creds from env
 9dd13aa  docs: add handover report
-a505685  fix(frontend): route every screen through Env instead of hardcoded hosts
+a505685  fix(frontend): route every screen through Env, not hardcoded hosts
 5902994  fix(api): declare response_model=None on every 204 route
-5915be8  chore: pin LF line endings for shell scripts and Linux-consumed config
-16119ef  fix(deploy): rename blueprint service and stop hardcoding the assigned hostname
+5915be8  chore: pin LF line endings for shell scripts
+16119ef  fix(deploy): rename blueprint service, stop hardcoding the hostname
 faec629  fix(deploy): make the service deployable on Render's free tier
 5a05a68  feat(storage): move object storage to Cloudflare R2
-b060a6e  fix(deploy): unbreak the build and make the service deployable on Render
-7c59a3b  feat(db): add initial schema migration and fix alembic async driver
-d4e732d  fix: repair boot crashes and merge orphaned backend/app into app/
+b060a6e  fix(deploy): unbreak the build, make the service deployable
+7c59a3b  feat(db): add initial schema migration, fix alembic async driver
+d4e732d  fix: repair boot crashes, merge orphaned backend/app into app/
 ```
 
-Each message documents its own root cause and verification. `git show <hash>`
-for detail.
+Each message documents its own root cause and how it was verified.
+`git show <hash>` for detail.
