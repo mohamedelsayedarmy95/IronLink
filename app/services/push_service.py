@@ -16,6 +16,12 @@ _initialized = False
 _available = False
 
 
+def ensure_initialized() -> bool:
+    """Public entry point — also used by app.api.routes.auth to verify Firebase
+    Phone Auth ID tokens, which needs the same Admin SDK app initialised."""
+    return _ensure_init()
+
+
 def _ensure_init() -> bool:
     """Lazy Firebase Admin init — the app runs fine without FCM configured
     (pushes become no-ops with a warning), so local dev needs no Firebase."""

@@ -43,6 +43,15 @@ class VerifyIn(BaseModel):
         return v
 
 
+class FirebaseVerifyIn(BaseModel):
+    # phone_number is deliberately NOT taken from the client — it's read out of
+    # the verified Firebase ID token server-side, so a caller can't claim a
+    # number they don't control.
+    id_token: str = Field(..., min_length=20)
+    military_id: str = Field(..., min_length=4, max_length=40)
+    device_fingerprint: str = Field(..., min_length=16, max_length=128)
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

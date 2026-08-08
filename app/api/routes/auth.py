@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.api.schemas import (
+    FirebaseVerifyIn,
     RequestOtpIn,
     RequestOtpOut,
     SessionOut,
@@ -37,6 +38,7 @@ from app.models.audit_log import AuditAction
 from app.models.user import UserRole, UserStatus
 
 logger = structlog.get_logger("auth")
+from app.services import push_service
 from app.services.otp_service import OtpService
 from app.services.sms_gateway import SmsGateway
 
@@ -180,16 +182,93 @@ async def verify(
         await db.commit()
         raise generic_error
 
+    return await _issue_login(db, user, body.device_fingerprint, ip, user_agent)
+
+
+@router.post("/verify-firebase", response_model=VerifyOut)
+async def verify_firebase(
+    body: FirebaseVerifyIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> VerifyOut:
+    """Firebase Phone Auth path: the client verifies phone ownership with
+    Firebase client-side (SMS code) and hands us the resulting ID token. We
+    verify it server-side — never trust a client-supplied phone number — then
+    still require the military ID as the app's own second factor, exactly like
+    /verify. This replaces OTP delivery, not the military-ID check."""
+    ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")[:512]
+
+    generic_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Verification failed. Check your code and credentials.",
+    )
+
+    if not push_service.ensure_initialized():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone verification is temporarily unavailable.",
+        )
+
+    from firebase_admin import auth as firebase_auth
+
+    try:
+        decoded = firebase_auth.verify_id_token(body.id_token)
+    except Exception as exc:
+        # Expired, revoked, malformed, wrong-project — all collapse to the same
+        # generic 401 so the failure mode can't be used to fingerprint the cause.
+        logger.warning("firebase_id_token_rejected", error=str(exc))
+        raise generic_error
+
+    phone_number = decoded.get("phone_number")
+    if not phone_number:
+        # A Firebase ID token from a different sign-in method (no phone claim).
+        logger.warning("firebase_id_token_missing_phone", uid=decoded.get("uid"))
+        raise generic_error
+
+    user = await db.scalar(select(User).where(User.phone_number == phone_number))
+    if user is None or user.status != UserStatus.ACTIVE:
+        raise generic_error
+
+    if user.expiry_date is not None and user.expiry_date < datetime.now(timezone.utc).date():
+        raise generic_error
+
+    mil_ok = verify_military_id(body.military_id, user.hashed_military_id)
+    if not mil_ok:
+        db.add(AuditLog(
+            actor_id=user.id,
+            actor_role=user.role,
+            action=AuditAction.LOGIN_FAILED,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=False,
+            error_code="firebase_mid_mismatch",
+        ))
+        await db.commit()
+        raise generic_error
+
+    return await _issue_login(db, user, body.device_fingerprint, ip, user_agent)
+
+
+async def _issue_login(
+    db: AsyncSession,
+    user: User,
+    device_fingerprint: str,
+    ip: str,
+    user_agent: str,
+) -> VerifyOut:
+    """Shared by /verify and /verify-firebase once credentials are confirmed:
+    rotate token_version, open a session, and audit-log the login."""
     # Fable5-Enhancement: device fingerprint change is NOT a hard block (users
     # legitimately change phones) but IS recorded as a security event so the
     # admin dashboard can flag anomalous device migrations.
     fingerprint_changed = (
         user.device_fingerprint is not None
-        and user.device_fingerprint != body.device_fingerprint
+        and user.device_fingerprint != device_fingerprint
     )
-    user.device_fingerprint = body.device_fingerprint
+    user.device_fingerprint = device_fingerprint
 
-    # 3. Rotate token_version — invalidates ALL previously issued tokens
+    # Rotate token_version — invalidates ALL previously issued tokens
     user.token_version += 1
     user.last_seen_at = datetime.now(timezone.utc)
 
