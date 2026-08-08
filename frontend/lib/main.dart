@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -14,8 +15,17 @@ import 'features/auth/screens/splash_screen.dart';
 import 'features/chat/chat_repository.dart';
 import 'features/groups/groups_repository.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    // Reads android/app/google-services.json natively. Must happen before
+    // the auth screen mounts — Firebase Phone Auth needs it on the very
+    // first screen, not just for push notifications post-login.
+    await Firebase.initializeApp();
+  } catch (_) {
+    // No Firebase config (local dev without google-services.json): Phone
+    // Auth and push both stay unavailable rather than crashing the app.
+  }
   runApp(const MilAcademyApp());
 }
 

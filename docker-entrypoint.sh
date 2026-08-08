@@ -21,6 +21,14 @@ else
     echo "[entrypoint] RUN_MIGRATIONS_ON_START=false — skipping migrations"
 fi
 
+# One-off seed scripts, gated behind explicit env vars so they never run by
+# accident. Unset the var in Render once the seed has run — these are meant
+# to fire once, not on every boot.
+if [ "${SEED_TEST_PHONE_USER:-false}" = "true" ]; then
+    echo "[entrypoint] seeding Firebase Phone Auth test user"
+    python -m scripts.seed_test_phone_auth_user
+fi
+
 # exec so uvicorn becomes PID 1 and receives SIGTERM directly; without it the
 # shell absorbs the signal and the platform kills the container after the grace
 # period instead of shutting down cleanly.
