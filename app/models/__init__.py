@@ -23,6 +23,7 @@ from .community import (
     CommunityRole,
 )
 from .creator import CreatorDashboard, Payout, PayoutStatus, SubscriptionPlan
+from .device_key import OneTimePreKey, UserKeyBundle
 
 __all__ = [
     "Base",
@@ -55,4 +56,6 @@ __all__ = [
     "Payout",
     "PayoutStatus",
     "SubscriptionPlan",
+    "UserKeyBundle",
+    "OneTimePreKey",
 ]
