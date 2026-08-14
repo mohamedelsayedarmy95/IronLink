@@ -310,5 +310,25 @@ class LEn extends L {
   String get uploadFailed => 'That attachment didn\'t upload. Try again.';
 
   @override
+  String get attachGallery => 'Gallery';
+
+  @override
+  String get attachCamera => 'Camera';
+
+  @override
+  String get attachDocument => 'PDF document';
+
+  @override
+  String get attachPdfComingSoon => 'Picking PDF files isn\'t available yet.';
+
+  @override
+  String get captionHint => 'Add a caption…';
+
+  @override
+  String ocrAlertFound(String keyword) {
+    return 'The keyword \"$keyword\" was found in an uploaded file.';
+  }
+
+  @override
   String get acknowledged => 'Got it';
 }

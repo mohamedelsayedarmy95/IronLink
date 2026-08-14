@@ -16,6 +16,7 @@ import '../widgets/smart_replies.dart';
 import '../widgets/summary_banner.dart';
 import '../widgets/voice_player.dart';
 import '../widgets/voice_recorder.dart';
+import '../../../core/icons.dart';
 
 class ChatRoomScreen extends StatelessWidget {
   const ChatRoomScreen({
@@ -149,7 +150,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
             builder: (context, state) {
               return IconButton(
                 tooltip: t.startSecretChat,
-                icon: const Icon(Icons.lock, color: IronColors.gold),
+                icon: const Icon(IronIcons.lock, color: IronColors.gold),
                 onPressed: () {
                   // In a full implementation, we would restart the bloc with isSecret=true
                   // For now, just show a snack bar
@@ -332,7 +333,7 @@ class _MessageBubble extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.block, size: 14, color: IronColors.textLo),
+                    const Icon(IronIcons.blocked, size: IronIcons.sizeCompact, color: IronColors.textLo),
                     const SizedBox(width: 6),
                     Text(t.messageDeleted,
                         style: const TextStyle(
@@ -398,7 +399,7 @@ class _MessageBubble extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.translate, color: IronColors.gold),
+              leading: const Icon(IronIcons.translate, color: IronColors.gold),
               title: Text(t.translate),
               onTap: () {
                 Navigator.pop(context);
@@ -411,7 +412,7 @@ class _MessageBubble extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.shield, color: IronColors.gold),
+              leading: const Icon(IronIcons.report, color: IronColors.gold),
               title: Text(t.reportMessage),
               onTap: () {
                 Navigator.pop(context);
@@ -424,7 +425,7 @@ class _MessageBubble extends StatelessWidget {
             if (message.isMine && !message.deleted) ...[
               const Divider(color: IronColors.navyDeep),
               ListTile(
-                leading: const Icon(Icons.delete_forever_outlined,
+                leading: const Icon(IronIcons.delete,
                     color: IronColors.errorRed),
                 title: Text(t.deleteForEveryone,
                     style: const TextStyle(color: IronColors.textHi)),
@@ -458,12 +459,12 @@ class _Ticks extends StatelessWidget {
   Widget build(BuildContext context) {
     final onBubble = IronColors.navyDeep;
     if (pending) {
-      return Icon(Icons.schedule, size: 13, color: onBubble.withValues(alpha: 0.6));
+      return Icon(IronIcons.pending, size: IronIcons.sizeCompact, color: onBubble.withValues(alpha: 0.6));
     }
     final read = tick == MessageTick.read;
     final double single = tick == MessageTick.sent ? 1 : 2;
     return Icon(
-      single == 1 ? Icons.done : Icons.done_all,
+      single == 1 ? IronIcons.sent : IronIcons.delivered,
       size: 14,
       color: onBubble.withValues(alpha: read ? 0.85 : 0.6),
       shadows: read
@@ -567,7 +568,7 @@ class _InputBar extends StatelessWidget {
           children: [
             IconButton(
               tooltip: t.attach,
-              icon: const Icon(Icons.attach_file, color: IronColors.gold),
+              icon: const Icon(IronIcons.attach, color: IronColors.gold),
               onPressed: () async {
                 final media = context.read<MediaService>();
                 final result =
@@ -612,8 +613,8 @@ class _InputBar extends StatelessWidget {
               backgroundColor: IronColors.gold,
               child: IconButton(
                 tooltip: t.send,
-                icon: const Icon(Icons.send,
-                    color: IronColors.navyDeep, size: 20),
+                icon: const Icon(IronIcons.send,
+                    color: IronColors.navyDeep, size: IronIcons.sizeInline),
                 onPressed: onSend,
               ),
             ),

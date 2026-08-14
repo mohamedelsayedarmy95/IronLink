@@ -643,6 +643,42 @@ abstract class L {
   /// **'تعذّر رفع المرفق. حاول مرة أخرى.'**
   String get uploadFailed;
 
+  /// No description provided for @attachGallery.
+  ///
+  /// In ar, this message translates to:
+  /// **'المعرض'**
+  String get attachGallery;
+
+  /// No description provided for @attachCamera.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكاميرا'**
+  String get attachCamera;
+
+  /// No description provided for @attachDocument.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستند PDF'**
+  String get attachDocument;
+
+  /// No description provided for @attachPdfComingSoon.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار ملفات PDF غير متاح بعد.'**
+  String get attachPdfComingSoon;
+
+  /// No description provided for @captionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف تعليقًا…'**
+  String get captionHint;
+
+  /// No description provided for @ocrAlertFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'رُصدت الكلمة \"{keyword}\" في ملف مرفوع.'**
+  String ocrAlertFound(String keyword);
+
   /// No description provided for @acknowledged.
   ///
   /// In ar, this message translates to:

@@ -14,6 +14,7 @@ import '../chat/screens/chats_list_screen.dart';
 import '../groups/groups_repository.dart';
 import '../groups/groups_screen.dart';
 import '../settings/ocr_settings_page.dart';
+import '../../core/icons.dart';
 
 /// Home: live chats list in tab 0; other tabs land in later sprints.
 class HomeScreen extends StatefulWidget {
@@ -29,10 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
 
   List<({IconData icon, String label})> _tabs(L t) => [
-        (icon: Icons.chat_bubble_outline, label: t.tabChats),
-        (icon: Icons.groups_outlined, label: t.tabGroups),
-        (icon: Icons.campaign_outlined, label: t.tabBroadcasts),
-        (icon: Icons.settings_outlined, label: t.tabSettings),
+        (icon: IronIcons.chats, label: t.tabChats),
+        (icon: IronIcons.groups, label: t.tabGroups),
+        (icon: IronIcons.broadcasts, label: t.tabBroadcasts),
+        (icon: IronIcons.settings, label: t.tabSettings),
       ];
 
   @override

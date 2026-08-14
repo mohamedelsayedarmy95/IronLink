@@ -7,6 +7,7 @@ import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../core/ws_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/icons.dart';
 
 class BroadcastItem {
   const BroadcastItem({
@@ -126,7 +127,7 @@ class _BroadcastBannerHostState extends State<BroadcastBannerHost> {
         ),
         title: Row(
           children: [
-            const Icon(Icons.campaign, color: IronColors.gold),
+            const Icon(IronIcons.broadcasts, color: IronColors.gold),
             const SizedBox(width: 10),
             Expanded(
               child: Text(item.title,
@@ -174,7 +175,7 @@ class _UrgentBanner extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.campaign, color: IronColors.gold, size: 20),
+              const Icon(IronIcons.broadcasts, color: IronColors.gold, size: IronIcons.sizeInline),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -195,7 +196,7 @@ class _UrgentBanner extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.touch_app_outlined,
+              const Icon(IronIcons.tapHint,
                   color: IronColors.gold, size: 18),
             ],
           ),

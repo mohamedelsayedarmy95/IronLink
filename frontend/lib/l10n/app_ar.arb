@@ -120,6 +120,13 @@
   "dragToCancel": "← اسحب للإلغاء",
   "voiceUploadFailed": "فشل رفع التسجيل الصوتي",
   "uploadFailed": "تعذّر رفع المرفق. حاول مرة أخرى.",
+  "attachGallery": "المعرض",
+  "attachCamera": "الكاميرا",
+  "attachDocument": "مستند PDF",
+  "attachPdfComingSoon": "اختيار ملفات PDF غير متاح بعد.",
+  "captionHint": "أضف تعليقًا…",
+  "ocrAlertFound": "رُصدت الكلمة \"{keyword}\" في ملف مرفوع.",
+  "@ocrAlertFound": { "placeholders": { "keyword": { "type": "String" } } },
 
   "acknowledged": "علمت"
 }

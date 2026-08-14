@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/theme.dart';
 import '../../../core/api_client.dart';
 import 'package:dio/dio.dart';
+import '../../../core/icons.dart';
 
 class VoicePlayer extends StatefulWidget {
   final String mediaKey;
@@ -146,7 +147,7 @@ class _VoicePlayerState extends State<VoicePlayer> {
             children: [
               IconButton(
                 icon: Icon(
-                  _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                  _isPlaying ? IronIcons.pause : IronIcons.play,
                   color: IronColors.gold,
                 ),
                 onPressed: _togglePlayPause,
@@ -169,7 +170,7 @@ class _VoicePlayerState extends State<VoicePlayer> {
                   const PopupMenuItem(value: 1.5, child: Text('1.5x')),
                   const PopupMenuItem(value: 2.0, child: Text('2.0x')),
                 ],
-                child: Icon(Icons.speed, color: IronColors.gold),
+                child: Icon(IronIcons.speed, color: IronColors.gold),
               ),
             ],
           ),

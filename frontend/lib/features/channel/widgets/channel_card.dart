@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../bloc/channel_bloc.dart';
+import '../../../core/icons.dart';
 
 class ChannelCard extends StatelessWidget {
   final Channel channel;
@@ -28,7 +29,7 @@ class ChannelCard extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: IronColors.navyDeep,
-                child: const Icon(Icons.play_circle_outline,
+                child: const Icon(IronIcons.play,
                     color: IronColors.gold),
               ),
               const SizedBox(width: 14),
@@ -51,8 +52,8 @@ class ChannelCard extends StatelessWidget {
                         ),
                         if (channel.isVerified) ...[
                           const SizedBox(width: 6),
-                          const Icon(Icons.verified,
-                              size: 15, color: IronColors.gold),
+                          const Icon(IronIcons.verified,
+                              size: IronIcons.sizeCompact, color: IronColors.gold),
                         ],
                       ],
                     ),
@@ -70,8 +71,8 @@ class ChannelCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.people_outline,
-                            size: 14, color: IronColors.textLo),
+                        const Icon(IronIcons.subscribers,
+                            size: IronIcons.sizeCompact, color: IronColors.textLo),
                         const SizedBox(width: 4),
                         Text(
                           L.of(context).subscriberCount(channel.subscriberCount),
@@ -83,7 +84,7 @@ class ChannelCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_left, color: IronColors.textLo),
+              const Icon(IronIcons.forward, color: IronColors.textLo),
             ],
           ),
         ),

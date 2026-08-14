@@ -4,6 +4,7 @@ import '../../core/theme.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../l10n/app_localizations.dart';
 import 'groups_repository.dart';
+import '../../core/icons.dart';
 
 /// My-groups list; tapping a group shows its members with rank icons.
 class GroupsScreen extends StatefulWidget {
@@ -141,8 +142,8 @@ class _GroupCard extends StatelessWidget {
                 backgroundColor: IronColors.navyDeep,
                 child: Icon(
                   group.isAnnouncement
-                      ? Icons.campaign_outlined
-                      : Icons.groups_outlined,
+                      ? IronIcons.broadcasts
+                      : IronIcons.groups,
                   color: IronColors.gold,
                 ),
               ),
@@ -163,8 +164,8 @@ class _GroupCard extends StatelessWidget {
                         if (group.myRole == 'admin' ||
                             group.myRole == 'owner') ...[
                           const SizedBox(width: 6),
-                          const Icon(Icons.star,
-                              size: 15, color: IronColors.gold),
+                          const Icon(IronIcons.admin,
+                              size: IronIcons.sizeCompact, color: IronColors.gold),
                         ],
                       ],
                     ),
@@ -179,7 +180,7 @@ class _GroupCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_left, color: IronColors.textLo),
+              const Icon(IronIcons.forward, color: IronColors.textLo),
             ],
           ),
         ),
@@ -215,10 +216,10 @@ class _MemberTile extends StatelessWidget {
           const SizedBox(width: 6),
           // Rank icon: gold star = admin/owner, eye = observer
           if (member.isAdmin)
-            const Icon(Icons.star, size: 15, color: IronColors.gold)
+            const Icon(IronIcons.admin, size: IronIcons.sizeCompact, color: IronColors.gold)
           else if (member.isObserver)
-            const Icon(Icons.visibility_outlined,
-                size: 15, color: IronColors.textLo),
+            const Icon(IronIcons.show,
+                size: IronIcons.sizeCompact, color: IronColors.textLo),
         ],
       ),
       subtitle: Text(

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/env.dart';
 import '../bloc/community_bloc.dart';
 import '../widgets/community_card.dart';
+import '../../../core/icons.dart';
 
 class CommunityListScreen extends StatelessWidget {
   const CommunityListScreen({Key? key}) : super(key: key);
@@ -14,7 +15,7 @@ class CommunityListScreen extends StatelessWidget {
         title: Text('Communities'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(IronIcons.add),
             tooltip: 'Create Community',
             onPressed: () {
               // Navigate to create community screen

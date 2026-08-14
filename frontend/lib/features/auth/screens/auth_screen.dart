@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../home/home_screen.dart';
 import '../auth_repository.dart';
 import '../bloc/auth_bloc.dart';
+import '../../../core/icons.dart';
 
 /// Phone → OTP → military ID. Each step owns the full frame; completed steps
 /// collapse into a compact confirmation row so the user can see what they
@@ -41,7 +42,7 @@ class AuthScreen extends StatelessWidget {
             leading: state.step == AuthStep.phone
                 ? null
                 : IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: const Icon(IronIcons.back),
                     tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                     onPressed: () =>
                         context.read<AuthBloc>().add(const StepBackRequested()),
@@ -149,8 +150,8 @@ class _FieldError extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline,
-              size: 16, color: IronColors.semanticError),
+          const Icon(IronIcons.error,
+              size: IronIcons.sizeCompact, color: IronColors.semanticError),
           const SizedBox(width: IronSpacing.xs),
           Expanded(
             child: Text(
@@ -225,7 +226,7 @@ class _CompletedRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.check_circle_outline,
+            const Icon(IronIcons.success,
                 size: 18, color: IronColors.semanticSuccess),
             const SizedBox(width: IronSpacing.sm),
             Expanded(
@@ -565,14 +566,14 @@ class _MilitaryIdStepState extends State<_MilitaryIdStep> {
             style: IronTypography.bodyLarge(color: IronColors.textPrimary),
             decoration: InputDecoration(
               hintText: t.militaryIdHint,
-              prefixIcon: const Icon(Icons.badge_outlined,
-                  color: IronColors.textSecondary, size: 20),
+              prefixIcon: const Icon(IronIcons.militaryId,
+                  color: IronColors.textSecondary, size: IronIcons.sizeInline),
               suffixIcon: IconButton(
                 tooltip: _obscured ? t.showPassword : t.hidePassword,
                 icon: Icon(
                   _obscured
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                      ? IronIcons.show
+                      : IronIcons.hide,
                   color: IronColors.textSecondary,
                   size: 20,
                 ),
@@ -590,8 +591,8 @@ class _MilitaryIdStepState extends State<_MilitaryIdStep> {
         // Reassurance at the point the most sensitive value is requested.
         Row(
           children: [
-            const Icon(Icons.lock_outline,
-                size: 16, color: IronColors.textTertiary),
+            const Icon(IronIcons.lock,
+                size: IronIcons.sizeCompact, color: IronColors.textTertiary),
             const SizedBox(width: IronSpacing.xs),
             Expanded(
               child: Text(

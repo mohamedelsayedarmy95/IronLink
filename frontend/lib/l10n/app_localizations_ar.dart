@@ -303,5 +303,25 @@ class LAr extends L {
   String get uploadFailed => 'تعذّر رفع المرفق. حاول مرة أخرى.';
 
   @override
+  String get attachGallery => 'المعرض';
+
+  @override
+  String get attachCamera => 'الكاميرا';
+
+  @override
+  String get attachDocument => 'مستند PDF';
+
+  @override
+  String get attachPdfComingSoon => 'اختيار ملفات PDF غير متاح بعد.';
+
+  @override
+  String get captionHint => 'أضف تعليقًا…';
+
+  @override
+  String ocrAlertFound(String keyword) {
+    return 'رُصدت الكلمة \"$keyword\" في ملف مرفوع.';
+  }
+
+  @override
   String get acknowledged => 'علمت';
 }

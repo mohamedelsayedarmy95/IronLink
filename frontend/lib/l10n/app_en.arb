@@ -120,6 +120,13 @@
   "dragToCancel": "← Slide to cancel",
   "voiceUploadFailed": "Failed to upload the voice message",
   "uploadFailed": "That attachment didn't upload. Try again.",
+  "attachGallery": "Gallery",
+  "attachCamera": "Camera",
+  "attachDocument": "PDF document",
+  "attachPdfComingSoon": "Picking PDF files isn't available yet.",
+  "captionHint": "Add a caption…",
+  "ocrAlertFound": "The keyword \"{keyword}\" was found in an uploaded file.",
+  "@ocrAlertFound": { "placeholders": { "keyword": { "type": "String" } } },
 
   "acknowledged": "Got it"
 }

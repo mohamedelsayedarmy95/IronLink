@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../../../core/theme.dart';
+import '../../../core/icons.dart';
 
 class VoiceRecorder extends StatefulWidget {
   final Function(String mediaKey, double duration, List<double> waveform) onSend;
@@ -143,7 +144,7 @@ class _VoiceRecorderState extends State<VoiceRecorder> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.mic, color: IronColors.white),
+                Icon(IronIcons.mic, color: IronColors.white),
                 const SizedBox(width: 8),
                 Text(
                   '${_duration.toStringAsFixed(0)}s',
@@ -164,7 +165,7 @@ class _VoiceRecorderState extends State<VoiceRecorder> {
                 shape: BoxShape.circle,
                 color: IronColors.gold,
               ),
-              child: const Icon(Icons.mic, color: IronColors.navyDeep),
+              child: const Icon(IronIcons.mic, color: IronColors.navyDeep),
             ),
           ),
         if (_isRecording)

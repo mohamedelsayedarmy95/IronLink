@@ -6,6 +6,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../l10n/app_localizations.dart';
 import '../bloc/channel_bloc.dart';
 import '../widgets/channel_card.dart';
+import '../../../core/icons.dart';
 
 class ChannelListScreen extends StatelessWidget {
   const ChannelListScreen({super.key});
@@ -25,7 +26,7 @@ class ChannelListScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: IronColors.gold),
+            icon: const Icon(IronIcons.add, color: IronColors.gold),
             tooltip: t.createChannel,
             onPressed: () {
               // TODO: create-channel screen not built yet.

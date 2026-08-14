@@ -7,6 +7,7 @@ import 'package:record/record.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/icons.dart';
 
 /// WhatsApp-style hold-to-record, lift-to-send, drag-left-to-cancel —
 /// restyled in gold with a pulsing ring while recording.
@@ -130,7 +131,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
                     ? (_cancelZone ? IronColors.errorRed : IronColors.gold)
                     : Colors.transparent,
                 child: Icon(
-                  _recording ? Icons.mic : Icons.mic_none,
+                  _recording ? IronIcons.mic : IronIcons.mic,
                   color: _recording
                       ? IronColors.navyDeep
                       : IronColors.gold,

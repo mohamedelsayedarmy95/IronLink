@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import 'iron_button.dart';
+import '../../core/icons.dart';
 
 /// Abstract geometric mark for empty states — overlapping rings on a faint
 /// grid, drawn rather than shipped as an asset so it inherits theme colors
@@ -172,7 +173,7 @@ class IronErrorState extends StatelessWidget {
                   color: IronColors.semanticError.withValues(alpha: 0.35),
                 ),
               ),
-              child: const Icon(Icons.cloud_off_outlined,
+              child: const Icon(IronIcons.offline,
                   size: 26, color: IronColors.semanticError),
             ),
             const SizedBox(height: IronSpacing.md),
@@ -193,7 +194,7 @@ class IronErrorState extends StatelessWidget {
                 label: retryLabel!,
                 onPressed: onRetry,
                 variant: IronButtonVariant.secondary,
-                icon: Icons.refresh,
+                icon: IronIcons.refresh,
                 expand: false,
               ),
             ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme.dart';
+import '../../../core/icons.dart';
 
 class SummaryBanner extends StatelessWidget {
   final String summary;
@@ -26,7 +27,7 @@ class SummaryBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.summarize, color: IronColors.gold, size: 20),
+              const Icon(IronIcons.summary, color: IronColors.gold, size: IronIcons.sizeInline),
               const SizedBox(width: 8),
               Text(
                 'AI Summary',

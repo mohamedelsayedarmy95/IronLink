@@ -6,6 +6,7 @@ import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../chat_repository.dart';
 import 'chat_room_screen.dart';
+import '../../../core/icons.dart';
 
 /// Navy cards, circular avatars, gold online dot, 20-char preview.
 class ChatsListScreen extends StatefulWidget {
@@ -164,8 +165,8 @@ class _ChatCard extends StatelessWidget {
                         ),
                         if (chat.isOnline) ...[
                           const SizedBox(width: 6),
-                          const Icon(Icons.bolt,
-                              size: 14, color: IronColors.gold),
+                          const Icon(IronIcons.online,
+                              size: IronIcons.sizeCompact, color: IronColors.gold),
                         ],
                       ],
                     ),

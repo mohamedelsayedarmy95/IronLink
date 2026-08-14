@@ -10,6 +10,7 @@ import 'package:ironlink/core/widgets/iron_button.dart';
 import 'package:ironlink/features/settings/ocr_settings_bloc.dart';
 import 'package:ironlink/features/settings/ocr_settings_state.dart';
 import 'package:ironlink/l10n/app_localizations.dart';
+import '../../core/icons.dart';
 
 /// Localized sentence for a classified failure. Shared entry point so every
 /// surface phrases the same cause identically.
@@ -100,7 +101,7 @@ class _OcrSettingsViewState extends State<_OcrSettingsView> {
           content: Row(
             children: [
               Icon(
-                isWarning ? Icons.info_outline : Icons.error_outline,
+                isWarning ? IronIcons.info : IronIcons.error,
                 size: 20,
                 color: accent,
               ),
@@ -185,7 +186,7 @@ class _OcrSettingsViewState extends State<_OcrSettingsView> {
                       height: 56,
                       child: IronButton(
                         label: t.add,
-                        icon: Icons.add,
+                        icon: IronIcons.add,
                         expand: false,
                         onPressed: canAdd ? _submit : null,
                       ),
@@ -247,7 +248,7 @@ class _OcrSettingsViewState extends State<_OcrSettingsView> {
               color: IronColors.semanticError.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(IronRadius.md),
             ),
-            child: const Icon(Icons.delete_outline,
+            child: const Icon(IronIcons.delete,
                 color: IronColors.semanticError),
           ),
           child: Container(
@@ -259,8 +260,8 @@ class _OcrSettingsViewState extends State<_OcrSettingsView> {
             child: ListTile(
               contentPadding: const EdgeInsetsDirectional.only(
                   start: IronSpacing.md, end: IronSpacing.xs),
-              leading: const Icon(Icons.sell_outlined,
-                  color: IronColors.textSecondary, size: 20),
+              leading: const Icon(IronIcons.keyword,
+                  color: IronColors.textSecondary, size: IronIcons.sizeInline),
               title: Text(
                 keyword,
                 style: IronTypography.bodyLarge(color: IronColors.textPrimary),
@@ -269,7 +270,7 @@ class _OcrSettingsViewState extends State<_OcrSettingsView> {
                 tooltip: t.delete,
                 // Icon-only control: the tooltip alone is not announced
                 // reliably, so the action is named for assistive tech too.
-                icon: const Icon(Icons.close, color: IronColors.textSecondary),
+                icon: const Icon(IronIcons.close, color: IronColors.textSecondary),
                 iconSize: 20,
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 onPressed: () {

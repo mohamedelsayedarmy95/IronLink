@@ -9,6 +9,7 @@ import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/icons.dart';
 
 /// Result handed back to the chat room after a successful upload.
 class AttachmentReady {
@@ -39,8 +40,7 @@ Future<AttachmentReady?> showAttachFlow(
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Ключевое слово "$keyword" найдено в загруженном файле $fileId'),
+            content: Text(L.of(context).ocrAlertFound(keyword ?? '')),
             backgroundColor: IronColors.navySurface,
           ),
         );
@@ -62,18 +62,18 @@ Future<AttachmentReady?> showAttachFlow(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _AttachOption(
-                icon: Icons.photo_library_outlined,
-                label: 'Контент галереи',
+                icon: IronIcons.gallery,
+                label: L.of(context).attachGallery,
                 onTap: () => Navigator.pop(sheetContext, 'gallery'),
               ),
               _AttachOption(
-                icon: Icons.camera_alt_outlined,
-                label: 'Камера',
+                icon: IronIcons.camera,
+                label: L.of(context).attachCamera,
                 onTap: () => Navigator.pop(sheetContext, 'camera'),
               ),
               _AttachOption(
-                icon: Icons.picture_as_pdf_outlined,
-                label: 'Файл PDF',
+                icon: IronIcons.document,
+                label: L.of(context).attachDocument,
                 onTap: () => Navigator.pop(sheetContext, 'pdf'),
               ),
             ],
@@ -84,10 +84,8 @@ Future<AttachmentReady?> showAttachFlow(
     if (source == null || !context.mounted) return null;
 
     if (source == 'pdf') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: IronColors.navySurface,
-        content: Text('Выбор PDF будет реализован в следующем обновлении',
-            style: TextStyle(color: IronColors.textHi)),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(L.of(context).attachPdfComingSoon),
       ));
       return null;
     }
@@ -201,7 +199,7 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: IronColors.textHi),
+          icon: const Icon(IronIcons.close, color: IronColors.textHi),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -227,8 +225,8 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
                     child: TextField(
                       controller: _caption,
                       enabled: _progress == null,
-                      decoration: const InputDecoration(
-                          hintText: 'Введите подпись…'),
+                      decoration: InputDecoration(
+                          hintText: L.of(context).captionHint),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -242,7 +240,7 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
                                 color: IronColors.navyDeep, strokeWidth: 2),
                           )
                         : IconButton(
-                            icon: const Icon(Icons.send,
+                            icon: const Icon(IronIcons.send,
                                 color: IronColors.navyDeep),
                             onPressed: _send,
                           ),
