@@ -324,4 +324,183 @@ class LAr extends L {
 
   @override
   String get acknowledged => 'علمت';
+
+  @override
+  String get completeVerificationForm => 'استكمال نموذج التحقق';
+
+  @override
+  String joinRequestFor(String group) {
+    return 'طلب انضمام: $group';
+  }
+
+  @override
+  String get completeFormBelow => 'يرجى استكمال النموذج أدناه.';
+
+  @override
+  String get submitRequest => 'إرسال الطلب';
+
+  @override
+  String get resubmit => 'إعادة الإرسال';
+
+  @override
+  String get requestToJoin => 'طلب الانضمام';
+
+  @override
+  String get cancelRequest => 'إلغاء الطلب';
+
+  @override
+  String get requestAgain => 'إعادة الطلب';
+
+  @override
+  String requiredFieldsProgress(int filled, int total) {
+    return '$filled من $total حقول مطلوبة مكتملة';
+  }
+
+  @override
+  String get draftRestored => 'تم استرجاع إجاباتك السابقة';
+
+  @override
+  String get formAnswersEncrypted => 'إجاباتك مشفّرة أثناء النقل وعند التخزين.';
+
+  @override
+  String get formLoadFailedTitle => 'تعذّر تحميل النموذج';
+
+  @override
+  String get noFormRequired => 'لا يوجد نموذج مطلوب';
+
+  @override
+  String get noFormRequiredHint =>
+      'هذه المجموعة لا تطلب أي معلومات إضافية. أرسل طلبك مباشرة.';
+
+  @override
+  String get selectAnOption => 'اختر خيارًا';
+
+  @override
+  String get selectADate => 'اختر تاريخًا';
+
+  @override
+  String get noFileSelected => 'لم يتم اختيار ملف';
+
+  @override
+  String get fieldTypeUnsupported =>
+      'هذا الحقل غير مدعوم في هذا الإصدار. حدّث التطبيق لإكماله.';
+
+  @override
+  String get statusPending => 'قيد المراجعة';
+
+  @override
+  String get statusApproved => 'تمت الموافقة';
+
+  @override
+  String get statusRejected => 'مرفوض';
+
+  @override
+  String get statusMoreInfo => 'بحاجة لمعلومات';
+
+  @override
+  String get statusExpired => 'منتهي';
+
+  @override
+  String get joinRequestsTitle => 'طلبات الانضمام';
+
+  @override
+  String get tabPending => 'معلّقة';
+
+  @override
+  String get tabExpired => 'منتهية';
+
+  @override
+  String get tabHistory => 'السجل';
+
+  @override
+  String get select => 'تحديد';
+
+  @override
+  String get cancel => 'إلغاء';
+
+  @override
+  String get approve => 'موافقة';
+
+  @override
+  String get reject => 'رفض';
+
+  @override
+  String get approveAll => 'قبول الكل';
+
+  @override
+  String get rejectAll => 'رفض الكل';
+
+  @override
+  String approveSelected(int count) {
+    return 'قبول ($count)';
+  }
+
+  @override
+  String rejectSelected(int count) {
+    return 'رفض ($count)';
+  }
+
+  @override
+  String get approveAllTitle => 'قبول جميع الطلبات';
+
+  @override
+  String get rejectAllTitle => 'رفض جميع الطلبات';
+
+  @override
+  String approveAllConfirm(int count) {
+    return 'هل أنت متأكد أنك تريد قبول جميع الطلبات المعلّقة وعددها $count؟';
+  }
+
+  @override
+  String rejectAllConfirm(int count) {
+    return 'هل أنت متأكد أنك تريد رفض جميع الطلبات المعلّقة وعددها $count؟ لا يمكن التراجع عن هذا الإجراء.';
+  }
+
+  @override
+  String bulkResult(int count) {
+    return 'تمت المعالجة بنجاح لـ $count طلب';
+  }
+
+  @override
+  String get rejectRequestTitle => 'رفض الطلب';
+
+  @override
+  String get rejectionReasonOptional => 'سبب الرفض (اختياري)';
+
+  @override
+  String get rejectionReasonLabel => 'سبب الرفض';
+
+  @override
+  String get noAnswersSubmitted => 'لم تُقدَّم أي إجابات';
+
+  @override
+  String get requestsLoadFailedTitle => 'تعذّر تحميل الطلبات';
+
+  @override
+  String get noPendingRequests => 'لا توجد طلبات انضمام معلّقة';
+
+  @override
+  String get noPendingRequestsHint =>
+      'مجموعتك آمنة. ستظهر الطلبات الجديدة هنا.';
+
+  @override
+  String get nothingHere => 'لا يوجد شيء هنا';
+
+  @override
+  String get nothingHereHint => 'لا توجد طلبات بهذه الحالة بعد.';
+
+  @override
+  String minutesAgo(int count) {
+    return 'منذ $count دقيقة';
+  }
+
+  @override
+  String hoursAgo(int count) {
+    return 'منذ $count ساعة';
+  }
+
+  @override
+  String daysAgo(int count) {
+    return 'منذ $count يوم';
+  }
 }

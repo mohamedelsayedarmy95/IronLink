@@ -14,6 +14,7 @@ import 'features/auth/auth_repository.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/chat/chat_repository.dart';
+import 'features/groups/entry/entry_repository.dart';
 import 'features/groups/groups_repository.dart';
 import 'l10n/app_localizations.dart';
 
@@ -49,6 +50,8 @@ class MilAcademyApp extends StatelessWidget {
             create: (ctx) => MediaService(ctx.read<ApiClient>())),
         RepositoryProvider(
             create: (ctx) => GroupsRepository(ctx.read<ApiClient>())),
+        RepositoryProvider(
+            create: (ctx) => GroupEntryRepository(ctx.read<ApiClient>())),
         RepositoryProvider(
             create: (ctx) => PushService(ctx.read<ApiClient>())),
       ],

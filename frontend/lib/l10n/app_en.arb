@@ -1,6 +1,5 @@
 {
   "@@locale": "en",
-
   "authTagline": "Private · Secure · Limitless",
   "authSubtitle": "The Trusted Messaging System",
   "featureE2EE": "End-to-end encryption",
@@ -11,7 +10,6 @@
   "alreadyHaveAccount": "Already have an account? ",
   "signIn": "Sign in",
   "devGuestLogin": "Guest login (no server)",
-
   "secureSignInTitle": "Secure Sign-In",
   "phoneStepSubtitle": "Enter your unit-registered phone number",
   "otpStepSubtitle": "Enter the verification code sent to you by SMS",
@@ -22,14 +20,17 @@
   "resendCode": "Resend code",
   "resendCodeCountdown": "Resend in {seconds}s",
   "@resendCodeCountdown": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "militaryIdHint": "Military ID",
   "showPassword": "Show",
   "hidePassword": "Hide",
   "confirmSignIn": "Confirm sign-in",
   "e2eeNotice": "Your details are end-to-end encrypted — the server can't read them.",
-
   "errorFirebaseTokenFailed": "Couldn't get a verification token from Firebase",
   "errorNetwork": "Couldn't reach the server — check your connection",
   "errorUnexpected": "Something went wrong",
@@ -38,10 +39,8 @@
   "errorInvalidCode": "Incorrect verification code",
   "errorSessionExpired": "Code expired — resend it",
   "errorPhoneVerificationFailed": "Something went wrong verifying your phone",
-
   "noChatsYet": "No conversations yet",
   "noChatsYetHint": "Start a secure conversation with one of your contacts.",
-
   "onlineNow": "Online now",
   "startSecretChat": "Start secret chat",
   "secretChatComingSoon": "Secret chat enabled (arriving in a future update)",
@@ -52,32 +51,42 @@
   "deleteForEveryoneHint": "Available for 5 minutes after sending",
   "typingIndicator": "{name} is typing",
   "@typingIndicator": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "attach": "Attach",
   "messageHint": "Type a message…",
   "send": "Send",
-
   "notInAnyGroupYet": "You're not a member of any group yet",
   "notInAnyGroupYetHint": "Create a group or join one to coordinate with your team.",
   "groupMembersTitle": "{name} — {count} members",
   "@groupMembersTitle": {
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "announcementChannelReadOnly": "Announcement channel — read only",
   "memberCount": "{count} members",
   "@memberCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "roleOwner": "Group owner",
   "roleAdmin": "Admin",
   "roleModerator": "Moderator",
   "roleObserver": "Observer — read only",
   "roleMember": "Member",
-
   "channelsTitle": "Channels",
   "createChannel": "Create channel",
   "noChannelsYet": "No channels yet",
@@ -85,9 +94,12 @@
   "channelsLoadFailedTitle": "Couldn't load channels",
   "subscriberCount": "{count} subscribers",
   "@subscriberCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "ocrKeywordsTitle": "OCR Keywords",
   "ocrKeywordsDescription": "You'll be alerted automatically if any of these words appear in scanned (OCR) text inside an image or document.",
   "newKeywordLabel": "New keyword",
@@ -101,7 +113,6 @@
   "ocrLoadFailedTitle": "Couldn't load keywords",
   "ocrAddFailed": "That keyword wasn't added. Try again.",
   "ocrRemoveFailed": "That keyword wasn't removed. Try again.",
-
   "failureOffline": "You appear to be offline. Check your connection and try again.",
   "failureTimeout": "The server is taking longer than usual. Try again in a moment.",
   "failureServer": "We can't reach the server right now. Try again shortly.",
@@ -109,13 +120,11 @@
   "failureRejected": "That request couldn't be completed. Check the details and try again.",
   "failureInsecure": "The connection's security couldn't be verified. Nothing was sent.",
   "failureUnknown": "Something went wrong. Please try again.",
-
   "tabChats": "Chats",
   "tabGroups": "Groups",
   "tabBroadcasts": "Broadcasts",
   "tabSettings": "Settings",
   "comingSoon": "Coming soon",
-
   "releaseToCancel": "Release to cancel",
   "dragToCancel": "← Slide to cancel",
   "voiceUploadFailed": "Failed to upload the voice message",
@@ -126,7 +135,137 @@
   "attachPdfComingSoon": "Picking PDF files isn't available yet.",
   "captionHint": "Add a caption…",
   "ocrAlertFound": "The keyword \"{keyword}\" was found in an uploaded file.",
-  "@ocrAlertFound": { "placeholders": { "keyword": { "type": "String" } } },
-
-  "acknowledged": "Got it"
+  "@ocrAlertFound": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "acknowledged": "Got it",
+  "completeVerificationForm": "Complete Verification Form",
+  "joinRequestFor": "Join request: {group}",
+  "@joinRequestFor": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "completeFormBelow": "Please complete the form below.",
+  "submitRequest": "Submit request",
+  "resubmit": "Resubmit",
+  "requestToJoin": "Request to Join",
+  "cancelRequest": "Cancel request",
+  "requestAgain": "Request again",
+  "requiredFieldsProgress": "{filled} of {total} required fields completed",
+  "@requiredFieldsProgress": {
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "draftRestored": "Your previous answers were restored",
+  "formAnswersEncrypted": "Your answers are encrypted in transit and at rest.",
+  "formLoadFailedTitle": "Couldn't load the form",
+  "noFormRequired": "No form required",
+  "noFormRequiredHint": "This group doesn't ask for any extra information. Send your request directly.",
+  "selectAnOption": "Select an option",
+  "selectADate": "Select a date",
+  "noFileSelected": "No file selected",
+  "fieldTypeUnsupported": "This field isn't supported in this version. Update the app to complete it.",
+  "statusPending": "Pending",
+  "statusApproved": "Approved",
+  "statusRejected": "Rejected",
+  "statusMoreInfo": "Needs info",
+  "statusExpired": "Expired",
+  "joinRequestsTitle": "Join Requests",
+  "tabPending": "Pending",
+  "tabExpired": "Expired",
+  "tabHistory": "History",
+  "select": "Select",
+  "cancel": "Cancel",
+  "approve": "Approve",
+  "reject": "Reject",
+  "approveAll": "Accept All",
+  "rejectAll": "Reject All",
+  "approveSelected": "Approve ({count})",
+  "@approveSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectSelected": "Reject ({count})",
+  "@rejectSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approveAllTitle": "Accept all requests",
+  "rejectAllTitle": "Reject all requests",
+  "approveAllConfirm": "Are you sure you want to accept all {count} pending requests?",
+  "@approveAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectAllConfirm": "Are you sure you want to reject all {count} pending requests? This cannot be undone.",
+  "@rejectAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkResult": "Successfully processed {count} requests",
+  "@bulkResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectRequestTitle": "Reject request",
+  "rejectionReasonOptional": "Reason for rejection (optional)",
+  "rejectionReasonLabel": "Reason",
+  "noAnswersSubmitted": "No answers submitted",
+  "requestsLoadFailedTitle": "Couldn't load requests",
+  "noPendingRequests": "No pending join requests",
+  "noPendingRequestsHint": "Your group is secure. New requests will appear here.",
+  "nothingHere": "Nothing here",
+  "nothingHereHint": "No requests with this status yet.",
+  "minutesAgo": "{count}m ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{count}h ago",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "{count}d ago",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

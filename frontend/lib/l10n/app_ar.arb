@@ -1,6 +1,5 @@
 {
   "@@locale": "ar",
-
   "authTagline": "خاص · آمن · بلا حدود",
   "authSubtitle": "منظومة التراسل المؤمَّنة",
   "featureE2EE": "تشفير من طرف لطرف",
@@ -11,7 +10,6 @@
   "alreadyHaveAccount": "لديك حساب بالفعل؟ ",
   "signIn": "تسجيل الدخول",
   "devGuestLogin": "دخول تجريبي بدون سيرفر",
-
   "secureSignInTitle": "تسجيل الدخول الآمن",
   "phoneStepSubtitle": "أدخل رقم هاتفك المسجل لدى الوحدة",
   "otpStepSubtitle": "أدخل رمز التحقق المرسل إليك عبر رسالة نصية",
@@ -22,14 +20,17 @@
   "resendCode": "إعادة إرسال الرمز",
   "resendCodeCountdown": "إعادة الإرسال بعد {seconds} ثانية",
   "@resendCodeCountdown": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "militaryIdHint": "الرقم العسكري",
   "showPassword": "إظهار",
   "hidePassword": "إخفاء",
   "confirmSignIn": "تأكيد الدخول",
   "e2eeNotice": "بياناتك مشفّرة من طرف لطرف ولا يمكن للخادم قراءتها.",
-
   "errorFirebaseTokenFailed": "تعذر الحصول على رمز التحقق من Firebase",
   "errorNetwork": "تعذر الاتصال بالخادم — تحقق من الشبكة",
   "errorUnexpected": "حدث خطأ غير متوقع",
@@ -38,10 +39,8 @@
   "errorInvalidCode": "رمز التحقق غير صحيح",
   "errorSessionExpired": "انتهت صلاحية الرمز — أعد الإرسال",
   "errorPhoneVerificationFailed": "حدث خطأ أثناء التحقق من الهاتف",
-
   "noChatsYet": "لا توجد محادثات بعد",
   "noChatsYetHint": "ابدأ محادثة مؤمَّنة مع أحد جهات اتصالك.",
-
   "onlineNow": "متصل الآن",
   "startSecretChat": "بدء محادثة سرية",
   "secretChatComingSoon": "تم تفعيل المحادثة السرية (سيتم تطبيقها في التحديث التالي)",
@@ -52,32 +51,42 @@
   "deleteForEveryoneHint": "متاح خلال 5 دقائق من الإرسال",
   "typingIndicator": "{name} يكتب",
   "@typingIndicator": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "attach": "إرفاق",
   "messageHint": "اكتب رسالة…",
   "send": "إرسال",
-
   "notInAnyGroupYet": "لست عضواً في أي مجموعة بعد",
   "notInAnyGroupYetHint": "أنشئ مجموعة أو انضم إلى واحدة للتنسيق مع فريقك.",
   "groupMembersTitle": "{name} — {count} عضو",
   "@groupMembersTitle": {
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "announcementChannelReadOnly": "قناة إعلانات — للقراءة فقط",
   "memberCount": "{count} عضو",
   "@memberCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "roleOwner": "مالك المجموعة",
   "roleAdmin": "مشرف",
   "roleModerator": "منسق",
   "roleObserver": "مراقب — قراءة فقط",
   "roleMember": "عضو",
-
   "channelsTitle": "القنوات",
   "createChannel": "إنشاء قناة",
   "noChannelsYet": "لا توجد قنوات بعد",
@@ -85,9 +94,12 @@
   "channelsLoadFailedTitle": "تعذّر تحميل القنوات",
   "subscriberCount": "{count} مشترك",
   "@subscriberCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "ocrKeywordsTitle": "كلمات المسح الضوئي المفتاحية (OCR)",
   "ocrKeywordsDescription": "يتم تنبيهك تلقائيًا إذا ظهرت أي من هذه الكلمات في نص ممسوح ضوئيًا (OCR) داخل صورة أو مستند.",
   "newKeywordLabel": "كلمة مفتاحية جديدة",
@@ -101,7 +113,6 @@
   "ocrLoadFailedTitle": "تعذّر تحميل الكلمات",
   "ocrAddFailed": "لم تُضَف الكلمة. حاول مرة أخرى.",
   "ocrRemoveFailed": "لم تُحذَف الكلمة. حاول مرة أخرى.",
-
   "failureOffline": "لا يوجد اتصال بالإنترنت. تحقّق من الشبكة ثم أعد المحاولة.",
   "failureTimeout": "الخادم يستغرق وقتًا أطول من المعتاد. أعد المحاولة بعد قليل.",
   "failureServer": "تعذّر الوصول إلى الخادم حاليًا. أعد المحاولة بعد قليل.",
@@ -109,13 +120,11 @@
   "failureRejected": "تعذّر إتمام الطلب. راجع البيانات وحاول مرة أخرى.",
   "failureInsecure": "تعذّر التحقّق من أمان الاتصال. لم تُرسَل أي بيانات.",
   "failureUnknown": "حدث خطأ غير متوقّع. أعد المحاولة.",
-
   "tabChats": "المحادثات",
   "tabGroups": "المجموعات",
   "tabBroadcasts": "التعميمات",
   "tabSettings": "الإعدادات",
   "comingSoon": "قريباً",
-
   "releaseToCancel": "اترك للإلغاء",
   "dragToCancel": "← اسحب للإلغاء",
   "voiceUploadFailed": "فشل رفع التسجيل الصوتي",
@@ -126,7 +135,137 @@
   "attachPdfComingSoon": "اختيار ملفات PDF غير متاح بعد.",
   "captionHint": "أضف تعليقًا…",
   "ocrAlertFound": "رُصدت الكلمة \"{keyword}\" في ملف مرفوع.",
-  "@ocrAlertFound": { "placeholders": { "keyword": { "type": "String" } } },
-
-  "acknowledged": "علمت"
+  "@ocrAlertFound": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "acknowledged": "علمت",
+  "completeVerificationForm": "استكمال نموذج التحقق",
+  "joinRequestFor": "طلب انضمام: {group}",
+  "@joinRequestFor": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "completeFormBelow": "يرجى استكمال النموذج أدناه.",
+  "submitRequest": "إرسال الطلب",
+  "resubmit": "إعادة الإرسال",
+  "requestToJoin": "طلب الانضمام",
+  "cancelRequest": "إلغاء الطلب",
+  "requestAgain": "إعادة الطلب",
+  "requiredFieldsProgress": "{filled} من {total} حقول مطلوبة مكتملة",
+  "@requiredFieldsProgress": {
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "draftRestored": "تم استرجاع إجاباتك السابقة",
+  "formAnswersEncrypted": "إجاباتك مشفّرة أثناء النقل وعند التخزين.",
+  "formLoadFailedTitle": "تعذّر تحميل النموذج",
+  "noFormRequired": "لا يوجد نموذج مطلوب",
+  "noFormRequiredHint": "هذه المجموعة لا تطلب أي معلومات إضافية. أرسل طلبك مباشرة.",
+  "selectAnOption": "اختر خيارًا",
+  "selectADate": "اختر تاريخًا",
+  "noFileSelected": "لم يتم اختيار ملف",
+  "fieldTypeUnsupported": "هذا الحقل غير مدعوم في هذا الإصدار. حدّث التطبيق لإكماله.",
+  "statusPending": "قيد المراجعة",
+  "statusApproved": "تمت الموافقة",
+  "statusRejected": "مرفوض",
+  "statusMoreInfo": "بحاجة لمعلومات",
+  "statusExpired": "منتهي",
+  "joinRequestsTitle": "طلبات الانضمام",
+  "tabPending": "معلّقة",
+  "tabExpired": "منتهية",
+  "tabHistory": "السجل",
+  "select": "تحديد",
+  "cancel": "إلغاء",
+  "approve": "موافقة",
+  "reject": "رفض",
+  "approveAll": "قبول الكل",
+  "rejectAll": "رفض الكل",
+  "approveSelected": "قبول ({count})",
+  "@approveSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectSelected": "رفض ({count})",
+  "@rejectSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approveAllTitle": "قبول جميع الطلبات",
+  "rejectAllTitle": "رفض جميع الطلبات",
+  "approveAllConfirm": "هل أنت متأكد أنك تريد قبول جميع الطلبات المعلّقة وعددها {count}؟",
+  "@approveAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectAllConfirm": "هل أنت متأكد أنك تريد رفض جميع الطلبات المعلّقة وعددها {count}؟ لا يمكن التراجع عن هذا الإجراء.",
+  "@rejectAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkResult": "تمت المعالجة بنجاح لـ {count} طلب",
+  "@bulkResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectRequestTitle": "رفض الطلب",
+  "rejectionReasonOptional": "سبب الرفض (اختياري)",
+  "rejectionReasonLabel": "سبب الرفض",
+  "noAnswersSubmitted": "لم تُقدَّم أي إجابات",
+  "requestsLoadFailedTitle": "تعذّر تحميل الطلبات",
+  "noPendingRequests": "لا توجد طلبات انضمام معلّقة",
+  "noPendingRequestsHint": "مجموعتك آمنة. ستظهر الطلبات الجديدة هنا.",
+  "nothingHere": "لا يوجد شيء هنا",
+  "nothingHereHint": "لا توجد طلبات بهذه الحالة بعد.",
+  "minutesAgo": "منذ {count} دقيقة",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "منذ {count} ساعة",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "منذ {count} يوم",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

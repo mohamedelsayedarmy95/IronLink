@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../l10n/app_localizations.dart';
+import 'entry/entry_repository.dart';
+import 'entry/models/verification_form.dart';
+import 'entry/screens/pending_requests_screen.dart';
 import 'groups_repository.dart';
-import '../../core/icons.dart';
 
 /// My-groups list; tapping a group shows its members with rank icons.
 class GroupsScreen extends StatefulWidget {
@@ -58,9 +62,43 @@ class _GroupsScreenState extends State<GroupsScreen> {
             itemBuilder: (context, i) => _GroupCard(
               group: groups[i],
               onTap: () => _showMembers(context, groups[i]),
+              onReviewRequests: _canReview(groups[i])
+                  ? () => _openRequests(context, groups[i])
+                  : null,
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// Reviewing entry requests is a moderator-and-above capability, matching
+  /// the permission the server enforces. Showing the affordance to a member
+  /// would only produce a 403 they can do nothing about.
+  static bool _canReview(GroupInfo group) =>
+      const {'moderator', 'admin', 'owner'}.contains(group.myRole);
+
+  Future<void> _openRequests(BuildContext context, GroupInfo group) async {
+    final repo = context.read<GroupEntryRepository>();
+
+    // The active form is fetched up front so answers can be shown against
+    // their labels; a review screen listing bare field ids is not reviewable.
+    VerificationForm? form;
+    try {
+      form = await repo.activeForm(group.id);
+    } catch (_) {
+      // Non-fatal: the list still works, answers just fall back to raw keys.
+    }
+    if (!context.mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PendingRequestsScreen(
+          repository: repo,
+          groupId: group.id,
+          groupName: group.name,
+          form: form,
+        ),
       ),
     );
   }
@@ -116,10 +154,17 @@ class _GroupsScreenState extends State<GroupsScreen> {
 }
 
 class _GroupCard extends StatelessWidget {
-  const _GroupCard({required this.group, required this.onTap});
+  const _GroupCard({
+    required this.group,
+    required this.onTap,
+    this.onReviewRequests,
+  });
 
   final GroupInfo group;
   final VoidCallback onTap;
+
+  /// Null for members, who cannot review entry requests.
+  final VoidCallback? onReviewRequests;
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +225,19 @@ class _GroupCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(IronIcons.forward, color: IronColors.textLo),
+              if (onReviewRequests != null)
+                IconButton(
+                  tooltip: L.of(context).joinRequestsTitle,
+                  icon: const Icon(IronIcons.verified,
+                      size: IronIcons.sizeInline),
+                  color: IronColors.gold,
+                  // 48px target: the glyph alone sits well under the floor.
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: onReviewRequests,
+                )
+              else
+                const Icon(IronIcons.forward, color: IronColors.textLo),
             ],
           ),
         ),

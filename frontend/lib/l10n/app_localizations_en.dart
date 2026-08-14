@@ -331,4 +331,184 @@ class LEn extends L {
 
   @override
   String get acknowledged => 'Got it';
+
+  @override
+  String get completeVerificationForm => 'Complete Verification Form';
+
+  @override
+  String joinRequestFor(String group) {
+    return 'Join request: $group';
+  }
+
+  @override
+  String get completeFormBelow => 'Please complete the form below.';
+
+  @override
+  String get submitRequest => 'Submit request';
+
+  @override
+  String get resubmit => 'Resubmit';
+
+  @override
+  String get requestToJoin => 'Request to Join';
+
+  @override
+  String get cancelRequest => 'Cancel request';
+
+  @override
+  String get requestAgain => 'Request again';
+
+  @override
+  String requiredFieldsProgress(int filled, int total) {
+    return '$filled of $total required fields completed';
+  }
+
+  @override
+  String get draftRestored => 'Your previous answers were restored';
+
+  @override
+  String get formAnswersEncrypted =>
+      'Your answers are encrypted in transit and at rest.';
+
+  @override
+  String get formLoadFailedTitle => 'Couldn\'t load the form';
+
+  @override
+  String get noFormRequired => 'No form required';
+
+  @override
+  String get noFormRequiredHint =>
+      'This group doesn\'t ask for any extra information. Send your request directly.';
+
+  @override
+  String get selectAnOption => 'Select an option';
+
+  @override
+  String get selectADate => 'Select a date';
+
+  @override
+  String get noFileSelected => 'No file selected';
+
+  @override
+  String get fieldTypeUnsupported =>
+      'This field isn\'t supported in this version. Update the app to complete it.';
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get statusApproved => 'Approved';
+
+  @override
+  String get statusRejected => 'Rejected';
+
+  @override
+  String get statusMoreInfo => 'Needs info';
+
+  @override
+  String get statusExpired => 'Expired';
+
+  @override
+  String get joinRequestsTitle => 'Join Requests';
+
+  @override
+  String get tabPending => 'Pending';
+
+  @override
+  String get tabExpired => 'Expired';
+
+  @override
+  String get tabHistory => 'History';
+
+  @override
+  String get select => 'Select';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get approve => 'Approve';
+
+  @override
+  String get reject => 'Reject';
+
+  @override
+  String get approveAll => 'Accept All';
+
+  @override
+  String get rejectAll => 'Reject All';
+
+  @override
+  String approveSelected(int count) {
+    return 'Approve ($count)';
+  }
+
+  @override
+  String rejectSelected(int count) {
+    return 'Reject ($count)';
+  }
+
+  @override
+  String get approveAllTitle => 'Accept all requests';
+
+  @override
+  String get rejectAllTitle => 'Reject all requests';
+
+  @override
+  String approveAllConfirm(int count) {
+    return 'Are you sure you want to accept all $count pending requests?';
+  }
+
+  @override
+  String rejectAllConfirm(int count) {
+    return 'Are you sure you want to reject all $count pending requests? This cannot be undone.';
+  }
+
+  @override
+  String bulkResult(int count) {
+    return 'Successfully processed $count requests';
+  }
+
+  @override
+  String get rejectRequestTitle => 'Reject request';
+
+  @override
+  String get rejectionReasonOptional => 'Reason for rejection (optional)';
+
+  @override
+  String get rejectionReasonLabel => 'Reason';
+
+  @override
+  String get noAnswersSubmitted => 'No answers submitted';
+
+  @override
+  String get requestsLoadFailedTitle => 'Couldn\'t load requests';
+
+  @override
+  String get noPendingRequests => 'No pending join requests';
+
+  @override
+  String get noPendingRequestsHint =>
+      'Your group is secure. New requests will appear here.';
+
+  @override
+  String get nothingHere => 'Nothing here';
+
+  @override
+  String get nothingHereHint => 'No requests with this status yet.';
+
+  @override
+  String minutesAgo(int count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String hoursAgo(int count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String daysAgo(int count) {
+    return '${count}d ago';
+  }
 }

@@ -684,6 +684,318 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'علمت'**
   String get acknowledged;
+
+  /// No description provided for @completeVerificationForm.
+  ///
+  /// In ar, this message translates to:
+  /// **'استكمال نموذج التحقق'**
+  String get completeVerificationForm;
+
+  /// No description provided for @joinRequestFor.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب انضمام: {group}'**
+  String joinRequestFor(String group);
+
+  /// No description provided for @completeFormBelow.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى استكمال النموذج أدناه.'**
+  String get completeFormBelow;
+
+  /// No description provided for @submitRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الطلب'**
+  String get submitRequest;
+
+  /// No description provided for @resubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة الإرسال'**
+  String get resubmit;
+
+  /// No description provided for @requestToJoin.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب الانضمام'**
+  String get requestToJoin;
+
+  /// No description provided for @cancelRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الطلب'**
+  String get cancelRequest;
+
+  /// No description provided for @requestAgain.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة الطلب'**
+  String get requestAgain;
+
+  /// No description provided for @requiredFieldsProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'{filled} من {total} حقول مطلوبة مكتملة'**
+  String requiredFieldsProgress(int filled, int total);
+
+  /// No description provided for @draftRestored.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم استرجاع إجاباتك السابقة'**
+  String get draftRestored;
+
+  /// No description provided for @formAnswersEncrypted.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجاباتك مشفّرة أثناء النقل وعند التخزين.'**
+  String get formAnswersEncrypted;
+
+  /// No description provided for @formLoadFailedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل النموذج'**
+  String get formLoadFailedTitle;
+
+  /// No description provided for @noFormRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد نموذج مطلوب'**
+  String get noFormRequired;
+
+  /// No description provided for @noFormRequiredHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه المجموعة لا تطلب أي معلومات إضافية. أرسل طلبك مباشرة.'**
+  String get noFormRequiredHint;
+
+  /// No description provided for @selectAnOption.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر خيارًا'**
+  String get selectAnOption;
+
+  /// No description provided for @selectADate.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر تاريخًا'**
+  String get selectADate;
+
+  /// No description provided for @noFileSelected.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم اختيار ملف'**
+  String get noFileSelected;
+
+  /// No description provided for @fieldTypeUnsupported.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الحقل غير مدعوم في هذا الإصدار. حدّث التطبيق لإكماله.'**
+  String get fieldTypeUnsupported;
+
+  /// No description provided for @statusPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get statusPending;
+
+  /// No description provided for @statusApproved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت الموافقة'**
+  String get statusApproved;
+
+  /// No description provided for @statusRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get statusRejected;
+
+  /// No description provided for @statusMoreInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'بحاجة لمعلومات'**
+  String get statusMoreInfo;
+
+  /// No description provided for @statusExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتهي'**
+  String get statusExpired;
+
+  /// No description provided for @joinRequestsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات الانضمام'**
+  String get joinRequestsTitle;
+
+  /// No description provided for @tabPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلّقة'**
+  String get tabPending;
+
+  /// No description provided for @tabExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتهية'**
+  String get tabExpired;
+
+  /// No description provided for @tabHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'السجل'**
+  String get tabHistory;
+
+  /// No description provided for @select.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد'**
+  String get select;
+
+  /// No description provided for @cancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء'**
+  String get cancel;
+
+  /// No description provided for @approve.
+  ///
+  /// In ar, this message translates to:
+  /// **'موافقة'**
+  String get approve;
+
+  /// No description provided for @reject.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض'**
+  String get reject;
+
+  /// No description provided for @approveAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبول الكل'**
+  String get approveAll;
+
+  /// No description provided for @rejectAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض الكل'**
+  String get rejectAll;
+
+  /// No description provided for @approveSelected.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبول ({count})'**
+  String approveSelected(int count);
+
+  /// No description provided for @rejectSelected.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض ({count})'**
+  String rejectSelected(int count);
+
+  /// No description provided for @approveAllTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبول جميع الطلبات'**
+  String get approveAllTitle;
+
+  /// No description provided for @rejectAllTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض جميع الطلبات'**
+  String get rejectAllTitle;
+
+  /// No description provided for @approveAllConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد أنك تريد قبول جميع الطلبات المعلّقة وعددها {count}؟'**
+  String approveAllConfirm(int count);
+
+  /// No description provided for @rejectAllConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد أنك تريد رفض جميع الطلبات المعلّقة وعددها {count}؟ لا يمكن التراجع عن هذا الإجراء.'**
+  String rejectAllConfirm(int count);
+
+  /// No description provided for @bulkResult.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت المعالجة بنجاح لـ {count} طلب'**
+  String bulkResult(int count);
+
+  /// No description provided for @rejectRequestTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض الطلب'**
+  String get rejectRequestTitle;
+
+  /// No description provided for @rejectionReasonOptional.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب الرفض (اختياري)'**
+  String get rejectionReasonOptional;
+
+  /// No description provided for @rejectionReasonLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب الرفض'**
+  String get rejectionReasonLabel;
+
+  /// No description provided for @noAnswersSubmitted.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تُقدَّم أي إجابات'**
+  String get noAnswersSubmitted;
+
+  /// No description provided for @requestsLoadFailedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل الطلبات'**
+  String get requestsLoadFailedTitle;
+
+  /// No description provided for @noPendingRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد طلبات انضمام معلّقة'**
+  String get noPendingRequests;
+
+  /// No description provided for @noPendingRequestsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مجموعتك آمنة. ستظهر الطلبات الجديدة هنا.'**
+  String get noPendingRequestsHint;
+
+  /// No description provided for @nothingHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد شيء هنا'**
+  String get nothingHere;
+
+  /// No description provided for @nothingHereHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد طلبات بهذه الحالة بعد.'**
+  String get nothingHereHint;
+
+  /// No description provided for @minutesAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'منذ {count} دقيقة'**
+  String minutesAgo(int count);
+
+  /// No description provided for @hoursAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'منذ {count} ساعة'**
+  String hoursAgo(int count);
+
+  /// No description provided for @daysAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'منذ {count} يوم'**
+  String daysAgo(int count);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
