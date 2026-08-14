@@ -511,4 +511,314 @@ class LEn extends L {
   String daysAgo(int count) {
     return '${count}d ago';
   }
+
+  @override
+  String get entrySettingsTitle => 'Entry Settings';
+
+  @override
+  String get joinModeSection => 'Join mode';
+
+  @override
+  String get modeOpen => 'Open';
+
+  @override
+  String get modeOpenHint => 'Anyone joins instantly, no approval needed.';
+
+  @override
+  String get modeInviteOnly => 'Invite only';
+
+  @override
+  String get modeInviteOnlyHint => 'Only people with an invite link can join.';
+
+  @override
+  String get modeRequestApproval => 'Request + approval';
+
+  @override
+  String get modeRequestApprovalHint =>
+      'Applicants complete a verification form and await approval.';
+
+  @override
+  String get verificationFormSection => 'Verification form';
+
+  @override
+  String get noFormAttached => 'No form attached';
+
+  @override
+  String get noFormAttachedHint =>
+      'The group is gated but asks nothing. Create a form.';
+
+  @override
+  String fieldCount(int count) {
+    return '$count fields';
+  }
+
+  @override
+  String get requestHandlingSection => 'Request handling';
+
+  @override
+  String get requestExpiryTitle => 'Request expiry';
+
+  @override
+  String get requestExpiryHint =>
+      'Requests with no decision within this window expire automatically.';
+
+  @override
+  String get expiryNever => 'Never';
+
+  @override
+  String expiryDays(int count) {
+    return '$count days';
+  }
+
+  @override
+  String get allowRejoinTitle => 'Allow re-applying';
+
+  @override
+  String get allowRejoinHint =>
+      'A rejected applicant may submit a new request.';
+
+  @override
+  String get saveChanges => 'Save changes';
+
+  @override
+  String get settingsSaved => 'Settings saved';
+
+  @override
+  String get formBuilderTitle => 'Form Builder';
+
+  @override
+  String get formBuilderEmptyTitle => 'No fields added yet';
+
+  @override
+  String get formBuilderEmptyHint =>
+      'Add the fields an applicant must complete before joining.';
+
+  @override
+  String get addField => 'Add field';
+
+  @override
+  String get saveAndActivate => 'Save & activate';
+
+  @override
+  String get previewForm => 'Preview';
+
+  @override
+  String get editForm => 'Edit';
+
+  @override
+  String get previewNotice => 'This is exactly what the applicant will see.';
+
+  @override
+  String get formNameLabel => 'Form name';
+
+  @override
+  String get formNameHint => 'e.g. Unit verification';
+
+  @override
+  String get formNeedsName => 'Give the form a name';
+
+  @override
+  String get formNeedsFields => 'Add at least one field';
+
+  @override
+  String fieldNumber(int number) {
+    return 'Field $number';
+  }
+
+  @override
+  String get fieldNeedsLabel => 'This field needs a label';
+
+  @override
+  String get fieldNeedsOptions => 'Add at least one option';
+
+  @override
+  String get untitledField => 'Untitled field';
+
+  @override
+  String get chooseFieldType => 'Choose a field type';
+
+  @override
+  String get fieldLabelLabel => 'Question';
+
+  @override
+  String get fieldLabelHint => 'e.g. Full name in Arabic';
+
+  @override
+  String get fieldPlaceholderLabel => 'Placeholder (optional)';
+
+  @override
+  String get fieldHelperLabel => 'Helper text (optional)';
+
+  @override
+  String get fieldRequiredLabel => 'Required field';
+
+  @override
+  String get fieldOptionsLabel => 'Options';
+
+  @override
+  String get addOptionHint => 'Add an option';
+
+  @override
+  String get optionExists => 'That option already exists';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get fieldTypeTextShort => 'Short text';
+
+  @override
+  String get fieldTypeTextLong => 'Long text';
+
+  @override
+  String get fieldTypeNumber => 'Number';
+
+  @override
+  String get fieldTypeSelectSingle => 'Single select';
+
+  @override
+  String get fieldTypeSelectMulti => 'Multi select';
+
+  @override
+  String get fieldTypeDate => 'Date';
+
+  @override
+  String get fieldTypePhone => 'Phone number';
+
+  @override
+  String get fieldTypeFile => 'File';
+
+  @override
+  String get fieldTypeImage => 'Image';
+
+  @override
+  String get fieldTypeCheckbox => 'Checkbox';
+
+  @override
+  String get fieldTypeUrl => 'URL';
+
+  @override
+  String get fieldTypeEmail => 'Email';
+
+  @override
+  String get auditLogTitle => 'Audit Log';
+
+  @override
+  String get auditLogEmpty => 'No activities recorded yet';
+
+  @override
+  String get auditLogEmptyHint =>
+      'Every sensitive action on this group will appear here.';
+
+  @override
+  String get auditLogLoadFailedTitle => 'Couldn\'t load the audit log';
+
+  @override
+  String get loadMore => 'Load more';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get filterApprovals => 'Approvals';
+
+  @override
+  String get filterRejections => 'Rejections';
+
+  @override
+  String get filterBans => 'Bans';
+
+  @override
+  String get filterSettings => 'Settings';
+
+  @override
+  String get auditApproved => 'Approved join request';
+
+  @override
+  String get auditRejected => 'Rejected join request';
+
+  @override
+  String get auditMoreInfo => 'Requested more information';
+
+  @override
+  String auditBulkApproved(int count) {
+    return 'Bulk approved $count requests';
+  }
+
+  @override
+  String auditBulkRejected(int count) {
+    return 'Bulk rejected $count requests';
+  }
+
+  @override
+  String get auditBanned => 'Banned a member';
+
+  @override
+  String get auditUnbanned => 'Lifted a ban';
+
+  @override
+  String get auditRemoved => 'Removed a member';
+
+  @override
+  String get auditJoinModeChanged => 'Changed the join mode';
+
+  @override
+  String get auditFormUpdated => 'Updated the verification form';
+
+  @override
+  String get auditModeratorAssigned => 'Assigned a moderator';
+
+  @override
+  String get auditReopened => 'Reopened a request';
+
+  @override
+  String get auditExported => 'Exported the audit log';
+
+  @override
+  String get uploading => 'Uploading…';
+
+  @override
+  String get fileAttached => 'File attached';
+
+  @override
+  String get choose => 'Choose';
+
+  @override
+  String get replace => 'Replace';
+
+  @override
+  String get amendRequest => 'Amend request';
+
+  @override
+  String get cancelRequestTitle => 'Cancel request';
+
+  @override
+  String get cancelRequestConfirm =>
+      'Your request and answers will be deleted. You can apply again later.';
+
+  @override
+  String get keepRequest => 'Keep it';
+
+  @override
+  String get groupRequiresApproval =>
+      'This group requires admin approval before joining.';
+
+  @override
+  String get statusPendingBody =>
+      'Your request is being reviewed by the admin.';
+
+  @override
+  String get statusApprovedBody =>
+      'You have been approved! You can now participate in the group.';
+
+  @override
+  String get statusRejectedBody => 'Your request was not approved.';
+
+  @override
+  String get statusMoreInfoBody =>
+      'The admin needs more information. Please amend your request.';
+
+  @override
+  String get statusExpiredBody =>
+      'Your request has expired. You can submit a new request.';
 }

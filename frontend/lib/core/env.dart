@@ -1,43 +1,47 @@
 /// Build-time backend configuration.
 ///
-/// Two ways to point the app at a backend. Either works; the full-URL form wins
-/// when both are supplied.
+/// The deployed backend is the default, so a plain `flutter run` or
+/// `flutter build apk` produces a working app. This was previously inverted:
+/// the emulator loopback (`10.0.2.2`) was the default, so any build without
+/// explicit flags shipped pointing at a host that only exists on a developer's
+/// machine — which is why sign-in failed on a real device.
 ///
-/// 1. Full URL — one flag, best for CI and hosted backends:
+/// Overriding for local work, in order of precedence:
 ///
-///      flutter build apk --release \
-///        --dart-define=API_BASE_URL=https://ironlink-api.onrender.com/api/v1 \
-///        --dart-define=WS_BASE_URL=wss://ironlink-api.onrender.com
+/// 1. Full URL — one flag, best for CI and alternate environments:
 ///
-/// 2. Host / port / TLS — convenient for local work:
+///      flutter run \
+///        --dart-define=API_BASE_URL=http://192.168.1.10:8000/api/v1 \
+///        --dart-define=WS_BASE_URL=ws://192.168.1.10:8000
 ///
-///      flutter run --dart-define=API_HOST=10.140.128.63 --dart-define=USE_TLS=false
+/// 2. Host / port / TLS — convenient against a local server:
 ///
-/// Defaults target the Android emulator (10.0.2.2 = host loopback).
-/// Release builds MUST use a real hostname over TLS.
+///      flutter run --dart-define=API_HOST=10.0.2.2 \
+///                  --dart-define=API_PORT=8000 \
+///                  --dart-define=USE_TLS=false
 abstract class Env {
-  // Full-URL overrides. The CI workflow has been passing these flags since
-  // before anything read them, so release builds silently kept the emulator
-  // defaults and shipped pointing at 10.0.2.2.
+  /// The deployed backend. Declared here rather than only in CI so that a
+  /// build with no flags still reaches a real server.
+  static const _defaultHost = 'ironlink-api.onrender.com';
+
+  // Full-URL overrides win when supplied.
   static const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
   static const _wsBaseUrlOverride = String.fromEnvironment('WS_BASE_URL');
 
   static const host = String.fromEnvironment(
     'API_HOST',
-    defaultValue: '10.0.2.2',
+    defaultValue: _defaultHost,
   );
 
-  /// Pass an empty value for a hosted backend on the default port:
-  /// `--dart-define=API_PORT=`
-  static const port = String.fromEnvironment(
-    'API_PORT',
-    defaultValue: '8000',
-  );
+  /// Empty means "the scheme's default port", which is what a hosted backend
+  /// behind a proxy needs. Pass a value only when targeting a local server:
+  /// `--dart-define=API_PORT=8000`
+  static const port = String.fromEnvironment('API_PORT', defaultValue: '');
 
-  static const useTls = bool.fromEnvironment(
-    'USE_TLS',
-    defaultValue: false,
-  );
+  /// Defaults to TLS. A plaintext build has to be asked for explicitly — in a
+  /// product whose premise is a trustworthy channel, insecure transport should
+  /// never be something you get by forgetting a flag.
+  static const useTls = bool.fromEnvironment('USE_TLS', defaultValue: true);
 
   static String get _authority => port.isEmpty ? host : '$host:$port';
 
@@ -57,4 +61,10 @@ abstract class Env {
   static String get wsBaseUrl => _wsBaseUrlOverride.isNotEmpty
       ? _trim(_wsBaseUrlOverride)
       : '${useTls ? 'wss' : 'ws'}://$_authority';
+
+  /// True when pointing at something other than the deployed backend. Used to
+  /// surface a visible marker in debug builds so a screenshot taken against a
+  /// local server is never mistaken for production.
+  static bool get isCustomBackend =>
+      _apiBaseUrlOverride.isNotEmpty || host != _defaultHost;
 }

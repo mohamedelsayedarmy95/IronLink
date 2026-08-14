@@ -503,4 +503,311 @@ class LAr extends L {
   String daysAgo(int count) {
     return 'منذ $count يوم';
   }
+
+  @override
+  String get entrySettingsTitle => 'إعدادات الانضمام';
+
+  @override
+  String get joinModeSection => 'طريقة الانضمام';
+
+  @override
+  String get modeOpen => 'مفتوحة';
+
+  @override
+  String get modeOpenHint => 'أي شخص ينضم فورًا بدون موافقة.';
+
+  @override
+  String get modeInviteOnly => 'بالدعوة فقط';
+
+  @override
+  String get modeInviteOnlyHint => 'لا يمكن الانضمام إلا عبر رابط دعوة.';
+
+  @override
+  String get modeRequestApproval => 'طلب وموافقة';
+
+  @override
+  String get modeRequestApprovalHint =>
+      'يملأ المتقدّم نموذج تحقق وينتظر موافقة المشرف.';
+
+  @override
+  String get verificationFormSection => 'نموذج التحقق';
+
+  @override
+  String get noFormAttached => 'لا يوجد نموذج';
+
+  @override
+  String get noFormAttachedHint =>
+      'المجموعة مغلقة لكنها لا تسأل أي شيء. أنشئ نموذجًا.';
+
+  @override
+  String fieldCount(int count) {
+    return '$count حقل';
+  }
+
+  @override
+  String get requestHandlingSection => 'معالجة الطلبات';
+
+  @override
+  String get requestExpiryTitle => 'انتهاء صلاحية الطلب';
+
+  @override
+  String get requestExpiryHint =>
+      'الطلبات التي لا يُتخذ فيها قرار خلال هذه المدة تنتهي تلقائيًا.';
+
+  @override
+  String get expiryNever => 'بلا انتهاء';
+
+  @override
+  String expiryDays(int count) {
+    return '$count يوم';
+  }
+
+  @override
+  String get allowRejoinTitle => 'السماح بإعادة التقديم';
+
+  @override
+  String get allowRejoinHint => 'يمكن لمن رُفض طلبه تقديم طلب جديد.';
+
+  @override
+  String get saveChanges => 'حفظ التغييرات';
+
+  @override
+  String get settingsSaved => 'تم حفظ الإعدادات';
+
+  @override
+  String get formBuilderTitle => 'بنّاء النموذج';
+
+  @override
+  String get formBuilderEmptyTitle => 'لم تُضف أي حقول بعد';
+
+  @override
+  String get formBuilderEmptyHint =>
+      'أضف الحقول التي يجب على المتقدّم استكمالها قبل الانضمام.';
+
+  @override
+  String get addField => 'إضافة حقل';
+
+  @override
+  String get saveAndActivate => 'حفظ وتفعيل';
+
+  @override
+  String get previewForm => 'معاينة';
+
+  @override
+  String get editForm => 'تحرير';
+
+  @override
+  String get previewNotice => 'هذا ما سيراه المتقدّم بالضبط.';
+
+  @override
+  String get formNameLabel => 'اسم النموذج';
+
+  @override
+  String get formNameHint => 'مثال: تحقق الوحدة';
+
+  @override
+  String get formNeedsName => 'أدخل اسمًا للنموذج';
+
+  @override
+  String get formNeedsFields => 'أضف حقلًا واحدًا على الأقل';
+
+  @override
+  String fieldNumber(int number) {
+    return 'الحقل $number';
+  }
+
+  @override
+  String get fieldNeedsLabel => 'هذا الحقل يحتاج عنوانًا';
+
+  @override
+  String get fieldNeedsOptions => 'أضف خيارًا واحدًا على الأقل';
+
+  @override
+  String get untitledField => 'حقل بلا عنوان';
+
+  @override
+  String get chooseFieldType => 'اختر نوع الحقل';
+
+  @override
+  String get fieldLabelLabel => 'السؤال';
+
+  @override
+  String get fieldLabelHint => 'مثال: الاسم الرباعي بالعربي';
+
+  @override
+  String get fieldPlaceholderLabel => 'نص توضيحي داخل الحقل (اختياري)';
+
+  @override
+  String get fieldHelperLabel => 'إرشاد أسفل الحقل (اختياري)';
+
+  @override
+  String get fieldRequiredLabel => 'حقل مطلوب';
+
+  @override
+  String get fieldOptionsLabel => 'الخيارات';
+
+  @override
+  String get addOptionHint => 'أضف خيارًا';
+
+  @override
+  String get optionExists => 'هذا الخيار موجود بالفعل';
+
+  @override
+  String get done => 'تم';
+
+  @override
+  String get fieldTypeTextShort => 'نص قصير';
+
+  @override
+  String get fieldTypeTextLong => 'نص طويل';
+
+  @override
+  String get fieldTypeNumber => 'رقم';
+
+  @override
+  String get fieldTypeSelectSingle => 'اختيار واحد';
+
+  @override
+  String get fieldTypeSelectMulti => 'اختيار متعدد';
+
+  @override
+  String get fieldTypeDate => 'تاريخ';
+
+  @override
+  String get fieldTypePhone => 'رقم هاتف';
+
+  @override
+  String get fieldTypeFile => 'ملف';
+
+  @override
+  String get fieldTypeImage => 'صورة';
+
+  @override
+  String get fieldTypeCheckbox => 'مربع اختيار';
+
+  @override
+  String get fieldTypeUrl => 'رابط';
+
+  @override
+  String get fieldTypeEmail => 'بريد إلكتروني';
+
+  @override
+  String get auditLogTitle => 'سجل التدقيق';
+
+  @override
+  String get auditLogEmpty => 'لم يُسجَّل أي نشاط بعد';
+
+  @override
+  String get auditLogEmptyHint =>
+      'ستظهر هنا كل الإجراءات الحساسة على المجموعة.';
+
+  @override
+  String get auditLogLoadFailedTitle => 'تعذّر تحميل السجل';
+
+  @override
+  String get loadMore => 'تحميل المزيد';
+
+  @override
+  String get filterAll => 'الكل';
+
+  @override
+  String get filterApprovals => 'الموافقات';
+
+  @override
+  String get filterRejections => 'الرفض';
+
+  @override
+  String get filterBans => 'الحظر';
+
+  @override
+  String get filterSettings => 'الإعدادات';
+
+  @override
+  String get auditApproved => 'تمت الموافقة على طلب انضمام';
+
+  @override
+  String get auditRejected => 'تم رفض طلب انضمام';
+
+  @override
+  String get auditMoreInfo => 'طُلبت معلومات إضافية';
+
+  @override
+  String auditBulkApproved(int count) {
+    return 'تمت الموافقة على $count طلب دفعة واحدة';
+  }
+
+  @override
+  String auditBulkRejected(int count) {
+    return 'تم رفض $count طلب دفعة واحدة';
+  }
+
+  @override
+  String get auditBanned => 'تم حظر عضو';
+
+  @override
+  String get auditUnbanned => 'تم رفع الحظر عن عضو';
+
+  @override
+  String get auditRemoved => 'تمت إزالة عضو';
+
+  @override
+  String get auditJoinModeChanged => 'تم تغيير طريقة الانضمام';
+
+  @override
+  String get auditFormUpdated => 'تم تحديث نموذج التحقق';
+
+  @override
+  String get auditModeratorAssigned => 'تم تعيين منسق';
+
+  @override
+  String get auditReopened => 'تمت إعادة فتح طلب';
+
+  @override
+  String get auditExported => 'تم تصدير سجل التدقيق';
+
+  @override
+  String get uploading => 'جارٍ الرفع…';
+
+  @override
+  String get fileAttached => 'تم إرفاق ملف';
+
+  @override
+  String get choose => 'اختيار';
+
+  @override
+  String get replace => 'استبدال';
+
+  @override
+  String get amendRequest => 'تعديل الطلب';
+
+  @override
+  String get cancelRequestTitle => 'إلغاء الطلب';
+
+  @override
+  String get cancelRequestConfirm =>
+      'سيُحذف طلبك وإجاباتك. يمكنك التقديم من جديد لاحقًا.';
+
+  @override
+  String get keepRequest => 'الإبقاء عليه';
+
+  @override
+  String get groupRequiresApproval =>
+      'هذه المجموعة تتطلّب موافقة المشرف قبل الانضمام.';
+
+  @override
+  String get statusPendingBody => 'طلبك قيد المراجعة من قِبل المشرف.';
+
+  @override
+  String get statusApprovedBody =>
+      'تمت الموافقة على طلبك! يمكنك الآن المشاركة في المجموعة.';
+
+  @override
+  String get statusRejectedBody => 'لم تتم الموافقة على طلبك.';
+
+  @override
+  String get statusMoreInfoBody =>
+      'يحتاج المشرف إلى معلومات إضافية. يرجى تعديل طلبك.';
+
+  @override
+  String get statusExpiredBody => 'انتهت صلاحية طلبك. يمكنك تقديم طلب جديد.';
 }

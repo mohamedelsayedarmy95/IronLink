@@ -135,6 +135,71 @@ class VerificationForm extends Equatable {
   List<Object?> get props => [id, name, fields];
 }
 
+/// How a group admits people.
+enum GroupJoinMode {
+  open('open'),
+  inviteOnly('invite_only'),
+  requestApproval('request_approval');
+
+  const GroupJoinMode(this.wire);
+  final String wire;
+
+  static GroupJoinMode fromWire(String value) => GroupJoinMode.values.firstWhere(
+        (m) => m.wire == value,
+        // Approval-required is the safe fallback: an unrecognised mode must
+        // not silently open a group that was meant to be gated.
+        orElse: () => GroupJoinMode.requestApproval,
+      );
+
+  /// Whether a verification form is meaningful for this mode. Open and
+  /// invite-only groups never show the form, so attaching one would be a
+  /// setting with no effect.
+  bool get usesForm => this == GroupJoinMode.requestApproval;
+}
+
+/// Entry configuration for a group, as the admin sees and edits it.
+class GroupEntrySettings extends Equatable {
+  const GroupEntrySettings({
+    required this.joinMode,
+    this.verificationFormId,
+    this.requestExpiryDays = 14,
+    this.allowRejoin = false,
+  });
+
+  final GroupJoinMode joinMode;
+  final String? verificationFormId;
+
+  /// 0 means requests never expire.
+  final int requestExpiryDays;
+  final bool allowRejoin;
+
+  GroupEntrySettings copyWith({
+    GroupJoinMode? joinMode,
+    String? verificationFormId,
+    bool clearForm = false,
+    int? requestExpiryDays,
+    bool? allowRejoin,
+  }) =>
+      GroupEntrySettings(
+        joinMode: joinMode ?? this.joinMode,
+        verificationFormId:
+            clearForm ? null : (verificationFormId ?? this.verificationFormId),
+        requestExpiryDays: requestExpiryDays ?? this.requestExpiryDays,
+        allowRejoin: allowRejoin ?? this.allowRejoin,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'join_mode': joinMode.wire,
+        'verification_form_id': verificationFormId,
+        'request_expiry_days': requestExpiryDays,
+        'allow_rejoin': allowRejoin,
+      };
+
+  @override
+  List<Object?> get props =>
+      [joinMode, verificationFormId, requestExpiryDays, allowRejoin];
+}
+
 /// Where a join request stands. Wire values match the backend.
 enum JoinRequestStatus {
   pending('pending'),
@@ -157,6 +222,86 @@ enum JoinRequestStatus {
 
   /// Whether a fresh request is the way forward from here.
   bool get allowsNewRequest => this == JoinRequestStatus.expired;
+}
+
+/// A recorded sensitive action. Wire values match GroupAuditAction.
+enum AuditAction {
+  approveRequest('approve_request'),
+  rejectRequest('reject_request'),
+  requestMoreInfo('request_more_info'),
+  bulkApprove('bulk_approve'),
+  bulkReject('bulk_reject'),
+  removeMember('remove_member'),
+  banMember('ban_member'),
+  unbanMember('unban_member'),
+  changeJoinMode('change_join_mode'),
+  updateForm('update_form'),
+  assignModerator('assign_moderator'),
+  reopenRequest('reopen_request'),
+  exportAuditLog('export_audit_log'),
+  unknown('__unknown__');
+
+  const AuditAction(this.wire);
+  final String wire;
+
+  static AuditAction fromWire(String value) => AuditAction.values.firstWhere(
+        (a) => a.wire == value,
+        // An action this build doesn't know still appears in the log with its
+        // raw name — dropping it would leave a gap in an audit trail.
+        orElse: () => AuditAction.unknown,
+      );
+}
+
+class AuditEntry extends Equatable {
+  const AuditEntry({
+    required this.id,
+    required this.action,
+    required this.rawAction,
+    required this.performedById,
+    this.targetUserId,
+    this.details = const {},
+    this.createdAt,
+  });
+
+  final String id;
+  final AuditAction action;
+
+  /// Kept so an unrecognised action can still be displayed by name.
+  final String rawAction;
+  final String performedById;
+  final String? targetUserId;
+  final Map<String, dynamic> details;
+  final DateTime? createdAt;
+
+  /// Free-text detail worth showing on its own line: a rejection reason, the
+  /// notes attached to a more-info request, or a bulk count.
+  String? get detailLine {
+    final reason = details['reason'];
+    if (reason is String && reason.trim().isNotEmpty) return reason;
+    final notes = details['notes'];
+    if (notes is String && notes.trim().isNotEmpty) return notes;
+    return null;
+  }
+
+  int? get count => (details['count'] as num?)?.toInt();
+
+  factory AuditEntry.fromJson(Map<String, dynamic> json) {
+    final raw = json['action'] as String? ?? '';
+    return AuditEntry(
+      id: json['id'] as String,
+      action: AuditAction.fromWire(raw),
+      rawAction: raw,
+      performedById: json['performed_by_id'] as String? ?? '',
+      targetUserId: json['target_user_id'] as String?,
+      details: (json['details'] as Map<String, dynamic>?) ?? const {},
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.tryParse(json['created_at'] as String),
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, action, createdAt];
 }
 
 class JoinRequest extends Equatable {

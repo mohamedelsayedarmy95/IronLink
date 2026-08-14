@@ -267,5 +267,136 @@
         "type": "int"
       }
     }
-  }
+  },
+  "entrySettingsTitle": "Entry Settings",
+  "joinModeSection": "Join mode",
+  "modeOpen": "Open",
+  "modeOpenHint": "Anyone joins instantly, no approval needed.",
+  "modeInviteOnly": "Invite only",
+  "modeInviteOnlyHint": "Only people with an invite link can join.",
+  "modeRequestApproval": "Request + approval",
+  "modeRequestApprovalHint": "Applicants complete a verification form and await approval.",
+  "verificationFormSection": "Verification form",
+  "noFormAttached": "No form attached",
+  "noFormAttachedHint": "The group is gated but asks nothing. Create a form.",
+  "fieldCount": "{count} fields",
+  "@fieldCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestHandlingSection": "Request handling",
+  "requestExpiryTitle": "Request expiry",
+  "requestExpiryHint": "Requests with no decision within this window expire automatically.",
+  "expiryNever": "Never",
+  "expiryDays": "{count} days",
+  "@expiryDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allowRejoinTitle": "Allow re-applying",
+  "allowRejoinHint": "A rejected applicant may submit a new request.",
+  "saveChanges": "Save changes",
+  "settingsSaved": "Settings saved",
+  "formBuilderTitle": "Form Builder",
+  "formBuilderEmptyTitle": "No fields added yet",
+  "formBuilderEmptyHint": "Add the fields an applicant must complete before joining.",
+  "addField": "Add field",
+  "saveAndActivate": "Save & activate",
+  "previewForm": "Preview",
+  "editForm": "Edit",
+  "previewNotice": "This is exactly what the applicant will see.",
+  "formNameLabel": "Form name",
+  "formNameHint": "e.g. Unit verification",
+  "formNeedsName": "Give the form a name",
+  "formNeedsFields": "Add at least one field",
+  "fieldNumber": "Field {number}",
+  "@fieldNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "fieldNeedsLabel": "This field needs a label",
+  "fieldNeedsOptions": "Add at least one option",
+  "untitledField": "Untitled field",
+  "chooseFieldType": "Choose a field type",
+  "fieldLabelLabel": "Question",
+  "fieldLabelHint": "e.g. Full name in Arabic",
+  "fieldPlaceholderLabel": "Placeholder (optional)",
+  "fieldHelperLabel": "Helper text (optional)",
+  "fieldRequiredLabel": "Required field",
+  "fieldOptionsLabel": "Options",
+  "addOptionHint": "Add an option",
+  "optionExists": "That option already exists",
+  "done": "Done",
+  "fieldTypeTextShort": "Short text",
+  "fieldTypeTextLong": "Long text",
+  "fieldTypeNumber": "Number",
+  "fieldTypeSelectSingle": "Single select",
+  "fieldTypeSelectMulti": "Multi select",
+  "fieldTypeDate": "Date",
+  "fieldTypePhone": "Phone number",
+  "fieldTypeFile": "File",
+  "fieldTypeImage": "Image",
+  "fieldTypeCheckbox": "Checkbox",
+  "fieldTypeUrl": "URL",
+  "fieldTypeEmail": "Email",
+  "auditLogTitle": "Audit Log",
+  "auditLogEmpty": "No activities recorded yet",
+  "auditLogEmptyHint": "Every sensitive action on this group will appear here.",
+  "auditLogLoadFailedTitle": "Couldn't load the audit log",
+  "loadMore": "Load more",
+  "filterAll": "All",
+  "filterApprovals": "Approvals",
+  "filterRejections": "Rejections",
+  "filterBans": "Bans",
+  "filterSettings": "Settings",
+  "auditApproved": "Approved join request",
+  "auditRejected": "Rejected join request",
+  "auditMoreInfo": "Requested more information",
+  "auditBulkApproved": "Bulk approved {count} requests",
+  "@auditBulkApproved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBulkRejected": "Bulk rejected {count} requests",
+  "@auditBulkRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBanned": "Banned a member",
+  "auditUnbanned": "Lifted a ban",
+  "auditRemoved": "Removed a member",
+  "auditJoinModeChanged": "Changed the join mode",
+  "auditFormUpdated": "Updated the verification form",
+  "auditModeratorAssigned": "Assigned a moderator",
+  "auditReopened": "Reopened a request",
+  "auditExported": "Exported the audit log",
+  "uploading": "Uploading…",
+  "fileAttached": "File attached",
+  "choose": "Choose",
+  "replace": "Replace",
+  "amendRequest": "Amend request",
+  "cancelRequestTitle": "Cancel request",
+  "cancelRequestConfirm": "Your request and answers will be deleted. You can apply again later.",
+  "keepRequest": "Keep it",
+  "groupRequiresApproval": "This group requires admin approval before joining.",
+  "statusPendingBody": "Your request is being reviewed by the admin.",
+  "statusApprovedBody": "You have been approved! You can now participate in the group.",
+  "statusRejectedBody": "Your request was not approved.",
+  "statusMoreInfoBody": "The admin needs more information. Please amend your request.",
+  "statusExpiredBody": "Your request has expired. You can submit a new request."
 }

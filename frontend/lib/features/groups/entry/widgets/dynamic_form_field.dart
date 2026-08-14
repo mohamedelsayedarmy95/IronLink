@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/icons.dart';
+import '../../../../core/media_service.dart';
 import '../../../../core/theme.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../models/verification_form.dart';
@@ -21,6 +25,7 @@ class DynamicFormField extends StatelessWidget {
     required this.onChanged,
     this.errorText,
     this.enabled = true,
+    this.media,
   });
 
   final VerificationFormField field;
@@ -28,6 +33,10 @@ class DynamicFormField extends StatelessWidget {
   final ValueChanged<dynamic> onChanged;
   final String? errorText;
   final bool enabled;
+
+  /// Required for file and image fields. Null in the admin's preview, where
+  /// the control is shown but must not actually upload anything.
+  final MediaService? media;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +107,14 @@ class DynamicFormField extends StatelessWidget {
         return _checkbox(context);
       case FormFieldType.file:
       case FormFieldType.image:
-        return _upload(context, t);
+        return _UploadField(
+          field: field,
+          value: value is String ? value as String : null,
+          enabled: enabled && media != null,
+          media: media,
+          onChanged: onChanged,
+          decoration: _decoration(),
+        );
       case FormFieldType.textShort:
         return _text(context);
       case FormFieldType.unsupported:
@@ -281,47 +297,6 @@ class DynamicFormField extends StatelessWidget {
     );
   }
 
-  Widget _upload(BuildContext context, L t) {
-    final hasFile = value is String && (value as String).isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.all(IronSpacing.md),
-      decoration: BoxDecoration(
-        color: IronColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(IronRadius.md),
-        border: Border.all(color: IronColors.borderInteractive),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            field.type == FormFieldType.image
-                ? IronIcons.camera
-                : IronIcons.document,
-            size: IronIcons.sizeInline,
-            color: IronColors.textSecondary,
-          ),
-          const SizedBox(width: IronSpacing.sm),
-          Expanded(
-            child: Text(
-              hasFile ? (value as String).split('/').last : t.noFileSelected,
-              overflow: TextOverflow.ellipsis,
-              style: IronTypography.bodyMedium(
-                color: hasFile
-                    ? IronColors.textPrimary
-                    : IronColors.textTertiary,
-              ),
-            ),
-          ),
-          TextButton(
-            // Upload is wired to the media service in a follow-up; the
-            // control is disabled rather than pretending to work.
-            onPressed: null,
-            child: Text(t.comingSoon),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _unsupported(L t) => Container(
         padding: const EdgeInsets.all(IronSpacing.md),
         decoration: BoxDecoration(
@@ -347,6 +322,175 @@ class DynamicFormField extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// File and image answers.
+///
+/// The stored answer is the media key the server returns, not the local path:
+/// the validator checks that key, and a device path would mean nothing to an
+/// admin reviewing the request from somewhere else.
+class _UploadField extends StatefulWidget {
+  const _UploadField({
+    required this.field,
+    required this.value,
+    required this.enabled,
+    required this.media,
+    required this.onChanged,
+    required this.decoration,
+  });
+
+  final VerificationFormField field;
+  final String? value;
+  final bool enabled;
+  final MediaService? media;
+  final ValueChanged<dynamic> onChanged;
+  final InputDecoration decoration;
+
+  @override
+  State<_UploadField> createState() => _UploadFieldState();
+}
+
+class _UploadFieldState extends State<_UploadField> {
+  double? _progress;
+  String? _error;
+
+  bool get _uploading => _progress != null;
+
+  Future<void> _pick() async {
+    final media = widget.media;
+    if (media == null) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      // Documents still come from the gallery for now: a dedicated document
+      // picker is a separate dependency, and offering a camera for a PDF
+      // would be worse than offering a slightly wide gallery.
+      source: ImageSource.gallery,
+      imageQuality: 90,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _progress = 0;
+      _error = null;
+    });
+
+    try {
+      final result = await media.upload(
+        File(picked.path),
+        mimeType: widget.field.type == FormFieldType.image
+            ? 'image/jpeg'
+            : 'application/octet-stream',
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
+      );
+      if (!mounted) return;
+      HapticFeedback.selectionClick();
+      setState(() => _progress = null);
+      widget.onChanged(result.mediaKey);
+    } catch (e) {
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      debugPrint('[form-upload] failed: $e');
+      setState(() {
+        _progress = null;
+        // Named separately from the field's validation error: this is about
+        // the transfer, not about the answer being wrong.
+        _error = L.of(context).uploadFailed;
+      });
+    }
+  }
+
+  void _clear() {
+    widget.onChanged(null);
+    setState(() => _error = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = L.of(context);
+    final hasFile = widget.value != null && widget.value!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(IronSpacing.md),
+          decoration: BoxDecoration(
+            color: IronColors.surfacePrimary,
+            borderRadius: BorderRadius.circular(IronRadius.md),
+            border: Border.all(color: IronColors.borderInteractive),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                widget.field.type == FormFieldType.image
+                    ? IronIcons.camera
+                    : IronIcons.document,
+                size: IronIcons.sizeInline,
+                color: hasFile
+                    ? IronColors.semanticSuccess
+                    : IronColors.textSecondary,
+              ),
+              const SizedBox(width: IronSpacing.sm),
+              Expanded(
+                child: Text(
+                  _uploading
+                      ? t.uploading
+                      : hasFile
+                          ? t.fileAttached
+                          : t.noFileSelected,
+                  overflow: TextOverflow.ellipsis,
+                  style: IronTypography.bodyMedium(
+                    color: hasFile
+                        ? IronColors.textPrimary
+                        : IronColors.textTertiary,
+                  ),
+                ),
+              ),
+              if (hasFile && !_uploading)
+                IconButton(
+                  tooltip: t.delete,
+                  icon: const Icon(IronIcons.close,
+                      size: IronIcons.sizeCompact),
+                  color: IronColors.textSecondary,
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: widget.enabled ? _clear : null,
+                )
+              else
+                TextButton(
+                  onPressed:
+                      widget.enabled && !_uploading ? _pick : null,
+                  child: Text(hasFile ? t.replace : t.choose),
+                ),
+            ],
+          ),
+        ),
+        if (_uploading) ...[
+          const SizedBox(height: IronSpacing.xs),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: _progress,
+              minHeight: 3,
+              backgroundColor: IronColors.surfaceSecondary,
+              valueColor:
+                  const AlwaysStoppedAnimation(IronColors.accentText),
+            ),
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: IronSpacing.xxs),
+          Text(
+            _error!,
+            style: IronTypography.bodySmall(color: IronColors.semanticError),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _Label extends StatelessWidget {

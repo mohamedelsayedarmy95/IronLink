@@ -7,6 +7,8 @@ import '../../core/widgets/empty_state.dart';
 import '../../l10n/app_localizations.dart';
 import 'entry/entry_repository.dart';
 import 'entry/models/verification_form.dart';
+import 'entry/screens/group_entry_screen.dart';
+import 'entry/screens/group_entry_settings_screen.dart';
 import 'entry/screens/pending_requests_screen.dart';
 import 'groups_repository.dart';
 
@@ -61,9 +63,19 @@ class _GroupsScreenState extends State<GroupsScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, i) => _GroupCard(
               group: groups[i],
-              onTap: () => _showMembers(context, groups[i]),
+              // A member sees who else is in the group; anyone without a role
+              // is looking at a group they have not joined, so the entry
+              // screen is the useful destination.
+              onTap: () => groups[i].myRole == null
+                  ? _openEntry(context, groups[i])
+                  : _showMembers(context, groups[i]),
               onReviewRequests: _canReview(groups[i])
                   ? () => _openRequests(context, groups[i])
+                  : null,
+              // Entry configuration is admin-only; moderators may review
+              // requests but not change the rules they are reviewed under.
+              onOpenSettings: _canConfigure(groups[i])
+                  ? () => _openSettings(context, groups[i])
                   : null,
             ),
           );
@@ -77,6 +89,33 @@ class _GroupsScreenState extends State<GroupsScreen> {
   /// would only produce a 403 they can do nothing about.
   static bool _canReview(GroupInfo group) =>
       const {'moderator', 'admin', 'owner'}.contains(group.myRole);
+
+  static bool _canConfigure(GroupInfo group) =>
+      const {'admin', 'owner'}.contains(group.myRole);
+
+  Future<void> _openEntry(BuildContext context, GroupInfo group) =>
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GroupEntryScreen(
+            repository: context.read<GroupEntryRepository>(),
+            groupId: group.id,
+            groupName: group.name,
+            groupDescription: group.description,
+            memberCount: group.memberCount,
+          ),
+        ),
+      );
+
+  Future<void> _openSettings(BuildContext context, GroupInfo group) =>
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GroupEntrySettingsScreen(
+            repository: context.read<GroupEntryRepository>(),
+            groupId: group.id,
+            groupName: group.name,
+          ),
+        ),
+      );
 
   Future<void> _openRequests(BuildContext context, GroupInfo group) async {
     final repo = context.read<GroupEntryRepository>();
@@ -158,6 +197,7 @@ class _GroupCard extends StatelessWidget {
     required this.group,
     required this.onTap,
     this.onReviewRequests,
+    this.onOpenSettings,
   });
 
   final GroupInfo group;
@@ -165,6 +205,9 @@ class _GroupCard extends StatelessWidget {
 
   /// Null for members, who cannot review entry requests.
   final VoidCallback? onReviewRequests;
+
+  /// Null for anyone below admin, who cannot change entry rules.
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -225,18 +268,28 @@ class _GroupCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onOpenSettings != null)
+                IconButton(
+                  tooltip: L.of(context).entrySettingsTitle,
+                  icon: const Icon(IronIcons.settings,
+                      size: IronIcons.sizeInline),
+                  color: IronColors.textLo,
+                  // 48px target: the glyph alone sits well under the floor.
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: onOpenSettings,
+                ),
               if (onReviewRequests != null)
                 IconButton(
                   tooltip: L.of(context).joinRequestsTitle,
                   icon: const Icon(IronIcons.verified,
                       size: IronIcons.sizeInline),
                   color: IronColors.gold,
-                  // 48px target: the glyph alone sits well under the floor.
                   constraints:
                       const BoxConstraints(minWidth: 48, minHeight: 48),
                   onPressed: onReviewRequests,
-                )
-              else
+                ),
+              if (onOpenSettings == null && onReviewRequests == null)
                 const Icon(IronIcons.forward, color: IronColors.textLo),
             ],
           ),

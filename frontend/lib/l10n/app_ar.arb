@@ -267,5 +267,136 @@
         "type": "int"
       }
     }
-  }
+  },
+  "entrySettingsTitle": "إعدادات الانضمام",
+  "joinModeSection": "طريقة الانضمام",
+  "modeOpen": "مفتوحة",
+  "modeOpenHint": "أي شخص ينضم فورًا بدون موافقة.",
+  "modeInviteOnly": "بالدعوة فقط",
+  "modeInviteOnlyHint": "لا يمكن الانضمام إلا عبر رابط دعوة.",
+  "modeRequestApproval": "طلب وموافقة",
+  "modeRequestApprovalHint": "يملأ المتقدّم نموذج تحقق وينتظر موافقة المشرف.",
+  "verificationFormSection": "نموذج التحقق",
+  "noFormAttached": "لا يوجد نموذج",
+  "noFormAttachedHint": "المجموعة مغلقة لكنها لا تسأل أي شيء. أنشئ نموذجًا.",
+  "fieldCount": "{count} حقل",
+  "@fieldCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestHandlingSection": "معالجة الطلبات",
+  "requestExpiryTitle": "انتهاء صلاحية الطلب",
+  "requestExpiryHint": "الطلبات التي لا يُتخذ فيها قرار خلال هذه المدة تنتهي تلقائيًا.",
+  "expiryNever": "بلا انتهاء",
+  "expiryDays": "{count} يوم",
+  "@expiryDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allowRejoinTitle": "السماح بإعادة التقديم",
+  "allowRejoinHint": "يمكن لمن رُفض طلبه تقديم طلب جديد.",
+  "saveChanges": "حفظ التغييرات",
+  "settingsSaved": "تم حفظ الإعدادات",
+  "formBuilderTitle": "بنّاء النموذج",
+  "formBuilderEmptyTitle": "لم تُضف أي حقول بعد",
+  "formBuilderEmptyHint": "أضف الحقول التي يجب على المتقدّم استكمالها قبل الانضمام.",
+  "addField": "إضافة حقل",
+  "saveAndActivate": "حفظ وتفعيل",
+  "previewForm": "معاينة",
+  "editForm": "تحرير",
+  "previewNotice": "هذا ما سيراه المتقدّم بالضبط.",
+  "formNameLabel": "اسم النموذج",
+  "formNameHint": "مثال: تحقق الوحدة",
+  "formNeedsName": "أدخل اسمًا للنموذج",
+  "formNeedsFields": "أضف حقلًا واحدًا على الأقل",
+  "fieldNumber": "الحقل {number}",
+  "@fieldNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "fieldNeedsLabel": "هذا الحقل يحتاج عنوانًا",
+  "fieldNeedsOptions": "أضف خيارًا واحدًا على الأقل",
+  "untitledField": "حقل بلا عنوان",
+  "chooseFieldType": "اختر نوع الحقل",
+  "fieldLabelLabel": "السؤال",
+  "fieldLabelHint": "مثال: الاسم الرباعي بالعربي",
+  "fieldPlaceholderLabel": "نص توضيحي داخل الحقل (اختياري)",
+  "fieldHelperLabel": "إرشاد أسفل الحقل (اختياري)",
+  "fieldRequiredLabel": "حقل مطلوب",
+  "fieldOptionsLabel": "الخيارات",
+  "addOptionHint": "أضف خيارًا",
+  "optionExists": "هذا الخيار موجود بالفعل",
+  "done": "تم",
+  "fieldTypeTextShort": "نص قصير",
+  "fieldTypeTextLong": "نص طويل",
+  "fieldTypeNumber": "رقم",
+  "fieldTypeSelectSingle": "اختيار واحد",
+  "fieldTypeSelectMulti": "اختيار متعدد",
+  "fieldTypeDate": "تاريخ",
+  "fieldTypePhone": "رقم هاتف",
+  "fieldTypeFile": "ملف",
+  "fieldTypeImage": "صورة",
+  "fieldTypeCheckbox": "مربع اختيار",
+  "fieldTypeUrl": "رابط",
+  "fieldTypeEmail": "بريد إلكتروني",
+  "auditLogTitle": "سجل التدقيق",
+  "auditLogEmpty": "لم يُسجَّل أي نشاط بعد",
+  "auditLogEmptyHint": "ستظهر هنا كل الإجراءات الحساسة على المجموعة.",
+  "auditLogLoadFailedTitle": "تعذّر تحميل السجل",
+  "loadMore": "تحميل المزيد",
+  "filterAll": "الكل",
+  "filterApprovals": "الموافقات",
+  "filterRejections": "الرفض",
+  "filterBans": "الحظر",
+  "filterSettings": "الإعدادات",
+  "auditApproved": "تمت الموافقة على طلب انضمام",
+  "auditRejected": "تم رفض طلب انضمام",
+  "auditMoreInfo": "طُلبت معلومات إضافية",
+  "auditBulkApproved": "تمت الموافقة على {count} طلب دفعة واحدة",
+  "@auditBulkApproved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBulkRejected": "تم رفض {count} طلب دفعة واحدة",
+  "@auditBulkRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBanned": "تم حظر عضو",
+  "auditUnbanned": "تم رفع الحظر عن عضو",
+  "auditRemoved": "تمت إزالة عضو",
+  "auditJoinModeChanged": "تم تغيير طريقة الانضمام",
+  "auditFormUpdated": "تم تحديث نموذج التحقق",
+  "auditModeratorAssigned": "تم تعيين منسق",
+  "auditReopened": "تمت إعادة فتح طلب",
+  "auditExported": "تم تصدير سجل التدقيق",
+  "uploading": "جارٍ الرفع…",
+  "fileAttached": "تم إرفاق ملف",
+  "choose": "اختيار",
+  "replace": "استبدال",
+  "amendRequest": "تعديل الطلب",
+  "cancelRequestTitle": "إلغاء الطلب",
+  "cancelRequestConfirm": "سيُحذف طلبك وإجاباتك. يمكنك التقديم من جديد لاحقًا.",
+  "keepRequest": "الإبقاء عليه",
+  "groupRequiresApproval": "هذه المجموعة تتطلّب موافقة المشرف قبل الانضمام.",
+  "statusPendingBody": "طلبك قيد المراجعة من قِبل المشرف.",
+  "statusApprovedBody": "تمت الموافقة على طلبك! يمكنك الآن المشاركة في المجموعة.",
+  "statusRejectedBody": "لم تتم الموافقة على طلبك.",
+  "statusMoreInfoBody": "يحتاج المشرف إلى معلومات إضافية. يرجى تعديل طلبك.",
+  "statusExpiredBody": "انتهت صلاحية طلبك. يمكنك تقديم طلب جديد."
 }

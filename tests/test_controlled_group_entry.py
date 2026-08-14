@@ -420,6 +420,63 @@ def test_bulk_locks_rows_to_prevent_double_approval() -> None:
     assert "with_for_update" in source
 
 
+def test_ban_is_admin_only_not_delegable_to_moderators() -> None:
+    """A moderator who can ban can permanently exclude anyone from a group
+    they do not own."""
+    import inspect
+
+    from app.api.routes.group_entry import ban_from_group
+
+    source = inspect.getsource(ban_from_group)
+    assert "GroupRole.ADMIN" in source
+    assert "GroupRole.MODERATOR" not in source
+
+
+def test_ban_removes_membership_and_kills_live_requests() -> None:
+    """Leaving someone inside a group they are barred from rejoining is
+    incoherent, and a live request would let an admin later approve a banned
+    user."""
+    import inspect
+
+    from app.api.routes.group_entry import ban_from_group
+
+    source = inspect.getsource(ban_from_group)
+    assert "db.delete(target)" in source
+    assert "delete(GroupJoinRequest)" in source
+
+
+def test_admins_cannot_ban_each_other_or_themselves() -> None:
+    import inspect
+
+    from app.api.routes.group_entry import ban_from_group
+
+    source = inspect.getsource(ban_from_group)
+    assert "cannot ban yourself" in source
+    assert "cannot ban another admin" in source
+
+
+def test_lapsed_time_limited_ban_is_cleared_not_enforced() -> None:
+    """A user must not stay blocked by a row nobody remembered to remove."""
+    import inspect
+
+    from app.api.routes.group_entry import _assert_not_banned
+
+    source = inspect.getsource(_assert_not_banned)
+    assert "is_permanent" in source
+    assert "db.delete(ban)" in source
+
+
+def test_platform_ban_is_checked_before_group_ban() -> None:
+    """Telling a platform-banned user only about this one group would be
+    misleading about why they cannot proceed."""
+    import inspect
+
+    from app.api.routes.group_entry import _assert_not_banned
+
+    source = inspect.getsource(_assert_not_banned)
+    assert source.index("PlatformBan") < source.index("GroupBan")
+
+
 def test_banned_user_is_blocked_before_a_request_is_created() -> None:
     import inspect
 

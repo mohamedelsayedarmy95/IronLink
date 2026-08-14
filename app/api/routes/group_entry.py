@@ -149,6 +149,31 @@ class BulkResultOut(BaseModel):
     total: int
 
 
+class BanIn(BaseModel):
+    reason: str | None = Field(default=None, max_length=1000)
+    is_permanent: bool = True
+    expires_at: datetime | None = None
+
+    @field_validator("expires_at")
+    @classmethod
+    def _future(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v <= datetime.now(timezone.utc):
+            raise ValueError("expiry must be in the future")
+        return v
+
+
+class BannedUserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    user_id: UUID
+    banned_by_id: UUID
+    reason: str | None
+    is_permanent: bool
+    expires_at: datetime | None
+    created_at: datetime
+
+
 class AuditEntryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -780,6 +805,134 @@ async def _bulk(
         failed=len(rows) - len(settled),
         total=len(rows),
     )
+
+
+# ── Bans ──────────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/{group_id}/bans/{user_id}",
+    response_model=BannedUserOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def ban_from_group(
+    group_id: UUID,
+    user_id: UUID,
+    body: BanIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BannedUserOut:
+    """Ban a user from this group.
+
+    Admin-only rather than delegable: a moderator who can ban can permanently
+    exclude anyone from a group they do not own.
+    """
+    await _require_rank(db, group_id, user.id, GroupRole.ADMIN)
+    await _get_group(db, group_id)
+
+    if user_id == user.id:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "You cannot ban yourself"
+        )
+
+    target = await _membership(db, group_id, user_id)
+    if target is not None and GROUP_ROLE_RANK.get(target.role, 0) >= GROUP_ROLE_RANK[
+        GroupRole.ADMIN
+    ]:
+        # Otherwise any admin could unilaterally remove a peer or the owner.
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "You cannot ban another admin"
+        )
+
+    existing = await db.scalar(
+        select(GroupBan).where(
+            GroupBan.group_id == group_id, GroupBan.user_id == user_id
+        )
+    )
+    ban = existing or GroupBan(group_id=group_id, user_id=user_id)
+    ban.banned_by_id = user.id
+    ban.reason = body.reason
+    ban.is_permanent = body.is_permanent
+    ban.expires_at = None if body.is_permanent else body.expires_at
+    if existing is None:
+        db.add(ban)
+
+    # A ban also removes an existing membership; leaving them inside a group
+    # they are barred from rejoining would be incoherent.
+    if target is not None:
+        await db.delete(target)
+
+    # Any live request is closed too, so an admin cannot later approve someone
+    # who is banned.
+    await db.execute(
+        delete(GroupJoinRequest).where(
+            GroupJoinRequest.group_id == group_id,
+            GroupJoinRequest.user_id == user_id,
+        )
+    )
+
+    _log(
+        db,
+        group_id=group_id,
+        action=GroupAuditAction.BAN_MEMBER,
+        performed_by=user.id,
+        target=user_id,
+        details={"reason": body.reason, "permanent": body.is_permanent},
+    )
+    await db.commit()
+    await db.refresh(ban)
+    return BannedUserOut.model_validate(ban)
+
+
+@router.delete(
+    "/{group_id}/bans/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+async def unban_from_group(
+    group_id: UUID,
+    user_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Lift a group ban.
+
+    The user is deliberately not notified: telling someone they may reapply
+    re-opens contact they may not want, so they simply find the option
+    available next time they look.
+    """
+    await _require_rank(db, group_id, user.id, GroupRole.ADMIN)
+
+    result = await db.execute(
+        delete(GroupBan).where(
+            GroupBan.group_id == group_id, GroupBan.user_id == user_id
+        )
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "user is not banned")
+
+    _log(
+        db,
+        group_id=group_id,
+        action=GroupAuditAction.UNBAN_MEMBER,
+        performed_by=user.id,
+        target=user_id,
+    )
+    await db.commit()
+
+
+@router.get("/{group_id}/bans", response_model=list[BannedUserOut])
+async def list_bans(
+    group_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[BannedUserOut]:
+    await _require_rank(db, group_id, user.id, GroupRole.ADMIN)
+    rows = (await db.scalars(
+        select(GroupBan)
+        .where(GroupBan.group_id == group_id)
+        .order_by(GroupBan.created_at.desc())
+    )).all()
+    return [BannedUserOut.model_validate(r) for r in rows]
 
 
 # ── Audit log ─────────────────────────────────────────────────────────────────

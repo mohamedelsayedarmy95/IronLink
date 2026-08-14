@@ -3,10 +3,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../../core/failure.dart';
 import '../../../../core/icons.dart';
+import '../../../../core/media_service.dart';
 import '../../../../core/theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/iron_button.dart';
@@ -353,6 +355,7 @@ class _JoinRequestScreenState extends State<JoinRequestScreen> {
               value: _answers[field.id],
               errorText: _errors[field.id],
               enabled: !_submitting,
+              media: context.read<MediaService>(),
               onChanged: (v) => _setAnswer(field.id, v),
             ),
           ),

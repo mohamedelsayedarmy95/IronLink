@@ -77,6 +77,59 @@ class GroupEntryRepository {
     );
   }
 
+  // ── Admin: entry configuration ──────────────────────────────────────────
+
+  Future<void> saveSettings(
+    String groupId,
+    GroupEntrySettings settings,
+  ) async {
+    await _api.dio.put<void>(
+      '/groups/$groupId/join-mode',
+      data: settings.toJson(),
+      options: await _auth(),
+    );
+  }
+
+  /// Creates a form and returns it with server-assigned field ids.
+  Future<VerificationForm> createForm(
+    String groupId, {
+    required String name,
+    String? description,
+    required List<Map<String, dynamic>> fields,
+  }) async {
+    final res = await _api.dio.post<Map<String, dynamic>>(
+      '/groups/$groupId/forms',
+      data: {
+        'name': name,
+        if (description != null) 'description': description,
+        'fields': fields,
+      },
+      options: await _auth(),
+    );
+    return VerificationForm.fromJson(res.data!);
+  }
+
+  Future<List<AuditEntry>> auditLog(
+    String groupId, {
+    String? action,
+    int limit = 25,
+    int offset = 0,
+  }) async {
+    final res = await _api.dio.get<List<dynamic>>(
+      '/groups/$groupId/audit-log',
+      queryParameters: {
+        if (action != null) 'action': action,
+        'limit': limit,
+        'offset': offset,
+      },
+      options: await _auth(),
+    );
+    return [
+      for (final j in res.data ?? [])
+        AuditEntry.fromJson(j as Map<String, dynamic>)
+    ];
+  }
+
   // ── Admin side ──────────────────────────────────────────────────────────
 
   Future<List<JoinRequest>> requests(

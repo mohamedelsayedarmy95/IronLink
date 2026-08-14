@@ -996,6 +996,582 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'منذ {count} يوم'**
   String daysAgo(int count);
+
+  /// No description provided for @entrySettingsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات الانضمام'**
+  String get entrySettingsTitle;
+
+  /// No description provided for @joinModeSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة الانضمام'**
+  String get joinModeSection;
+
+  /// No description provided for @modeOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوحة'**
+  String get modeOpen;
+
+  /// No description provided for @modeOpenHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أي شخص ينضم فورًا بدون موافقة.'**
+  String get modeOpenHint;
+
+  /// No description provided for @modeInviteOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'بالدعوة فقط'**
+  String get modeInviteOnly;
+
+  /// No description provided for @modeInviteOnlyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن الانضمام إلا عبر رابط دعوة.'**
+  String get modeInviteOnlyHint;
+
+  /// No description provided for @modeRequestApproval.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب وموافقة'**
+  String get modeRequestApproval;
+
+  /// No description provided for @modeRequestApprovalHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يملأ المتقدّم نموذج تحقق وينتظر موافقة المشرف.'**
+  String get modeRequestApprovalHint;
+
+  /// No description provided for @verificationFormSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'نموذج التحقق'**
+  String get verificationFormSection;
+
+  /// No description provided for @noFormAttached.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد نموذج'**
+  String get noFormAttached;
+
+  /// No description provided for @noFormAttachedHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'المجموعة مغلقة لكنها لا تسأل أي شيء. أنشئ نموذجًا.'**
+  String get noFormAttachedHint;
+
+  /// No description provided for @fieldCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} حقل'**
+  String fieldCount(int count);
+
+  /// No description provided for @requestHandlingSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'معالجة الطلبات'**
+  String get requestHandlingSection;
+
+  /// No description provided for @requestExpiryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهاء صلاحية الطلب'**
+  String get requestExpiryTitle;
+
+  /// No description provided for @requestExpiryHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلبات التي لا يُتخذ فيها قرار خلال هذه المدة تنتهي تلقائيًا.'**
+  String get requestExpiryHint;
+
+  /// No description provided for @expiryNever.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلا انتهاء'**
+  String get expiryNever;
+
+  /// No description provided for @expiryDays.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} يوم'**
+  String expiryDays(int count);
+
+  /// No description provided for @allowRejoinTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'السماح بإعادة التقديم'**
+  String get allowRejoinTitle;
+
+  /// No description provided for @allowRejoinHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكن لمن رُفض طلبه تقديم طلب جديد.'**
+  String get allowRejoinHint;
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ التغييرات'**
+  String get saveChanges;
+
+  /// No description provided for @settingsSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ الإعدادات'**
+  String get settingsSaved;
+
+  /// No description provided for @formBuilderTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'بنّاء النموذج'**
+  String get formBuilderTitle;
+
+  /// No description provided for @formBuilderEmptyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تُضف أي حقول بعد'**
+  String get formBuilderEmptyTitle;
+
+  /// No description provided for @formBuilderEmptyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف الحقول التي يجب على المتقدّم استكمالها قبل الانضمام.'**
+  String get formBuilderEmptyHint;
+
+  /// No description provided for @addField.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة حقل'**
+  String get addField;
+
+  /// No description provided for @saveAndActivate.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ وتفعيل'**
+  String get saveAndActivate;
+
+  /// No description provided for @previewForm.
+  ///
+  /// In ar, this message translates to:
+  /// **'معاينة'**
+  String get previewForm;
+
+  /// No description provided for @editForm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحرير'**
+  String get editForm;
+
+  /// No description provided for @previewNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا ما سيراه المتقدّم بالضبط.'**
+  String get previewNotice;
+
+  /// No description provided for @formNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم النموذج'**
+  String get formNameLabel;
+
+  /// No description provided for @formNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: تحقق الوحدة'**
+  String get formNameHint;
+
+  /// No description provided for @formNeedsName.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل اسمًا للنموذج'**
+  String get formNeedsName;
+
+  /// No description provided for @formNeedsFields.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف حقلًا واحدًا على الأقل'**
+  String get formNeedsFields;
+
+  /// No description provided for @fieldNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحقل {number}'**
+  String fieldNumber(int number);
+
+  /// No description provided for @fieldNeedsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الحقل يحتاج عنوانًا'**
+  String get fieldNeedsLabel;
+
+  /// No description provided for @fieldNeedsOptions.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف خيارًا واحدًا على الأقل'**
+  String get fieldNeedsOptions;
+
+  /// No description provided for @untitledField.
+  ///
+  /// In ar, this message translates to:
+  /// **'حقل بلا عنوان'**
+  String get untitledField;
+
+  /// No description provided for @chooseFieldType.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر نوع الحقل'**
+  String get chooseFieldType;
+
+  /// No description provided for @fieldLabelLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'السؤال'**
+  String get fieldLabelLabel;
+
+  /// No description provided for @fieldLabelHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: الاسم الرباعي بالعربي'**
+  String get fieldLabelHint;
+
+  /// No description provided for @fieldPlaceholderLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'نص توضيحي داخل الحقل (اختياري)'**
+  String get fieldPlaceholderLabel;
+
+  /// No description provided for @fieldHelperLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرشاد أسفل الحقل (اختياري)'**
+  String get fieldHelperLabel;
+
+  /// No description provided for @fieldRequiredLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'حقل مطلوب'**
+  String get fieldRequiredLabel;
+
+  /// No description provided for @fieldOptionsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخيارات'**
+  String get fieldOptionsLabel;
+
+  /// No description provided for @addOptionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف خيارًا'**
+  String get addOptionHint;
+
+  /// No description provided for @optionExists.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الخيار موجود بالفعل'**
+  String get optionExists;
+
+  /// No description provided for @done.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم'**
+  String get done;
+
+  /// No description provided for @fieldTypeTextShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'نص قصير'**
+  String get fieldTypeTextShort;
+
+  /// No description provided for @fieldTypeTextLong.
+  ///
+  /// In ar, this message translates to:
+  /// **'نص طويل'**
+  String get fieldTypeTextLong;
+
+  /// No description provided for @fieldTypeNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم'**
+  String get fieldTypeNumber;
+
+  /// No description provided for @fieldTypeSelectSingle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار واحد'**
+  String get fieldTypeSelectSingle;
+
+  /// No description provided for @fieldTypeSelectMulti.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار متعدد'**
+  String get fieldTypeSelectMulti;
+
+  /// No description provided for @fieldTypeDate.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ'**
+  String get fieldTypeDate;
+
+  /// No description provided for @fieldTypePhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم هاتف'**
+  String get fieldTypePhone;
+
+  /// No description provided for @fieldTypeFile.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملف'**
+  String get fieldTypeFile;
+
+  /// No description provided for @fieldTypeImage.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة'**
+  String get fieldTypeImage;
+
+  /// No description provided for @fieldTypeCheckbox.
+  ///
+  /// In ar, this message translates to:
+  /// **'مربع اختيار'**
+  String get fieldTypeCheckbox;
+
+  /// No description provided for @fieldTypeUrl.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط'**
+  String get fieldTypeUrl;
+
+  /// No description provided for @fieldTypeEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'بريد إلكتروني'**
+  String get fieldTypeEmail;
+
+  /// No description provided for @auditLogTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل التدقيق'**
+  String get auditLogTitle;
+
+  /// No description provided for @auditLogEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يُسجَّل أي نشاط بعد'**
+  String get auditLogEmpty;
+
+  /// No description provided for @auditLogEmptyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ستظهر هنا كل الإجراءات الحساسة على المجموعة.'**
+  String get auditLogEmptyHint;
+
+  /// No description provided for @auditLogLoadFailedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل السجل'**
+  String get auditLogLoadFailedTitle;
+
+  /// No description provided for @loadMore.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحميل المزيد'**
+  String get loadMore;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get filterAll;
+
+  /// No description provided for @filterApprovals.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموافقات'**
+  String get filterApprovals;
+
+  /// No description provided for @filterRejections.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرفض'**
+  String get filterRejections;
+
+  /// No description provided for @filterBans.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحظر'**
+  String get filterBans;
+
+  /// No description provided for @filterSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإعدادات'**
+  String get filterSettings;
+
+  /// No description provided for @auditApproved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت الموافقة على طلب انضمام'**
+  String get auditApproved;
+
+  /// No description provided for @auditRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم رفض طلب انضمام'**
+  String get auditRejected;
+
+  /// No description provided for @auditMoreInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'طُلبت معلومات إضافية'**
+  String get auditMoreInfo;
+
+  /// No description provided for @auditBulkApproved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت الموافقة على {count} طلب دفعة واحدة'**
+  String auditBulkApproved(int count);
+
+  /// No description provided for @auditBulkRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم رفض {count} طلب دفعة واحدة'**
+  String auditBulkRejected(int count);
+
+  /// No description provided for @auditBanned.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حظر عضو'**
+  String get auditBanned;
+
+  /// No description provided for @auditUnbanned.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم رفع الحظر عن عضو'**
+  String get auditUnbanned;
+
+  /// No description provided for @auditRemoved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت إزالة عضو'**
+  String get auditRemoved;
+
+  /// No description provided for @auditJoinModeChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير طريقة الانضمام'**
+  String get auditJoinModeChanged;
+
+  /// No description provided for @auditFormUpdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديث نموذج التحقق'**
+  String get auditFormUpdated;
+
+  /// No description provided for @auditModeratorAssigned.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تعيين منسق'**
+  String get auditModeratorAssigned;
+
+  /// No description provided for @auditReopened.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت إعادة فتح طلب'**
+  String get auditReopened;
+
+  /// No description provided for @auditExported.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تصدير سجل التدقيق'**
+  String get auditExported;
+
+  /// No description provided for @uploading.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ الرفع…'**
+  String get uploading;
+
+  /// No description provided for @fileAttached.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرفاق ملف'**
+  String get fileAttached;
+
+  /// No description provided for @choose.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار'**
+  String get choose;
+
+  /// No description provided for @replace.
+  ///
+  /// In ar, this message translates to:
+  /// **'استبدال'**
+  String get replace;
+
+  /// No description provided for @amendRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل الطلب'**
+  String get amendRequest;
+
+  /// No description provided for @cancelRequestTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الطلب'**
+  String get cancelRequestTitle;
+
+  /// No description provided for @cancelRequestConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيُحذف طلبك وإجاباتك. يمكنك التقديم من جديد لاحقًا.'**
+  String get cancelRequestConfirm;
+
+  /// No description provided for @keepRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإبقاء عليه'**
+  String get keepRequest;
+
+  /// No description provided for @groupRequiresApproval.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه المجموعة تتطلّب موافقة المشرف قبل الانضمام.'**
+  String get groupRequiresApproval;
+
+  /// No description provided for @statusPendingBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبك قيد المراجعة من قِبل المشرف.'**
+  String get statusPendingBody;
+
+  /// No description provided for @statusApprovedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت الموافقة على طلبك! يمكنك الآن المشاركة في المجموعة.'**
+  String get statusApprovedBody;
+
+  /// No description provided for @statusRejectedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تتم الموافقة على طلبك.'**
+  String get statusRejectedBody;
+
+  /// No description provided for @statusMoreInfoBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يحتاج المشرف إلى معلومات إضافية. يرجى تعديل طلبك.'**
+  String get statusMoreInfoBody;
+
+  /// No description provided for @statusExpiredBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية طلبك. يمكنك تقديم طلب جديد.'**
+  String get statusExpiredBody;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
