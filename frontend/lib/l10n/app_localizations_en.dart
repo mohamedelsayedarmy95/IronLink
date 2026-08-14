@@ -82,6 +82,10 @@ class LEn extends L {
   String get confirmSignIn => 'Confirm sign-in';
 
   @override
+  String get e2eeNotice =>
+      'Your details are end-to-end encrypted — the server can\'t read them.';
+
+  @override
   String get errorFirebaseTokenFailed =>
       'Couldn\'t get a verification token from Firebase';
 
@@ -110,6 +114,10 @@ class LEn extends L {
 
   @override
   String get noChatsYet => 'No conversations yet';
+
+  @override
+  String get noChatsYetHint =>
+      'Start a secure conversation with one of your contacts.';
 
   @override
   String get onlineNow => 'Online now';
@@ -154,6 +162,10 @@ class LEn extends L {
   String get notInAnyGroupYet => 'You\'re not a member of any group yet';
 
   @override
+  String get notInAnyGroupYetHint =>
+      'Create a group or join one to coordinate with your team.';
+
+  @override
   String groupMembersTitle(String name, int count) {
     return '$name — $count members';
   }
@@ -191,6 +203,13 @@ class LEn extends L {
   String get noChannelsYet => 'No channels yet';
 
   @override
+  String get noChannelsYetHint =>
+      'Subscribe to a channel to receive official announcements.';
+
+  @override
+  String get channelsLoadFailedTitle => 'Couldn\'t load channels';
+
+  @override
   String subscriberCount(int count) {
     return '$count subscribers';
   }
@@ -212,25 +231,56 @@ class LEn extends L {
   String get noKeywordsYet => 'No keywords added yet';
 
   @override
+  String get add => 'Add';
+
+  @override
+  String get ocrKeywordExists => 'That keyword is already in your list.';
+
+  @override
+  String get ocrKeywordsEmptyHint =>
+      'Add a word to be alerted whenever it appears in a scanned image or document.';
+
+  @override
   String get retry => 'Retry';
 
   @override
   String get delete => 'Delete';
 
   @override
-  String ocrLoadFailed(String error) {
-    return 'Couldn\'t load keywords: $error';
-  }
+  String get ocrLoadFailedTitle => 'Couldn\'t load keywords';
 
   @override
-  String ocrAddFailed(String error) {
-    return 'Couldn\'t add the keyword: $error';
-  }
+  String get ocrAddFailed => 'That keyword wasn\'t added. Try again.';
 
   @override
-  String ocrRemoveFailed(String error) {
-    return 'Couldn\'t delete the keyword: $error';
-  }
+  String get ocrRemoveFailed => 'That keyword wasn\'t removed. Try again.';
+
+  @override
+  String get failureOffline =>
+      'You appear to be offline. Check your connection and try again.';
+
+  @override
+  String get failureTimeout =>
+      'The server is taking longer than usual. Try again in a moment.';
+
+  @override
+  String get failureServer =>
+      'We can\'t reach the server right now. Try again shortly.';
+
+  @override
+  String get failureUnauthorized =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get failureRejected =>
+      'That request couldn\'t be completed. Check the details and try again.';
+
+  @override
+  String get failureInsecure =>
+      'The connection\'s security couldn\'t be verified. Nothing was sent.';
+
+  @override
+  String get failureUnknown => 'Something went wrong. Please try again.';
 
   @override
   String get tabChats => 'Chats';
@@ -255,6 +305,9 @@ class LEn extends L {
 
   @override
   String get voiceUploadFailed => 'Failed to upload the voice message';
+
+  @override
+  String get uploadFailed => 'That attachment didn\'t upload. Try again.';
 
   @override
   String get acknowledged => 'Got it';

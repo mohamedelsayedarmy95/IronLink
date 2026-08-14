@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ironlink/core/api_client.dart';
+import 'package:ironlink/core/failure.dart';
 import 'ocr_settings_state.dart';
 
 part 'ocr_settings_event.dart';
@@ -41,7 +42,7 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
       emit(state.copyWith(
         isLoading: false,
         errorKind: OcrErrorKind.load,
-        errorDetail: '$e',
+        failure: NetworkFailureClassifier.from(e),
       ));
     }
   }
@@ -69,7 +70,7 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
       emit(state.copyWith(
         keywords: previousKeywords,
         errorKind: OcrErrorKind.add,
-        errorDetail: '$e',
+        failure: NetworkFailureClassifier.from(e),
       ));
     }
   }
@@ -94,7 +95,7 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
       emit(state.copyWith(
         keywords: previousKeywords,
         errorKind: OcrErrorKind.remove,
-        errorDetail: '$e',
+        failure: NetworkFailureClassifier.from(e),
       ));
     }
   }

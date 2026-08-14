@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../l10n/app_localizations.dart';
 import 'groups_repository.dart';
 
@@ -35,16 +36,19 @@ class _GroupsScreenState extends State<GroupsScreen> {
           }
           final groups = snap.data ?? [];
           if (groups.isEmpty) {
-            return ListView(children: [
-              const SizedBox(height: 160),
-              const Icon(Icons.groups_outlined,
-                  size: 64, color: IronColors.goldDim),
-              const SizedBox(height: 16),
-              Center(
-                child: Text(L.of(context).notInAnyGroupYet,
-                    style: const TextStyle(color: IronColors.textLo)),
+            return LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IronEmptyState(
+                    title: L.of(context).notInAnyGroupYet,
+                    message: L.of(context).notInAnyGroupYetHint,
+                    rings: 3,
+                  ),
+                ),
               ),
-            ]);
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),

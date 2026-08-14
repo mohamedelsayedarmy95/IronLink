@@ -80,6 +80,10 @@ class LAr extends L {
   String get confirmSignIn => 'تأكيد الدخول';
 
   @override
+  String get e2eeNotice =>
+      'بياناتك مشفّرة من طرف لطرف ولا يمكن للخادم قراءتها.';
+
+  @override
   String get errorFirebaseTokenFailed =>
       'تعذر الحصول على رمز التحقق من Firebase';
 
@@ -106,6 +110,9 @@ class LAr extends L {
 
   @override
   String get noChatsYet => 'لا توجد محادثات بعد';
+
+  @override
+  String get noChatsYetHint => 'ابدأ محادثة مؤمَّنة مع أحد جهات اتصالك.';
 
   @override
   String get onlineNow => 'متصل الآن';
@@ -150,6 +157,10 @@ class LAr extends L {
   String get notInAnyGroupYet => 'لست عضواً في أي مجموعة بعد';
 
   @override
+  String get notInAnyGroupYetHint =>
+      'أنشئ مجموعة أو انضم إلى واحدة للتنسيق مع فريقك.';
+
+  @override
   String groupMembersTitle(String name, int count) {
     return '$name — $count عضو';
   }
@@ -187,6 +198,12 @@ class LAr extends L {
   String get noChannelsYet => 'لا توجد قنوات بعد';
 
   @override
+  String get noChannelsYetHint => 'اشترك في قناة لتصلك الإعلانات الرسمية.';
+
+  @override
+  String get channelsLoadFailedTitle => 'تعذّر تحميل القنوات';
+
+  @override
   String subscriberCount(int count) {
     return '$count مشترك';
   }
@@ -208,25 +225,55 @@ class LAr extends L {
   String get noKeywordsYet => 'لا توجد كلمات مفتاحية بعد';
 
   @override
+  String get add => 'إضافة';
+
+  @override
+  String get ocrKeywordExists => 'هذه الكلمة مُضافة بالفعل.';
+
+  @override
+  String get ocrKeywordsEmptyHint =>
+      'أضف كلمة ليتم تنبيهك عند ظهورها في أي صورة أو مستند ممسوح ضوئيًا.';
+
+  @override
   String get retry => 'إعادة المحاولة';
 
   @override
   String get delete => 'حذف';
 
   @override
-  String ocrLoadFailed(String error) {
-    return 'تعذّر تحميل الكلمات المفتاحية: $error';
-  }
+  String get ocrLoadFailedTitle => 'تعذّر تحميل الكلمات';
 
   @override
-  String ocrAddFailed(String error) {
-    return 'تعذّرت إضافة الكلمة: $error';
-  }
+  String get ocrAddFailed => 'لم تُضَف الكلمة. حاول مرة أخرى.';
 
   @override
-  String ocrRemoveFailed(String error) {
-    return 'تعذّر حذف الكلمة: $error';
-  }
+  String get ocrRemoveFailed => 'لم تُحذَف الكلمة. حاول مرة أخرى.';
+
+  @override
+  String get failureOffline =>
+      'لا يوجد اتصال بالإنترنت. تحقّق من الشبكة ثم أعد المحاولة.';
+
+  @override
+  String get failureTimeout =>
+      'الخادم يستغرق وقتًا أطول من المعتاد. أعد المحاولة بعد قليل.';
+
+  @override
+  String get failureServer =>
+      'تعذّر الوصول إلى الخادم حاليًا. أعد المحاولة بعد قليل.';
+
+  @override
+  String get failureUnauthorized => 'انتهت صلاحية جلستك. سجّل الدخول مرة أخرى.';
+
+  @override
+  String get failureRejected =>
+      'تعذّر إتمام الطلب. راجع البيانات وحاول مرة أخرى.';
+
+  @override
+  String get failureInsecure =>
+      'تعذّر التحقّق من أمان الاتصال. لم تُرسَل أي بيانات.';
+
+  @override
+  String get failureUnknown => 'حدث خطأ غير متوقّع. أعد المحاولة.';
 
   @override
   String get tabChats => 'المحادثات';
@@ -251,6 +298,9 @@ class LAr extends L {
 
   @override
   String get voiceUploadFailed => 'فشل رفع التسجيل الصوتي';
+
+  @override
+  String get uploadFailed => 'تعذّر رفع المرفق. حاول مرة أخرى.';
 
   @override
   String get acknowledged => 'علمت';

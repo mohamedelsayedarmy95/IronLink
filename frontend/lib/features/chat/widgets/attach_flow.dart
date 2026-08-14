@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Result handed back to the chat room after a successful upload.
 class AttachmentReady {
@@ -186,8 +187,9 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _progress = null);
+      debugPrint('[attach] upload failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Ошибка загрузки — будет повторена автоматически ($e)'),
+        content: Text(L.of(context).uploadFailed),
       ));
     }
   }

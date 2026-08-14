@@ -52,15 +52,15 @@ flutter_launcher_icons:
 # instantly with no black frame. Regenerate after changing anything here:
 #   dart run flutter_native_splash:create
 flutter_native_splash:
-  # Matches IronColors.darkPrimary in lib/core/theme.dart, so the handover from
-  # splash to first screen has no colour jump.
-  color: "#0F172A"
+  # Matches IronColors.backgroundPrimary in lib/core/theme.dart, so the
+  # handover from splash to first screen has no colour jump.
+  color: "#0A0C10"
   image: assets/intro/splash_logo.png
 
   # Android 12+ ignores the legacy splash and masks the icon to a circle,
   # cropping to roughly the inner two-thirds — hence a separate, inset asset.
   android_12:
-    color: "#0F172A"
+    color: "#0A0C10"
     image: assets/intro/splash_logo_android12.png
 
   android: true

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/env.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../l10n/app_localizations.dart';
 import '../bloc/channel_bloc.dart';
 import '../widgets/channel_card.dart';
@@ -43,38 +44,22 @@ class ChannelListScreen extends StatelessWidget {
               return const Center(
                   child: CircularProgressIndicator(color: IronColors.gold));
             } else if (state is ChannelFetchFailure) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: IronColors.errorRed),
-                      const SizedBox(height: 12),
-                      Text(
-                        state.error,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: IronColors.textLo),
-                      ),
-                    ],
-                  ),
-                ),
+              // state.error holds raw transport text; the user sees a cause
+              // they can act on instead.
+              return IronErrorState(
+                title: t.channelsLoadFailedTitle,
+                message: t.failureServer,
+                retryLabel: t.retry,
+                onRetry: () =>
+                    context.read<ChannelBloc>().add(ChannelFetchStarted()),
               );
             } else if (state is ChannelFetchSuccess) {
               final channels = state.channels;
               if (channels.isEmpty) {
-                return ListView(
-                  children: [
-                    const SizedBox(height: 160),
-                    const Icon(Icons.campaign_outlined,
-                        size: 64, color: IronColors.goldDim),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: Text(t.noChannelsYet,
-                          style: const TextStyle(color: IronColors.textLo)),
-                    ),
-                  ],
+                return IronEmptyState(
+                  title: t.noChannelsYet,
+                  message: t.noChannelsYetHint,
+                  rings: 4,
                 );
               }
               return ListView.separated(

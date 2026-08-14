@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ironlink/core/api_client.dart';
+import 'package:ironlink/core/failure.dart';
 import 'package:ironlink/core/theme.dart';
+import 'package:ironlink/core/widgets/empty_state.dart';
+import 'package:ironlink/core/widgets/iron_button.dart';
 import 'package:ironlink/features/settings/ocr_settings_bloc.dart';
 import 'package:ironlink/features/settings/ocr_settings_state.dart';
 import 'package:ironlink/l10n/app_localizations.dart';
+
+/// Localized sentence for a classified failure. Shared entry point so every
+/// surface phrases the same cause identically.
+String failureMessage(L t, NetworkFailure f) => switch (f) {
+      NetworkFailure.offline => t.failureOffline,
+      NetworkFailure.timeout => t.failureTimeout,
+      NetworkFailure.server => t.failureServer,
+      NetworkFailure.unauthorized => t.failureUnauthorized,
+      NetworkFailure.rejected => t.failureRejected,
+      NetworkFailure.insecure => t.failureInsecure,
+      NetworkFailure.unknown => t.failureUnknown,
+    };
 
 class OcrSettingsPage extends StatelessWidget {
   const OcrSettingsPage({super.key});
@@ -31,203 +47,240 @@ class _OcrSettingsView extends StatefulWidget {
 
 class _OcrSettingsViewState extends State<_OcrSettingsView> {
   final _controller = TextEditingController();
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Drives the add button's enabled state from the field's content.
+    _controller.addListener(_onTextChanged);
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
-  void _submit(BuildContext context) {
+  void _onTextChanged() => setState(() {});
+
+  void _submit() {
     final value = _controller.text.trim();
     if (value.isEmpty) return;
+
+    // Duplicates are rejected on the device: a round-trip that can only fail
+    // is slower and less clear than saying so immediately.
+    final existing = context.read<OcrSettingsBloc>().state.keywords;
+    if (existing.contains(value)) {
+      HapticFeedback.heavyImpact();
+      _showNotice(L.of(context).ocrKeywordExists, isWarning: true);
+      return;
+    }
+
     context.read<OcrSettingsBloc>().add(AddKeyword(value));
     _controller.clear();
+    _focus.requestFocus();
+  }
+
+  void _showNotice(String message, {bool isWarning = false}) {
+    final accent =
+        isWarning ? IronColors.semanticWarning : IronColors.semanticError;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          backgroundColor: IronColors.surfaceSecondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(IronRadius.md),
+            side: BorderSide(color: accent.withValues(alpha: 0.4)),
+          ),
+          content: Row(
+            children: [
+              Icon(
+                isWarning ? Icons.info_outline : Icons.error_outline,
+                size: 20,
+                color: accent,
+              ),
+              const SizedBox(width: IronSpacing.sm),
+              Expanded(
+                child: Text(
+                  message,
+                  style:
+                      IronTypography.bodyMedium(color: IronColors.textPrimary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
   }
 
   @override
   Widget build(BuildContext context) {
     final t = L.of(context);
-    // No own Scaffold/AppBar: this view only ever lives embedded as a Home
-    // tab (see HomeScreen), whose AppBar already shows the settings title —
-    // a second AppBar here would just stack redundantly under it.
+    final canAdd = _controller.text.trim().isNotEmpty;
+
+    // No Scaffold/AppBar: this view is embedded as a Home tab whose AppBar
+    // already carries the settings title.
     return ColoredBox(
-      color: IronColors.navyDeep,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              t.ocrKeywordsTitle,
-              style: const TextStyle(
-                  color: IronColors.gold, fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              t.ocrKeywordsDescription,
-              style: const TextStyle(color: IronColors.textLo, fontSize: 13, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            Row(
+      color: IronColors.backgroundPrimary,
+      child: BlocConsumer<OcrSettingsBloc, OcrSettingsState>(
+        // Transient failures surface as a snackbar only while a list is
+        // already on screen; with an empty list the full error state below
+        // says the same thing without stacking two messages.
+        listenWhen: (prev, curr) =>
+            curr.errorKind != null &&
+            curr.errorKind != OcrErrorKind.load &&
+            (curr.errorKind != prev.errorKind || curr.failure != prev.failure),
+        listener: (context, state) {
+          HapticFeedback.heavyImpact();
+          _showNotice(switch (state.errorKind!) {
+            OcrErrorKind.add => t.ocrAddFailed,
+            OcrErrorKind.remove => t.ocrRemoveFailed,
+            OcrErrorKind.load => t.failureUnknown,
+          });
+        },
+        builder: (context, state) {
+          return Padding(
+            padding: const EdgeInsets.all(IronSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    style: const TextStyle(color: IronColors.textHi),
-                    decoration: InputDecoration(
-                      labelText: t.newKeywordLabel,
-                      hintText: t.newKeywordHint,
-                    ),
-                    onSubmitted: (_) => _submit(context),
-                  ),
+                Text(
+                  t.ocrKeywordsTitle,
+                  style: IronTypography.headlineLarge(
+                      color: IronColors.textPrimary),
                 ),
-                const SizedBox(width: 10),
-                Material(
-                  color: IronColors.gold,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => _submit(context),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                      child: Icon(Icons.add, color: IronColors.navyDeep),
-                    ),
-                  ),
+                const SizedBox(height: IronSpacing.xxs),
+                Text(
+                  t.ocrKeywordsDescription,
+                  style: IronTypography.bodyMedium(
+                      color: IronColors.textSecondary),
                 ),
+                const SizedBox(height: IronSpacing.md),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focus,
+                        textInputAction: TextInputAction.done,
+                        style: IronTypography.bodyLarge(
+                            color: IronColors.textPrimary),
+                        decoration: InputDecoration(
+                          labelText: t.newKeywordLabel,
+                          hintText: t.newKeywordHint,
+                        ),
+                        onSubmitted: (_) => _submit(),
+                      ),
+                    ),
+                    const SizedBox(width: IronSpacing.sm),
+                    // Sized to match the field's height so the row's baseline
+                    // stays level instead of the button floating high.
+                    SizedBox(
+                      height: 56,
+                      child: IronButton(
+                        label: t.add,
+                        icon: Icons.add,
+                        expand: false,
+                        onPressed: canAdd ? _submit : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: IronSpacing.md),
+                Expanded(child: _buildBody(context, t, state)),
               ],
             ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: BlocConsumer<OcrSettingsBloc, OcrSettingsState>(
-                listenWhen: (prev, curr) =>
-                    curr.errorKind != null &&
-                    (curr.errorKind != prev.errorKind ||
-                        curr.errorDetail != prev.errorDetail) &&
-                    curr.keywords.isNotEmpty,
-                listener: (context, state) {
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                      backgroundColor: IronColors.navySurface,
-                      content: Text(_errorText(t, state.errorKind!, state.errorDetail),
-                          style: const TextStyle(color: IronColors.textHi)),
-                    ));
-                },
-                builder: (context, state) {
-                  if (state.isLoading && state.keywords.isEmpty) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: IronColors.gold),
-                    );
-                  }
-
-                  if (state.errorKind != null && state.keywords.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.wifi_off_outlined,
-                              size: 48, color: IronColors.errorRed),
-                          const SizedBox(height: 12),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Text(
-                              _errorText(t, state.errorKind!, state.errorDetail),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: IronColors.textLo),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          OutlinedButton.icon(
-                            onPressed: () => context
-                                .read<OcrSettingsBloc>()
-                                .add(const LoadKeywords()),
-                            icon: const Icon(Icons.refresh),
-                            label: Text(t.retry),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  if (state.keywords.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.manage_search_outlined,
-                              size: 56, color: IronColors.goldDim),
-                          const SizedBox(height: 12),
-                          Text(t.noKeywordsYet,
-                              style: const TextStyle(color: IronColors.textLo)),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    itemCount: state.keywords.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final keyword = state.keywords[index];
-                      return Dismissible(
-                        key: Key(keyword),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: AlignmentDirectional.centerEnd,
-                          padding: const EdgeInsetsDirectional.only(end: 20),
-                          decoration: BoxDecoration(
-                            color: IronColors.errorRed.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(Icons.delete_outline,
-                              color: IronColors.errorRed),
-                        ),
-                        onDismissed: (_) => context
-                            .read<OcrSettingsBloc>()
-                            .add(RemoveKeyword(keyword)),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: IronColors.navySurface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: IronColors.navyBorder),
-                          ),
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.label_outline,
-                                color: IronColors.gold, size: 20),
-                            title: Text(keyword,
-                                style: const TextStyle(color: IronColors.textHi)),
-                            trailing: IconButton(
-                              tooltip: t.delete,
-                              icon: const Icon(Icons.delete_outline,
-                                  color: IronColors.textLo),
-                              onPressed: () => context
-                                  .read<OcrSettingsBloc>()
-                                  .add(RemoveKeyword(keyword)),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  static String _errorText(L t, OcrErrorKind kind, String? detail) {
-    final error = detail ?? '';
-    return switch (kind) {
-      OcrErrorKind.load => t.ocrLoadFailed(error),
-      OcrErrorKind.add => t.ocrAddFailed(error),
-      OcrErrorKind.remove => t.ocrRemoveFailed(error),
-    };
+  Widget _buildBody(BuildContext context, L t, OcrSettingsState state) {
+    if (state.isLoading && state.keywords.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: IronColors.accentText),
+      );
+    }
+
+    if (state.errorKind == OcrErrorKind.load && state.keywords.isEmpty) {
+      return IronErrorState(
+        title: t.ocrLoadFailedTitle,
+        message: failureMessage(t, state.failure ?? NetworkFailure.unknown),
+        retryLabel: t.retry,
+        onRetry: () =>
+            context.read<OcrSettingsBloc>().add(const LoadKeywords()),
+      );
+    }
+
+    if (state.keywords.isEmpty) {
+      return IronEmptyState(
+        title: t.noKeywordsYet,
+        message: t.ocrKeywordsEmptyHint,
+        rings: 1,
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.only(bottom: IronSpacing.lg),
+      itemCount: state.keywords.length,
+      separatorBuilder: (_, __) => const SizedBox(height: IronSpacing.xs),
+      itemBuilder: (context, index) {
+        final keyword = state.keywords[index];
+        return Dismissible(
+          key: Key(keyword),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) {
+            HapticFeedback.selectionClick();
+            context.read<OcrSettingsBloc>().add(RemoveKeyword(keyword));
+          },
+          background: Container(
+            alignment: AlignmentDirectional.centerEnd,
+            padding: const EdgeInsetsDirectional.only(end: IronSpacing.lg),
+            decoration: BoxDecoration(
+              color: IronColors.semanticError.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(IronRadius.md),
+            ),
+            child: const Icon(Icons.delete_outline,
+                color: IronColors.semanticError),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: IronColors.surfacePrimary,
+              borderRadius: BorderRadius.circular(IronRadius.md),
+              border: Border.all(color: IronColors.borderSubtle),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsetsDirectional.only(
+                  start: IronSpacing.md, end: IronSpacing.xs),
+              leading: const Icon(Icons.sell_outlined,
+                  color: IronColors.textSecondary, size: 20),
+              title: Text(
+                keyword,
+                style: IronTypography.bodyLarge(color: IronColors.textPrimary),
+              ),
+              trailing: IconButton(
+                tooltip: t.delete,
+                // Icon-only control: the tooltip alone is not announced
+                // reliably, so the action is named for assistive tech too.
+                icon: const Icon(Icons.close, color: IronColors.textSecondary),
+                iconSize: 20,
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  context.read<OcrSettingsBloc>().add(RemoveKeyword(keyword));
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

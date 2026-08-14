@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../chat_repository.dart';
@@ -46,18 +47,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           }
           final chats = snap.data ?? [];
           if (chats.isEmpty) {
-            return ListView(
-              // ListView so pull-to-refresh still works on empty state
-              children: [
-                const SizedBox(height: 160),
-                const Icon(Icons.forum_outlined,
-                    size: 64, color: IronColors.goldDim),
-                const SizedBox(height: 16),
-                Center(
-                  child: Text(L.of(context).noChatsYet,
-                      style: const TextStyle(color: IronColors.textLo)),
+            // Fills the viewport so the state sits centred, while staying a
+            // scrollable so pull-to-refresh still works with no items.
+            return LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IronEmptyState(
+                    title: L.of(context).noChatsYet,
+                    message: L.of(context).noChatsYetHint,
+                    rings: 1,
+                  ),
                 ),
-              ],
+              ),
             );
           }
           return ListView.separated(

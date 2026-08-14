@@ -28,6 +28,7 @@
   "showPassword": "إظهار",
   "hidePassword": "إخفاء",
   "confirmSignIn": "تأكيد الدخول",
+  "e2eeNotice": "بياناتك مشفّرة من طرف لطرف ولا يمكن للخادم قراءتها.",
 
   "errorFirebaseTokenFailed": "تعذر الحصول على رمز التحقق من Firebase",
   "errorNetwork": "تعذر الاتصال بالخادم — تحقق من الشبكة",
@@ -39,6 +40,7 @@
   "errorPhoneVerificationFailed": "حدث خطأ أثناء التحقق من الهاتف",
 
   "noChatsYet": "لا توجد محادثات بعد",
+  "noChatsYetHint": "ابدأ محادثة مؤمَّنة مع أحد جهات اتصالك.",
 
   "onlineNow": "متصل الآن",
   "startSecretChat": "بدء محادثة سرية",
@@ -57,6 +59,7 @@
   "send": "إرسال",
 
   "notInAnyGroupYet": "لست عضواً في أي مجموعة بعد",
+  "notInAnyGroupYetHint": "أنشئ مجموعة أو انضم إلى واحدة للتنسيق مع فريقك.",
   "groupMembersTitle": "{name} — {count} عضو",
   "@groupMembersTitle": {
     "placeholders": {
@@ -78,6 +81,8 @@
   "channelsTitle": "القنوات",
   "createChannel": "إنشاء قناة",
   "noChannelsYet": "لا توجد قنوات بعد",
+  "noChannelsYetHint": "اشترك في قناة لتصلك الإعلانات الرسمية.",
+  "channelsLoadFailedTitle": "تعذّر تحميل القنوات",
   "subscriberCount": "{count} مشترك",
   "@subscriberCount": {
     "placeholders": { "count": { "type": "int" } }
@@ -88,20 +93,22 @@
   "newKeywordLabel": "كلمة مفتاحية جديدة",
   "newKeywordHint": "اكتب كلمة وأضفها",
   "noKeywordsYet": "لا توجد كلمات مفتاحية بعد",
+  "add": "إضافة",
+  "ocrKeywordExists": "هذه الكلمة مُضافة بالفعل.",
+  "ocrKeywordsEmptyHint": "أضف كلمة ليتم تنبيهك عند ظهورها في أي صورة أو مستند ممسوح ضوئيًا.",
   "retry": "إعادة المحاولة",
   "delete": "حذف",
-  "ocrLoadFailed": "تعذّر تحميل الكلمات المفتاحية: {error}",
-  "@ocrLoadFailed": {
-    "placeholders": { "error": { "type": "String" } }
-  },
-  "ocrAddFailed": "تعذّرت إضافة الكلمة: {error}",
-  "@ocrAddFailed": {
-    "placeholders": { "error": { "type": "String" } }
-  },
-  "ocrRemoveFailed": "تعذّر حذف الكلمة: {error}",
-  "@ocrRemoveFailed": {
-    "placeholders": { "error": { "type": "String" } }
-  },
+  "ocrLoadFailedTitle": "تعذّر تحميل الكلمات",
+  "ocrAddFailed": "لم تُضَف الكلمة. حاول مرة أخرى.",
+  "ocrRemoveFailed": "لم تُحذَف الكلمة. حاول مرة أخرى.",
+
+  "failureOffline": "لا يوجد اتصال بالإنترنت. تحقّق من الشبكة ثم أعد المحاولة.",
+  "failureTimeout": "الخادم يستغرق وقتًا أطول من المعتاد. أعد المحاولة بعد قليل.",
+  "failureServer": "تعذّر الوصول إلى الخادم حاليًا. أعد المحاولة بعد قليل.",
+  "failureUnauthorized": "انتهت صلاحية جلستك. سجّل الدخول مرة أخرى.",
+  "failureRejected": "تعذّر إتمام الطلب. راجع البيانات وحاول مرة أخرى.",
+  "failureInsecure": "تعذّر التحقّق من أمان الاتصال. لم تُرسَل أي بيانات.",
+  "failureUnknown": "حدث خطأ غير متوقّع. أعد المحاولة.",
 
   "tabChats": "المحادثات",
   "tabGroups": "المجموعات",
@@ -112,6 +119,7 @@
   "releaseToCancel": "اترك للإلغاء",
   "dragToCancel": "← اسحب للإلغاء",
   "voiceUploadFailed": "فشل رفع التسجيل الصوتي",
+  "uploadFailed": "تعذّر رفع المرفق. حاول مرة أخرى.",
 
   "acknowledged": "علمت"
 }

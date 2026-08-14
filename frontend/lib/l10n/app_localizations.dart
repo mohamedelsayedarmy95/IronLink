@@ -235,6 +235,12 @@ abstract class L {
   /// **'تأكيد الدخول'**
   String get confirmSignIn;
 
+  /// No description provided for @e2eeNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'بياناتك مشفّرة من طرف لطرف ولا يمكن للخادم قراءتها.'**
+  String get e2eeNotice;
+
   /// No description provided for @errorFirebaseTokenFailed.
   ///
   /// In ar, this message translates to:
@@ -288,6 +294,12 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'لا توجد محادثات بعد'**
   String get noChatsYet;
+
+  /// No description provided for @noChatsYetHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ محادثة مؤمَّنة مع أحد جهات اتصالك.'**
+  String get noChatsYetHint;
 
   /// No description provided for @onlineNow.
   ///
@@ -367,6 +379,12 @@ abstract class L {
   /// **'لست عضواً في أي مجموعة بعد'**
   String get notInAnyGroupYet;
 
+  /// No description provided for @notInAnyGroupYetHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنشئ مجموعة أو انضم إلى واحدة للتنسيق مع فريقك.'**
+  String get notInAnyGroupYetHint;
+
   /// No description provided for @groupMembersTitle.
   ///
   /// In ar, this message translates to:
@@ -433,6 +451,18 @@ abstract class L {
   /// **'لا توجد قنوات بعد'**
   String get noChannelsYet;
 
+  /// No description provided for @noChannelsYetHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشترك في قناة لتصلك الإعلانات الرسمية.'**
+  String get noChannelsYetHint;
+
+  /// No description provided for @channelsLoadFailedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل القنوات'**
+  String get channelsLoadFailedTitle;
+
   /// No description provided for @subscriberCount.
   ///
   /// In ar, this message translates to:
@@ -469,6 +499,24 @@ abstract class L {
   /// **'لا توجد كلمات مفتاحية بعد'**
   String get noKeywordsYet;
 
+  /// No description provided for @add.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة'**
+  String get add;
+
+  /// No description provided for @ocrKeywordExists.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه الكلمة مُضافة بالفعل.'**
+  String get ocrKeywordExists;
+
+  /// No description provided for @ocrKeywordsEmptyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف كلمة ليتم تنبيهك عند ظهورها في أي صورة أو مستند ممسوح ضوئيًا.'**
+  String get ocrKeywordsEmptyHint;
+
   /// No description provided for @retry.
   ///
   /// In ar, this message translates to:
@@ -481,23 +529,65 @@ abstract class L {
   /// **'حذف'**
   String get delete;
 
-  /// No description provided for @ocrLoadFailed.
+  /// No description provided for @ocrLoadFailedTitle.
   ///
   /// In ar, this message translates to:
-  /// **'تعذّر تحميل الكلمات المفتاحية: {error}'**
-  String ocrLoadFailed(String error);
+  /// **'تعذّر تحميل الكلمات'**
+  String get ocrLoadFailedTitle;
 
   /// No description provided for @ocrAddFailed.
   ///
   /// In ar, this message translates to:
-  /// **'تعذّرت إضافة الكلمة: {error}'**
-  String ocrAddFailed(String error);
+  /// **'لم تُضَف الكلمة. حاول مرة أخرى.'**
+  String get ocrAddFailed;
 
   /// No description provided for @ocrRemoveFailed.
   ///
   /// In ar, this message translates to:
-  /// **'تعذّر حذف الكلمة: {error}'**
-  String ocrRemoveFailed(String error);
+  /// **'لم تُحذَف الكلمة. حاول مرة أخرى.'**
+  String get ocrRemoveFailed;
+
+  /// No description provided for @failureOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد اتصال بالإنترنت. تحقّق من الشبكة ثم أعد المحاولة.'**
+  String get failureOffline;
+
+  /// No description provided for @failureTimeout.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخادم يستغرق وقتًا أطول من المعتاد. أعد المحاولة بعد قليل.'**
+  String get failureTimeout;
+
+  /// No description provided for @failureServer.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر الوصول إلى الخادم حاليًا. أعد المحاولة بعد قليل.'**
+  String get failureServer;
+
+  /// No description provided for @failureUnauthorized.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية جلستك. سجّل الدخول مرة أخرى.'**
+  String get failureUnauthorized;
+
+  /// No description provided for @failureRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر إتمام الطلب. راجع البيانات وحاول مرة أخرى.'**
+  String get failureRejected;
+
+  /// No description provided for @failureInsecure.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر التحقّق من أمان الاتصال. لم تُرسَل أي بيانات.'**
+  String get failureInsecure;
+
+  /// No description provided for @failureUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدث خطأ غير متوقّع. أعد المحاولة.'**
+  String get failureUnknown;
 
   /// No description provided for @tabChats.
   ///
@@ -546,6 +636,12 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'فشل رفع التسجيل الصوتي'**
   String get voiceUploadFailed;
+
+  /// No description provided for @uploadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر رفع المرفق. حاول مرة أخرى.'**
+  String get uploadFailed;
 
   /// No description provided for @acknowledged.
   ///

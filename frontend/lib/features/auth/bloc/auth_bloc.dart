@@ -38,6 +38,12 @@ class ResendOtpRequested extends AuthEvent {
   const ResendOtpRequested();
 }
 
+/// Steps back one stage. Without this a mistyped phone number stranded the
+/// user — the only way out was killing the app.
+class StepBackRequested extends AuthEvent {
+  const StepBackRequested();
+}
+
 class _CountdownTicked extends AuthEvent {
   const _CountdownTicked(this.secondsLeft);
   final int secondsLeft;
@@ -159,6 +165,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<OtpChanged>(_onOtpChanged);
     on<MilitaryIdSubmitted>(_onMilitaryIdSubmitted);
     on<ResendOtpRequested>(_onResendRequested);
+    on<StepBackRequested>(_onStepBack);
     on<_CodeSent>(_onCodeSent);
     on<_PhoneAutoVerified>(_onPhoneAutoVerified);
     on<_PhoneVerificationFailed>((e, emit) => emit(state.copyWith(
@@ -260,6 +267,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       ResendOtpRequested event, Emitter<AuthState> emit) async {
     if (!state.canResend) return;
     add(PhoneSubmitted(state.phoneNumber));
+  }
+
+  void _onStepBack(StepBackRequested event, Emitter<AuthState> emit) {
+    // Clears any error on the way back: it described the step being left, and
+    // carrying it forward would flag a field the user hasn't touched yet.
+    switch (state.step) {
+      case AuthStep.phone:
+        return;
+      case AuthStep.otp:
+        _countdown?.cancel();
+        emit(state.copyWith(step: AuthStep.phone, status: AuthStatus.idle));
+      case AuthStep.militaryId:
+        emit(state.copyWith(
+          step: AuthStep.otp,
+          status: AuthStatus.idle,
+          otpCode: '',
+          clearIdToken: true,
+        ));
+    }
   }
 
   void _startCountdown(int seconds) {
