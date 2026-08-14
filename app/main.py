@@ -16,6 +16,7 @@ from app.api.routes import (
     channels,
     chats,
     communities,
+    group_entry,
     groups,
     keys,
     media,
@@ -67,6 +68,7 @@ if settings.ENV == "production":
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(chats.router, prefix=settings.API_PREFIX)
 app.include_router(groups.router, prefix=settings.API_PREFIX)
+app.include_router(group_entry.router, prefix=settings.API_PREFIX)
 app.include_router(media.router, prefix=settings.API_PREFIX)
 app.include_router(broadcasts.router, prefix=settings.API_PREFIX)
 app.include_router(admin.router, prefix=settings.API_PREFIX)
