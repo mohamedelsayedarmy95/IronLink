@@ -3,6 +3,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/api_client.dart';
 
+/// Semantic error outcomes from the auth flow. The repository/bloc layer
+/// stays UI-agnostic — it has no BuildContext to localize a message with —
+/// so it classifies failures into these codes and the screen (which does
+/// have a BuildContext) maps each one to localized text when displaying it.
+enum AuthErrorCode {
+  network,
+  unexpected,
+  invalidPhone,
+  tooManyRequests,
+  invalidCode,
+  sessionExpired,
+  phoneVerificationFailed,
+}
+
 class AuthUser {
   const AuthUser({
     required this.id,
@@ -76,7 +90,7 @@ class AuthRepository {
     required String phoneNumber,
     required void Function(String verificationId, int? resendToken) onCodeSent,
     required void Function(String idToken) onAutoVerified,
-    required void Function(String message) onError,
+    required void Function(AuthErrorCode code, String? detail) onError,
     int? forceResendingToken,
   }) async {
     await FirebaseAuth.instance.verifyPhoneNumber(
@@ -88,10 +102,14 @@ class AuthRepository {
           final idToken = await _signInAndGetIdToken(credential);
           onAutoVerified(idToken);
         } catch (e) {
-          onError(firebaseErrorMessage(e));
+          final (code, detail) = firebaseErrorCode(e);
+          onError(code, detail);
         }
       },
-      verificationFailed: (e) => onError(firebaseErrorMessage(e)),
+      verificationFailed: (e) {
+        final (code, detail) = firebaseErrorCode(e);
+        onError(code, detail);
+      },
       codeSent: (verificationId, resendToken) =>
           onCodeSent(verificationId, resendToken),
       codeAutoRetrievalTimeout: (_) {},
@@ -115,7 +133,9 @@ class AuthRepository {
         await FirebaseAuth.instance.signInWithCredential(credential);
     final idToken = await userCredential.user?.getIdToken();
     if (idToken == null) {
-      throw Exception('تعذر الحصول على رمز التحقق من Firebase');
+      // Not FirebaseAuthException, so firebaseErrorCode() below maps this to
+      // AuthErrorCode.unexpected — the message itself is never surfaced.
+      throw Exception('Firebase returned no ID token after sign-in');
     }
     return idToken;
   }
@@ -144,38 +164,41 @@ class AuthRepository {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  /// Extracts the server's error message for the red military snackbar.
-  static String errorMessage(Object error) {
+  /// Classifies a backend-request failure for the auth screen to localize.
+  /// [detail] carries through the server's raw detail string, if any, since
+  /// that text comes from the API (already whatever language it replies in)
+  /// rather than something this client can translate.
+  static (AuthErrorCode, String?) errorCode(Object error) {
     if (error is DioException) {
       final detail = error.response?.data is Map
           ? (error.response!.data as Map)['detail']
           : null;
-      if (detail is String) return detail;
+      if (detail is String) return (AuthErrorCode.unexpected, detail);
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.connectionError) {
-        return 'تعذر الاتصال بالخادم — تحقق من الشبكة';
+        return (AuthErrorCode.network, null);
       }
     }
-    return 'حدث خطأ غير متوقع';
+    return (AuthErrorCode.unexpected, null);
   }
 
-  /// Same as [errorMessage] but also covers FirebaseAuthException codes from
+  /// Same as [errorCode] but also covers FirebaseAuthException codes from
   /// the phone-verification step.
-  static String firebaseErrorMessage(Object error) {
+  static (AuthErrorCode, String?) firebaseErrorCode(Object error) {
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case 'invalid-phone-number':
-          return 'رقم الهاتف غير صالح';
+          return (AuthErrorCode.invalidPhone, null);
         case 'too-many-requests':
-          return 'محاولات كثيرة جدًا — حاول لاحقًا';
+          return (AuthErrorCode.tooManyRequests, null);
         case 'invalid-verification-code':
-          return 'رمز التحقق غير صحيح';
+          return (AuthErrorCode.invalidCode, null);
         case 'session-expired':
-          return 'انتهت صلاحية الرمز — أعد الإرسال';
+          return (AuthErrorCode.sessionExpired, null);
         default:
-          return error.message ?? 'حدث خطأ أثناء التحقق من الهاتف';
+          return (AuthErrorCode.phoneVerificationFailed, error.message);
       }
     }
-    return errorMessage(error);
+    return errorCode(error);
   }
 }

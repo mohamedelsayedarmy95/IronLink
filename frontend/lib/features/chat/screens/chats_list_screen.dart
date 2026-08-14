@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../chat_repository.dart';
 import 'chat_room_screen.dart';
 
@@ -47,14 +48,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           if (chats.isEmpty) {
             return ListView(
               // ListView so pull-to-refresh still works on empty state
-              children: const [
-                SizedBox(height: 160),
-                Icon(Icons.forum_outlined,
+              children: [
+                const SizedBox(height: 160),
+                const Icon(Icons.forum_outlined,
                     size: 64, color: IronColors.goldDim),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Center(
-                  child: Text('لا توجد محادثات بعد',
-                      style: TextStyle(color: IronColors.textLo)),
+                  child: Text(L.of(context).noChatsYet,
+                      style: const TextStyle(color: IronColors.textLo)),
                 ),
               ],
             );

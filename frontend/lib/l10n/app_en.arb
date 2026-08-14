@@ -1,0 +1,117 @@
+{
+  "@@locale": "en",
+
+  "authTagline": "Private · Secure · Limitless",
+  "authSubtitle": "The Trusted Messaging System",
+  "featureE2EE": "End-to-end encryption",
+  "featureVerifiedIdentity": "Verified identity",
+  "featurePrivacyByDesign": "Privacy by design",
+  "featureDeviceSecurity": "Secure on every device",
+  "getStarted": "Get Started",
+  "alreadyHaveAccount": "Already have an account? ",
+  "signIn": "Sign in",
+  "devGuestLogin": "Guest login (no server)",
+
+  "secureSignInTitle": "Secure Sign-In",
+  "phoneStepSubtitle": "Enter your unit-registered phone number",
+  "otpStepSubtitle": "Enter the verification code sent to you by SMS",
+  "militaryIdStepSubtitle": "Enter your military ID to finish verification",
+  "phoneNumberLabel": "Phone number",
+  "otpCodeLabel": "Verification code",
+  "sendVerificationCode": "Send verification code",
+  "resendCode": "Resend code",
+  "resendCodeCountdown": "Resend in {seconds}s",
+  "@resendCodeCountdown": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "militaryIdHint": "Military ID",
+  "showPassword": "Show",
+  "hidePassword": "Hide",
+  "confirmSignIn": "Confirm sign-in",
+
+  "errorFirebaseTokenFailed": "Couldn't get a verification token from Firebase",
+  "errorNetwork": "Couldn't reach the server — check your connection",
+  "errorUnexpected": "Something went wrong",
+  "errorInvalidPhone": "Invalid phone number",
+  "errorTooManyRequests": "Too many attempts — try again later",
+  "errorInvalidCode": "Incorrect verification code",
+  "errorSessionExpired": "Code expired — resend it",
+  "errorPhoneVerificationFailed": "Something went wrong verifying your phone",
+
+  "noChatsYet": "No conversations yet",
+
+  "onlineNow": "Online now",
+  "startSecretChat": "Start secret chat",
+  "secretChatComingSoon": "Secret chat enabled (arriving in a future update)",
+  "messageDeleted": "This message was deleted",
+  "translate": "Translate",
+  "reportMessage": "Report message",
+  "deleteForEveryone": "Delete for everyone",
+  "deleteForEveryoneHint": "Available for 5 minutes after sending",
+  "typingIndicator": "{name} is typing",
+  "@typingIndicator": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "attach": "Attach",
+  "messageHint": "Type a message…",
+  "send": "Send",
+
+  "notInAnyGroupYet": "You're not a member of any group yet",
+  "groupMembersTitle": "{name} — {count} members",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "announcementChannelReadOnly": "Announcement channel — read only",
+  "memberCount": "{count} members",
+  "@memberCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "roleOwner": "Group owner",
+  "roleAdmin": "Admin",
+  "roleModerator": "Moderator",
+  "roleObserver": "Observer — read only",
+  "roleMember": "Member",
+
+  "channelsTitle": "Channels",
+  "createChannel": "Create channel",
+  "noChannelsYet": "No channels yet",
+  "subscriberCount": "{count} subscribers",
+  "@subscriberCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "ocrKeywordsTitle": "OCR Keywords",
+  "ocrKeywordsDescription": "You'll be alerted automatically if any of these words appear in scanned (OCR) text inside an image or document.",
+  "newKeywordLabel": "New keyword",
+  "newKeywordHint": "Type a keyword and add it",
+  "noKeywordsYet": "No keywords added yet",
+  "retry": "Retry",
+  "delete": "Delete",
+  "ocrLoadFailed": "Couldn't load keywords: {error}",
+  "@ocrLoadFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "ocrAddFailed": "Couldn't add the keyword: {error}",
+  "@ocrAddFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "ocrRemoveFailed": "Couldn't delete the keyword: {error}",
+  "@ocrRemoveFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "tabChats": "Chats",
+  "tabGroups": "Groups",
+  "tabBroadcasts": "Broadcasts",
+  "tabSettings": "Settings",
+  "comingSoon": "Coming soon",
+
+  "releaseToCancel": "Release to cancel",
+  "dragToCancel": "← Slide to cancel",
+  "voiceUploadFailed": "Failed to upload the voice message",
+
+  "acknowledged": "Got it"
+}

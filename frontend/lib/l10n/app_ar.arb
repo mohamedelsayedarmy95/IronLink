@@ -1,0 +1,117 @@
+{
+  "@@locale": "ar",
+
+  "authTagline": "خاص · آمن · بلا حدود",
+  "authSubtitle": "منظومة التراسل المؤمَّنة",
+  "featureE2EE": "تشفير من طرف لطرف",
+  "featureVerifiedIdentity": "هوية موثقة",
+  "featurePrivacyByDesign": "خصوصية بالتصميم",
+  "featureDeviceSecurity": "أمان على كل جهاز",
+  "getStarted": "ابدأ الآن",
+  "alreadyHaveAccount": "لديك حساب بالفعل؟ ",
+  "signIn": "تسجيل الدخول",
+  "devGuestLogin": "دخول تجريبي بدون سيرفر",
+
+  "secureSignInTitle": "تسجيل الدخول الآمن",
+  "phoneStepSubtitle": "أدخل رقم هاتفك المسجل لدى الوحدة",
+  "otpStepSubtitle": "أدخل رمز التحقق المرسل إليك عبر رسالة نصية",
+  "militaryIdStepSubtitle": "أدخل رقمك العسكري لإتمام التحقق",
+  "phoneNumberLabel": "رقم الهاتف",
+  "otpCodeLabel": "رمز التحقق",
+  "sendVerificationCode": "إرسال رمز التحقق",
+  "resendCode": "إعادة إرسال الرمز",
+  "resendCodeCountdown": "إعادة الإرسال بعد {seconds} ثانية",
+  "@resendCodeCountdown": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "militaryIdHint": "الرقم العسكري",
+  "showPassword": "إظهار",
+  "hidePassword": "إخفاء",
+  "confirmSignIn": "تأكيد الدخول",
+
+  "errorFirebaseTokenFailed": "تعذر الحصول على رمز التحقق من Firebase",
+  "errorNetwork": "تعذر الاتصال بالخادم — تحقق من الشبكة",
+  "errorUnexpected": "حدث خطأ غير متوقع",
+  "errorInvalidPhone": "رقم الهاتف غير صالح",
+  "errorTooManyRequests": "محاولات كثيرة جدًا — حاول لاحقًا",
+  "errorInvalidCode": "رمز التحقق غير صحيح",
+  "errorSessionExpired": "انتهت صلاحية الرمز — أعد الإرسال",
+  "errorPhoneVerificationFailed": "حدث خطأ أثناء التحقق من الهاتف",
+
+  "noChatsYet": "لا توجد محادثات بعد",
+
+  "onlineNow": "متصل الآن",
+  "startSecretChat": "بدء محادثة سرية",
+  "secretChatComingSoon": "تم تفعيل المحادثة السرية (سيتم تطبيقها في التحديث التالي)",
+  "messageDeleted": "تم حذف هذه الرسالة",
+  "translate": "ترجمة",
+  "reportMessage": "إبلاغ عن رسالة",
+  "deleteForEveryone": "حذف لدى الجميع",
+  "deleteForEveryoneHint": "متاح خلال 5 دقائق من الإرسال",
+  "typingIndicator": "{name} يكتب",
+  "@typingIndicator": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "attach": "إرفاق",
+  "messageHint": "اكتب رسالة…",
+  "send": "إرسال",
+
+  "notInAnyGroupYet": "لست عضواً في أي مجموعة بعد",
+  "groupMembersTitle": "{name} — {count} عضو",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "announcementChannelReadOnly": "قناة إعلانات — للقراءة فقط",
+  "memberCount": "{count} عضو",
+  "@memberCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "roleOwner": "مالك المجموعة",
+  "roleAdmin": "مشرف",
+  "roleModerator": "منسق",
+  "roleObserver": "مراقب — قراءة فقط",
+  "roleMember": "عضو",
+
+  "channelsTitle": "القنوات",
+  "createChannel": "إنشاء قناة",
+  "noChannelsYet": "لا توجد قنوات بعد",
+  "subscriberCount": "{count} مشترك",
+  "@subscriberCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "ocrKeywordsTitle": "كلمات المسح الضوئي المفتاحية (OCR)",
+  "ocrKeywordsDescription": "يتم تنبيهك تلقائيًا إذا ظهرت أي من هذه الكلمات في نص ممسوح ضوئيًا (OCR) داخل صورة أو مستند.",
+  "newKeywordLabel": "كلمة مفتاحية جديدة",
+  "newKeywordHint": "اكتب كلمة وأضفها",
+  "noKeywordsYet": "لا توجد كلمات مفتاحية بعد",
+  "retry": "إعادة المحاولة",
+  "delete": "حذف",
+  "ocrLoadFailed": "تعذّر تحميل الكلمات المفتاحية: {error}",
+  "@ocrLoadFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "ocrAddFailed": "تعذّرت إضافة الكلمة: {error}",
+  "@ocrAddFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "ocrRemoveFailed": "تعذّر حذف الكلمة: {error}",
+  "@ocrRemoveFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "tabChats": "المحادثات",
+  "tabGroups": "المجموعات",
+  "tabBroadcasts": "التعميمات",
+  "tabSettings": "الإعدادات",
+  "comingSoon": "قريباً",
+
+  "releaseToCancel": "اترك للإلغاء",
+  "dragToCancel": "← اسحب للإلغاء",
+  "voiceUploadFailed": "فشل رفع التسجيل الصوتي",
+
+  "acknowledged": "علمت"
+}

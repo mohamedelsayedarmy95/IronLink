@@ -6,6 +6,7 @@ import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../core/ws_service.dart';
 import '../../core/widgets/ticker.dart';
+import '../../l10n/app_localizations.dart';
 import '../auth/auth_repository.dart';
 import '../broadcast/broadcast_banner.dart';
 import '../chat/chat_repository.dart';
@@ -27,12 +28,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
 
-  static const _tabs = [
-    (icon: Icons.chat_bubble_outline, label: 'المحادثات'),
-    (icon: Icons.groups_outlined, label: 'المجموعات'),
-    (icon: Icons.campaign_outlined, label: 'التعميمات'),
-    (icon: Icons.settings_outlined, label: 'الإعدادات'),
-  ];
+  List<({IconData icon, String label})> _tabs(L t) => [
+        (icon: Icons.chat_bubble_outline, label: t.tabChats),
+        (icon: Icons.groups_outlined, label: t.tabGroups),
+        (icon: Icons.campaign_outlined, label: t.tabBroadcasts),
+        (icon: Icons.settings_outlined, label: t.tabSettings),
+      ];
 
   @override
   void initState() {
@@ -45,12 +46,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
+    final tabs = _tabs(t);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: IronColors.navyDeep,
         elevation: 0,
         title: Text(
-          _tabs[_tab].label,
+          tabs[_tab].label,
           style: const TextStyle(
               color: IronColors.gold, fontWeight: FontWeight.w700),
         ),
@@ -96,12 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(_tabs[_tab].icon,
+                          Icon(tabs[_tab].icon,
                               size: 64, color: IronColors.goldDim),
                           const SizedBox(height: 16),
-                          const Text(
-                            'قريباً',
-                            style: TextStyle(color: IronColors.textLo),
+                          Text(
+                            t.comingSoon,
+                            style: const TextStyle(color: IronColors.textLo),
                           ),
                         ],
                       ),
@@ -119,11 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: [
-          for (final t in _tabs)
+          for (final tab in tabs)
             NavigationDestination(
-              icon: Icon(t.icon, color: IronColors.textLo),
-              selectedIcon: Icon(t.icon, color: IronColors.gold),
-              label: t.label,
+              icon: Icon(tab.icon, color: IronColors.textLo),
+              selectedIcon: Icon(tab.icon, color: IronColors.gold),
+              label: tab.label,
             ),
         ],
       ),

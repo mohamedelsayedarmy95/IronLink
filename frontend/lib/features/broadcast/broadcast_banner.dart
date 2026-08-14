@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../core/ws_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class BroadcastItem {
   const BroadcastItem({
@@ -141,8 +142,8 @@ class _BroadcastBannerHostState extends State<BroadcastBannerHost> {
               Navigator.pop(context);
               _ack(item);
             },
-            child: const Text('علمت',
-                style: TextStyle(color: IronColors.gold)),
+            child: Text(L.of(context).acknowledged,
+                style: const TextStyle(color: IronColors.gold)),
           ),
         ],
       ),

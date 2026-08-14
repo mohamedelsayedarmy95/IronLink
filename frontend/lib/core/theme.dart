@@ -2,38 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class IronColors {
-  // Dark theme colors
-  static const Color darkPrimary = Color(0xFF0F172A); // Navy bg
-  static const Color darkSecondary = Color(0xFF1E293B);
-  static const Color darkTertiary = Color(0xFF334155);
-  static const Color darkAccent = Color(0xFFD4AF37); // Metallic gold
-  static const Color darkTextPrimary = Color(0xFFF8FAFC);
-  static const Color darkTextSecondary = Color(0xFFE2E8F0);
-  static const Color darkTextTertiary = Color(0xFFCBD5E1);
+  // Dark theme colors — cyan/near-black security aesthetic, matching the
+  // auth flow (see features/auth/screens/auth_colors.dart).
+  static const Color darkPrimary = Color(0xFF070B14); // near-black bg
+  static const Color darkSecondary = Color(0xFF0D1424); // card surface
+  static const Color darkTertiary = Color(0xFF0C3340); // cyan-tinted border
+  static const Color darkAccent = Color(0xFF22D3EE); // cyan
+  static const Color darkTextPrimary = Color(0xFFF1F5F9);
+  static const Color darkTextSecondary = Color(0xFFCBD5E1);
+  static const Color darkTextTertiary = Color(0xFF7C8DA6);
 
   // Light theme colors
   static const Color lightPrimary = Color(0xFFF8FAFC); // Almost white
   static const Color lightSecondary = Color(0xFFF1F5F9);
   static const Color lightTertiary = Color(0xFFE2E8F0);
-  static const Color lightAccent = Color(0xFFD4AF37); // Metallic gold
+  static const Color lightAccent = Color(0xFF0E7490);
   static const Color lightTextPrimary = Color(0xFF0F172A); // Navy text
   static const Color lightTextSecondary = Color(0xFF1E293B);
   static const Color lightTextTertiary = Color(0xFF334155);
 
   // Common colors
-  static const Color success = Color(0xFF10B981);
+  static const Color success = Color(0xFF34D399);
   static const Color warning = Color(0xFFFAB005);
-  static const Color error = Color(0xFFEF4444);
+  static const Color error = Color(0xFFF87171);
   static const Color info = Color(0xFF3B82F6);
 
-  // Legacy fixed dark/gold palette aliases, used throughout the existing
+  // Legacy fixed dark/cyan palette aliases, used throughout the existing
   // screens which predate the light/dark theme split above.
   static const Color navyDeep = darkPrimary;
   static const Color navySurface = darkSecondary;
   static const Color navyBorder = darkTertiary;
   static const Color gold = darkAccent;
-  static const Color goldBright = Color(0xFFE9CB6B);
-  static const Color goldDim = Color(0xFF8A7638);
+  static const Color goldBright = Color(0xFF67E8F9);
+  static const Color goldDim = Color(0xFF0E7490);
   static const Color textHi = darkTextPrimary;
   static const Color textLo = darkTextTertiary;
   static const Color errorRed = error;
@@ -337,7 +338,7 @@ ThemeData ironLinkDarkTheme() {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: IronColors.darkAccent,
-        foregroundColor: IronColors.darkTextPrimary,
+        foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),

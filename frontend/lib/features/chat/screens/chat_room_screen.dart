@@ -8,6 +8,7 @@ import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
 import '../../../core/widgets/ticker.dart';
+import '../../../l10n/app_localizations.dart';
 import '../bloc/chat_bloc.dart';
 import '../chat_repository.dart';
 import '../widgets/attach_flow.dart';
@@ -94,14 +95,33 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: IronColors.navySurface,
+        elevation: 0,
+        shape: const Border(
+          bottom: BorderSide(color: IronColors.navyBorder),
+        ),
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 17,
-              backgroundColor: IronColors.navyDeep,
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: IronColors.navyDeep,
+                border: Border.all(color: IronColors.navyBorder),
+                boxShadow: widget.peerOnline
+                    ? [
+                        BoxShadow(
+                          color: IronColors.gold.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                        ),
+                      ]
+                    : null,
+              ),
               child: Text(
                 widget.peerName.characters.first,
                 style: const TextStyle(
@@ -116,8 +136,8 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                     style: const TextStyle(
                         fontSize: 16, color: IronColors.textHi)),
                 if (widget.peerOnline)
-                  const Text('متصل الآن',
-                      style: TextStyle(
+                  Text(t.onlineNow,
+                      style: const TextStyle(
                           fontSize: 11, color: IronColors.gold)),
               ],
             ),
@@ -128,14 +148,14 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
           BlocBuilder<ChatBloc, ChatRoomState>(
             builder: (context, state) {
               return IconButton(
-                tooltip: 'بدء محادثة سرية',
+                tooltip: t.startSecretChat,
                 icon: const Icon(Icons.lock, color: IronColors.gold),
                 onPressed: () {
                   // In a full implementation, we would restart the bloc with isSecret=true
                   // For now, just show a snack bar
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('تم تفعيل المحادثة السرية (سيتم تطبيقها في التحديث التالي)'),
+                    SnackBar(
+                      content: Text(t.secretChatComingSoon),
                       backgroundColor: IronColors.gold,
                     ),
                   );
@@ -269,6 +289,7 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     final mine = message.isMine;
 
     return Align(
@@ -308,13 +329,13 @@ class _MessageBubble extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (message.deleted)
-                const Row(
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.block, size: 14, color: IronColors.textLo),
-                    SizedBox(width: 6),
-                    Text('تم حذف هذه الرسالة',
-                        style: TextStyle(
+                    const Icon(Icons.block, size: 14, color: IronColors.textLo),
+                    const SizedBox(width: 6),
+                    Text(t.messageDeleted,
+                        style: const TextStyle(
                             color: IronColors.textLo,
                             fontStyle: FontStyle.italic,
                             fontSize: 13)),
@@ -331,8 +352,8 @@ class _MessageBubble extends StatelessWidget {
                   Text(
                     message.content ?? '',
                     style: TextStyle(
-                      // Dark bold text on gold for readability, as specified
-                      color: mine ? const Color(0xFF1A1503) : IronColors.textHi,
+                      // Dark bold text on the bright cyan bubble for readability.
+                      color: mine ? IronColors.navyDeep : IronColors.textHi,
                       fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
                       fontSize: 15,
                     ),
@@ -347,7 +368,7 @@ class _MessageBubble extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       color: mine
-                          ? const Color(0x991A1503)
+                          ? IronColors.navyDeep.withValues(alpha: 0.6)
                           : IronColors.textLo,
                     ),
                   ),
@@ -365,6 +386,7 @@ class _MessageBubble extends StatelessWidget {
   }
 
   void _showMessageOptions(BuildContext context) {
+    final t = L.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: IronColors.navySurface,
@@ -377,7 +399,7 @@ class _MessageBubble extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.translate, color: IronColors.gold),
-              title: const Text('ترجمة'),
+              title: Text(t.translate),
               onTap: () {
                 Navigator.pop(context);
                 // For translation, we need to ask for target language
@@ -390,7 +412,7 @@ class _MessageBubble extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.shield, color: IronColors.gold),
-              title: const Text('إبلاغ عن رسالة'),
+              title: Text(t.reportMessage),
               onTap: () {
                 Navigator.pop(context);
                 final text = message.content ?? '';
@@ -404,10 +426,10 @@ class _MessageBubble extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.delete_forever_outlined,
                     color: IronColors.errorRed),
-                title: const Text('حذف لدى الجميع',
-                    style: TextStyle(color: IronColors.textHi)),
-                subtitle: const Text('متاح خلال 5 دقائق من الإرسال',
-                    style: TextStyle(color: IronColors.textLo, fontSize: 12)),
+                title: Text(t.deleteForEveryone,
+                    style: const TextStyle(color: IronColors.textHi)),
+                subtitle: Text(t.deleteForEveryoneHint,
+                    style: const TextStyle(color: IronColors.textLo, fontSize: 12)),
                 onTap: () {
                   Navigator.pop(context);
                   // Find the bloc and send unsend event
@@ -434,27 +456,24 @@ class _Ticks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onBubble = IronColors.navyDeep;
     if (pending) {
-      return const Icon(Icons.schedule,
-          size: 13, color: Color(0x991A1503));
+      return Icon(Icons.schedule, size: 13, color: onBubble.withValues(alpha: 0.6));
     }
-    final gold = tick == MessageTick.read;
+    final read = tick == MessageTick.read;
     final double single = tick == MessageTick.sent ? 1 : 2;
-    final color = gold
-        ? const Color(0xFF7A5C00) // deep gold — visible ON the gold bubble
-        : const Color(0x991A1503);
     return Icon(
       single == 1 ? Icons.done : Icons.done_all,
       size: 14,
-      color: gold ? const Color(0xFF5C4400) : color,
-      shadows: gold
-          ? const [Shadow(color: Color(0xFFFFE082), blurRadius: 4)]
+      color: onBubble.withValues(alpha: read ? 0.85 : 0.6),
+      shadows: read
+          ? [Shadow(color: IronColors.goldBright.withValues(alpha: 0.5), blurRadius: 4)]
           : null,
     );
   }
 }
 
-// ── "يكتب..." indicator with 3 animated gold dots ────────────────────────────
+// ── "typing…" indicator with 3 animated gold dots ─────────────────────────────
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator({required this.peerName});
 
@@ -484,7 +503,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       child: Row(
         children: [
           Text(
-            '${widget.peerName} يكتب',
+            L.of(context).typingIndicator(widget.peerName),
             style: const TextStyle(color: IronColors.gold, fontSize: 13),
           ),
           const SizedBox(width: 6),
@@ -536,14 +555,18 @@ class _InputBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<ChatBloc>();
+    final t = L.of(context);
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        color: IronColors.navySurface,
+        decoration: const BoxDecoration(
+          color: IronColors.navySurface,
+          border: Border(top: BorderSide(color: IronColors.navyBorder)),
+        ),
         child: Row(
           children: [
             IconButton(
-              tooltip: 'إرفاق',
+              tooltip: t.attach,
               icon: const Icon(Icons.attach_file, color: IronColors.gold),
               onPressed: () async {
                 final media = context.read<MediaService>();
@@ -565,8 +588,8 @@ class _InputBar extends StatelessWidget {
                 onChanged: onChanged,
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'اكتب رسالة…',
+                decoration: InputDecoration(
+                  hintText: t.messageHint,
                   fillColor: IronColors.navyDeep,
                 ),
               ),
@@ -588,7 +611,7 @@ class _InputBar extends StatelessWidget {
             CircleAvatar(
               backgroundColor: IronColors.gold,
               child: IconButton(
-                tooltip: 'إرسال',
+                tooltip: t.send,
                 icon: const Icon(Icons.send,
                     color: IronColors.navyDeep, size: 20),
                 onPressed: onSend,

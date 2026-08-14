@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'groups_repository.dart';
 
 /// My-groups list; tapping a group shows its members with rank icons.
@@ -34,14 +35,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
           }
           final groups = snap.data ?? [];
           if (groups.isEmpty) {
-            return ListView(children: const [
-              SizedBox(height: 160),
-              Icon(Icons.groups_outlined,
+            return ListView(children: [
+              const SizedBox(height: 160),
+              const Icon(Icons.groups_outlined,
                   size: 64, color: IronColors.goldDim),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Center(
-                child: Text('لست عضواً في أي مجموعة بعد',
-                    style: TextStyle(color: IronColors.textLo)),
+                child: Text(L.of(context).notInAnyGroupYet,
+                    style: const TextStyle(color: IronColors.textLo)),
               ),
             ]);
           }
@@ -60,6 +61,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
   }
 
   void _showMembers(BuildContext context, GroupInfo group) {
+    final t = L.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: IronColors.navySurface,
@@ -80,7 +82,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    '${group.name} — ${group.memberCount} عضو',
+                    t.groupMembersTitle(group.name, group.memberCount),
                     style: const TextStyle(
                         color: IronColors.gold,
                         fontSize: 17,
@@ -165,8 +167,8 @@ class _GroupCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       group.isAnnouncement
-                          ? 'قناة إعلانات — للقراءة فقط'
-                          : '${group.memberCount} عضو',
+                          ? L.of(context).announcementChannelReadOnly
+                          : L.of(context).memberCount(group.memberCount),
                       style: const TextStyle(
                           color: IronColors.textLo, fontSize: 12),
                     ),
@@ -189,6 +191,7 @@ class _MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: IronColors.navyDeep,
@@ -216,11 +219,11 @@ class _MemberTile extends StatelessWidget {
       ),
       subtitle: Text(
         switch (member.role) {
-          'owner' => 'مالك المجموعة',
-          'admin' => 'مشرف',
-          'moderator' => 'منسق',
-          'observer' => 'مراقب — قراءة فقط',
-          _ => 'عضو',
+          'owner' => t.roleOwner,
+          'admin' => t.roleAdmin,
+          'moderator' => t.roleModerator,
+          'observer' => t.roleObserver,
+          _ => t.roleMember,
         },
         style: const TextStyle(color: IronColors.textLo, fontSize: 12),
       ),

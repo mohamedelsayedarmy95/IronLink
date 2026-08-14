@@ -24,6 +24,9 @@ dependencies:
   path_provider: ^2.1.4
   libsignal_protocol_dart: ^0.8.2  # Signal Protocol for E2EE
   google_fonts: ^6.2.0             # Google Fonts for beautiful typography
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:
@@ -34,6 +37,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/icons/
     - assets/intro/

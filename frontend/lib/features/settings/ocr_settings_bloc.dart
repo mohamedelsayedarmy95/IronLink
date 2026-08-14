@@ -27,7 +27,7 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
     LoadKeywords event,
     Emitter<OcrSettingsState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true, errorMessage: null));
+    emit(state.copyWith(isLoading: true, clearError: true));
     try {
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/ocr/keywords',
@@ -36,11 +36,12 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
       final List<dynamic>? keywordsData = response.data?['keywords'];
       final List<String> keywords =
           keywordsData?.map((e) => e as String).toList() ?? [];
-      emit(state.copyWith(isLoading: false, keywords: keywords));
+      emit(state.copyWith(isLoading: false, keywords: keywords, clearError: true));
     } catch (e) {
       emit(state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to load keywords: $e',
+        errorKind: OcrErrorKind.load,
+        errorDetail: '$e',
       ));
     }
   }
@@ -49,9 +50,14 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
     AddKeyword event,
     Emitter<OcrSettingsState> emit,
   ) async {
-    // Optimistically update the UI
-    final newKeywords = List<String>.from(state.keywords)..add(event.keyword);
-    emit(state.copyWith(keywords: newKeywords));
+    // Keep the pre-optimistic list so a failed request can revert to it —
+    // reverting to state.keywords here would revert to nothing, since the
+    // optimistic add already landed there by the time the catch runs.
+    final previousKeywords = state.keywords;
+    emit(state.copyWith(
+      keywords: [...previousKeywords, event.keyword],
+      clearError: true,
+    ));
 
     try {
       await _apiClient.dio.post<Map<String, dynamic>>(
@@ -59,12 +65,11 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
         data: {'keywords': [event.keyword]},
         options: await _auth(),
       );
-      // If the server returns an error, we'll revert in the catch block
     } catch (e) {
-      // Revert the optimistic update
-      emit(state.copyWith(keywords: List<String>.from(state.keywords)));
       emit(state.copyWith(
-        errorMessage: 'Failed to add keyword: $e',
+        keywords: previousKeywords,
+        errorKind: OcrErrorKind.add,
+        errorDetail: '$e',
       ));
     }
   }
@@ -73,10 +78,11 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
     RemoveKeyword event,
     Emitter<OcrSettingsState> emit,
   ) async {
-    // Optimistically update the UI
-    final newKeywords =
-        List<String>.from(state.keywords)..remove(event.keyword);
-    emit(state.copyWith(keywords: newKeywords));
+    final previousKeywords = state.keywords;
+    emit(state.copyWith(
+      keywords: previousKeywords.where((k) => k != event.keyword).toList(),
+      clearError: true,
+    ));
 
     try {
       await _apiClient.dio.delete(
@@ -85,10 +91,10 @@ class OcrSettingsBloc extends Bloc<OcrSettingsEvent, OcrSettingsState> {
         data: {'keyword': event.keyword},
       );
     } catch (e) {
-      // Revert the optimistic update
-      emit(state.copyWith(keywords: List<String>.from(state.keywords)));
       emit(state.copyWith(
-        errorMessage: 'Failed to remove keyword: $e',
+        keywords: previousKeywords,
+        errorKind: OcrErrorKind.remove,
+        errorDetail: '$e',
       ));
     }
   }

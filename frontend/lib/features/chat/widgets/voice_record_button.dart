@@ -6,6 +6,7 @@ import 'package:record/record.dart';
 
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// WhatsApp-style hold-to-record, lift-to-send, drag-left-to-cancel —
 /// restyled in gold with a pulsing ring while recording.
@@ -74,7 +75,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل رفع التسجيل الصوتي')),
+          SnackBar(content: Text(L.of(context).voiceUploadFailed)),
         );
       }
     } finally {
@@ -84,6 +85,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     return GestureDetector(
       onLongPressStart: (_) => _start(),
       onLongPressMoveUpdate: (d) {
@@ -98,7 +100,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
         children: [
           if (_recording) ...[
             Text(
-              _cancelZone ? 'اترك للإلغاء' : '← اسحب للإلغاء',
+              _cancelZone ? t.releaseToCancel : t.dragToCancel,
               style: TextStyle(
                 fontSize: 12,
                 color: _cancelZone ? IronColors.errorRed : IronColors.textLo,

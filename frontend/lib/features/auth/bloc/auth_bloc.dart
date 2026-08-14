@@ -63,10 +63,11 @@ class _PhoneAutoVerified extends AuthEvent {
 }
 
 class _PhoneVerificationFailed extends AuthEvent {
-  const _PhoneVerificationFailed(this.message);
-  final String message;
+  const _PhoneVerificationFailed(this.code, this.detail);
+  final AuthErrorCode code;
+  final String? detail;
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [code, detail];
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -82,7 +83,8 @@ class AuthState extends Equatable {
     this.phoneNumber = '',
     this.otpCode = '',
     this.resendCountdown = 0,
-    this.errorMessage,
+    this.errorCode,
+    this.errorDetail,
     this.user,
     this.verificationId,
     this.resendToken,
@@ -94,7 +96,8 @@ class AuthState extends Equatable {
   final String phoneNumber;
   final String otpCode;
   final int resendCountdown;
-  final String? errorMessage;
+  final AuthErrorCode? errorCode;
+  final String? errorDetail;
   final AuthUser? user;
 
   // Firebase Phone Auth session state
@@ -110,7 +113,8 @@ class AuthState extends Equatable {
     String? phoneNumber,
     String? otpCode,
     int? resendCountdown,
-    String? errorMessage,
+    AuthErrorCode? errorCode,
+    String? errorDetail,
     AuthUser? user,
     String? verificationId,
     int? resendToken,
@@ -123,7 +127,8 @@ class AuthState extends Equatable {
         phoneNumber: phoneNumber ?? this.phoneNumber,
         otpCode: otpCode ?? this.otpCode,
         resendCountdown: resendCountdown ?? this.resendCountdown,
-        errorMessage: errorMessage,
+        errorCode: errorCode,
+        errorDetail: errorDetail,
         user: user ?? this.user,
         verificationId: verificationId ?? this.verificationId,
         resendToken: resendToken ?? this.resendToken,
@@ -137,7 +142,8 @@ class AuthState extends Equatable {
         phoneNumber,
         otpCode,
         resendCountdown,
-        errorMessage,
+        errorCode,
+        errorDetail,
         user?.id,
         verificationId,
         idToken,
@@ -156,7 +162,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<_CodeSent>(_onCodeSent);
     on<_PhoneAutoVerified>(_onPhoneAutoVerified);
     on<_PhoneVerificationFailed>((e, emit) => emit(state.copyWith(
-        status: AuthStatus.error, errorMessage: e.message)));
+        status: AuthStatus.error, errorCode: e.code, errorDetail: e.detail)));
     on<_CountdownTicked>(
         (e, emit) => emit(state.copyWith(resendCountdown: e.secondsLeft)));
   }
@@ -176,12 +182,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         onCodeSent: (verificationId, resendToken) =>
             add(_CodeSent(verificationId, resendToken)),
         onAutoVerified: (idToken) => add(_PhoneAutoVerified(idToken)),
-        onError: (message) => add(_PhoneVerificationFailed(message)),
+        onError: (code, detail) => add(_PhoneVerificationFailed(code, detail)),
       );
     } catch (e) {
+      final (code, detail) = AuthRepository.firebaseErrorCode(e);
       emit(state.copyWith(
         status: AuthStatus.error,
-        errorMessage: AuthRepository.firebaseErrorMessage(e),
+        errorCode: code,
+        errorDetail: detail,
       ));
     }
   }
@@ -236,12 +244,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       // Firebase codes are single-use — return to OTP step so the user gets
       // a fresh one instead of retrying a burned code.
+      final (code, detail) = AuthRepository.firebaseErrorCode(e);
       emit(state.copyWith(
         step: AuthStep.otp,
         status: AuthStatus.error,
         otpCode: '',
         clearIdToken: true,
-        errorMessage: AuthRepository.firebaseErrorMessage(e),
+        errorCode: code,
+        errorDetail: detail,
       ));
     }
   }
