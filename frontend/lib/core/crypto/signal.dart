@@ -1,46 +1,251 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-/// Temporary stub for the Signal Protocol E2EE service.
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
+
+import 'key_repository.dart';
+import 'secret_store.dart';
+import 'signal_store.dart';
+
+export 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart'
+    show DuplicateMessageException, IdentityKey;
+export 'signal_store.dart' show IdentityChanged;
+
+/// Raised when a message cannot be encrypted or decrypted.
 ///
-/// The previous implementation was written against an incompatible version
-/// of libsignal_protocol_dart and never had working session establishment
-/// (initSessionAsSender/Receiver threw UnimplementedError). This stub keeps
-/// the same call surface used by ChatBloc so the app builds and secret
-/// chats degrade to a passthrough (base64-wrapped, NOT encrypted) instead of
-/// crashing. Real E2EE needs to be rebuilt against the installed package
-/// API in a dedicated follow-up.
+/// Every failure path in this file ends here rather than falling back to
+/// plaintext. A secret chat that quietly downgrades is worse than one that
+/// refuses to send: the user believes they are protected and is not.
+class EncryptionFailed implements Exception {
+  const EncryptionFailed(this.reason);
+  final String reason;
+
+  @override
+  String toString() => 'encryption failed: $reason';
+}
+
+/// The peer has never published keys, so nothing can be sent to them.
+class PeerHasNoKeys implements Exception {
+  const PeerHasNoKeys(this.userId);
+  final String userId;
+}
+
+/// Signal Protocol E2EE.
+///
+/// X3DH key agreement and the Double Ratchet are provided by
+/// libsignal_protocol_dart; this class owns installation, the key directory
+/// exchange, and the on-the-wire envelope. No cryptographic primitive is
+/// implemented here on purpose — hand-rolled crypto is how these systems fail.
 class SignalService {
-  final String _userId;
-  final String _baseUrl;
+  SignalService(
+    this.userId, {
+    required KeyRepository keys,
+    SecretStore? secrets,
+    PersistentSignalStore? store,
+  })  : _keys = keys,
+        _store = store ?? PersistentSignalStore(secrets ?? SecureSecretStore());
 
-  SignalService(this._userId, {required String baseUrl}) : _baseUrl = baseUrl;
+  final String userId;
+  final KeyRepository _keys;
+  final PersistentSignalStore _store;
 
-  final Map<String, bool> _sessions = {};
+  /// This app runs one device per account. The field exists because the
+  /// protocol addresses sessions by (user, device) and multi-device would
+  /// otherwise require a migration of every stored session key.
+  static const deviceId = 1;
 
-  Future<bool?> loadSession(String remoteUserId) async {
-    return _sessions[remoteUserId];
+  /// Generated per install. 100 is what Signal itself uses.
+  static const _preKeyBatch = 100;
+
+  /// Replenish before running out: a peer who claims the last one leaves
+  /// later senders with a weaker first message.
+  static const preKeyLowWaterMark = 20;
+
+  PersistentSignalStore get store => _store;
+
+  SignalProtocolAddress _address(String remoteUserId) =>
+      SignalProtocolAddress(remoteUserId, deviceId);
+
+  // ── Installation ──────────────────────────────────────────────────────────
+
+  /// Generates this device's keys and publishes the public half.
+  ///
+  /// Safe to call on every launch: it returns immediately once installed.
+  Future<void> ensureInstalled() async {
+    if (await _store.installedFor(userId)) {
+      await _replenishIfLow();
+      return;
+    }
+
+    final identity = generateIdentityKeyPair();
+    // Not the extended range: the server bounds registration_id to 14 bits,
+    // and a wider value would be rejected at upload.
+    final registrationId = generateRegistrationId(false);
+    await _store.install(
+      owner: userId,
+      identity: identity,
+      registrationId: registrationId,
+    );
+
+    final signedPreKey = generateSignedPreKey(identity, 1);
+    await _store.storeSignedPreKey(signedPreKey.id, signedPreKey);
+
+    final preKeys = generatePreKeys(1, _preKeyBatch);
+    for (final pk in preKeys) {
+      await _store.storePreKey(pk.id, pk);
+    }
+
+    // Published last. If this throws, the device keeps its keys and retries
+    // on next launch; publishing first would advertise keys whose private
+    // halves might not have been stored.
+    await _keys.publishBundle(
+      registrationId: registrationId,
+      identityKey: identity.getPublicKey(),
+      signedPreKey: signedPreKey,
+      oneTimePreKeys: preKeys,
+    );
   }
 
-  Future<void> performX3DH(String remoteUserId) async {}
+  Future<void> _replenishIfLow() async {
+    try {
+      final remaining = await _keys.remainingPreKeys();
+      if (remaining >= preKeyLowWaterMark) return;
 
-  Future<void> initSessionAsSender(
-      String remoteUserId, Map<String, dynamic> x3dhOutput) async {
-    _sessions[remoteUserId] = true;
+      // Continue past the highest id this device already holds, so a
+      // replenished key never collides with one still in use.
+      final existing = await _store.localPreKeyIds();
+      final start = (existing.isEmpty ? 0 : existing.reduce((a, b) => a > b ? a : b)) + 1;
+
+      final fresh = generatePreKeys(start, _preKeyBatch - remaining);
+      for (final pk in fresh) {
+        await _store.storePreKey(pk.id, pk);
+      }
+      await _keys.replenishPreKeys(fresh);
+    } catch (e) {
+      // Running low is not fatal — sessions still open without a one-time
+      // pre-key — so this must not block the app from starting.
+      debugPrint('[signal] pre-key replenish skipped: $e');
+    }
   }
 
-  Future<void> initSessionAsReceiver(
-      String remoteUserId, Map<String, dynamic> x3dhOutput) async {
-    _sessions[remoteUserId] = true;
+  /// Drops all key material. Called on sign-out.
+  Future<void> reset() => _store.wipe();
+
+  // ── Sessions ──────────────────────────────────────────────────────────────
+
+  Future<bool> hasSession(String remoteUserId) =>
+      _store.containsSession(_address(remoteUserId));
+
+  /// Opens a session by fetching the peer's bundle and running X3DH.
+  ///
+  /// Throws [IdentityChanged] if the peer's identity key differs from the one
+  /// already trusted — the user has to decide, because a reinstall and an
+  /// impersonation look identical from here.
+  Future<void> openSession(String remoteUserId) async {
+    final address = _address(remoteUserId);
+    final bundle = await _keys.fetchBundle(remoteUserId);
+    if (bundle == null) throw PeerHasNoKeys(remoteUserId);
+
+    final builder = SessionBuilder.fromSignalStore(_store, address);
+    try {
+      // Verifies the signed pre-key signature against the identity key
+      // before deriving anything, which is what makes an untrusted server
+      // acceptable here.
+      await builder.processPreKeyBundle(bundle.toPreKeyBundle(
+        deviceId: deviceId,
+      ));
+    } on UntrustedIdentityException {
+      throw IdentityChanged(remoteUserId);
+    } on InvalidKeyException catch (e) {
+      // A bad signature means the bundle was not produced by the holder of
+      // that identity key. Refuse rather than continue.
+      throw EncryptionFailed('peer key bundle failed verification: $e');
+    }
   }
 
-  Future<Map<String, dynamic>> encryptMessage(
-      String plaintext, String remoteUserId) async {
-    return {'ciphertext': base64Encode(utf8.encode(plaintext))};
+  /// Accepts a peer's changed identity after the user confirms it.
+  Future<void> acceptIdentityChange(
+      String remoteUserId, IdentityKey identityKey) =>
+      _store.acceptNewIdentity(_address(remoteUserId), identityKey);
+
+  // ── Envelope ──────────────────────────────────────────────────────────────
+  //
+  // The wire format has to carry the message type. A pre-key message (the
+  // first of a session) and a normal ratchet message are decrypted by
+  // different calls, and guessing wrong fails on every message.
+
+  static const _envelopeVersion = 1;
+
+  String _wrap(CiphertextMessage message) => jsonEncode({
+        'v': _envelopeVersion,
+        't': message.getType(),
+        'b': base64Encode(message.serialize()),
+      });
+
+  // ── Encrypt / decrypt ─────────────────────────────────────────────────────
+
+  /// Encrypts for [remoteUserId], opening a session if there is not one.
+  ///
+  /// Returns the envelope to put on the wire. Throws rather than returning
+  /// anything readable if encryption is not possible.
+  Future<String> encrypt(String plaintext, String remoteUserId) async {
+    if (!await hasSession(remoteUserId)) {
+      await openSession(remoteUserId);
+    }
+
+    final cipher = SessionCipher.fromStore(_store, _address(remoteUserId));
+    try {
+      final message = await cipher.encrypt(
+        Uint8List.fromList(utf8.encode(plaintext)),
+      );
+      return _wrap(message);
+    } on UntrustedIdentityException {
+      throw IdentityChanged(remoteUserId);
+    }
   }
 
-  Future<String> decryptMessage(
-      Map<String, dynamic> ciphertextMap, String remoteUserId) async {
-    final ciphertext = ciphertextMap['ciphertext'] as String;
-    return utf8.decode(base64Decode(ciphertext));
+  /// Decrypts an envelope produced by [encrypt].
+  Future<String> decrypt(String envelope, String remoteUserId) async {
+    final Map<String, dynamic> parsed;
+    try {
+      parsed = jsonDecode(envelope) as Map<String, dynamic>;
+    } catch (_) {
+      // Anything that is not an envelope is not something this device can
+      // read. Returning the raw text would display ciphertext — or, worse,
+      // present an unencrypted message as though it had been encrypted.
+      throw const EncryptionFailed('message is not an encrypted envelope');
+    }
+
+    if (parsed['v'] != _envelopeVersion) {
+      throw EncryptionFailed('unsupported envelope version ${parsed['v']}');
+    }
+
+    final body = base64Decode(parsed['b'] as String);
+    final cipher = SessionCipher.fromStore(_store, _address(remoteUserId));
+
+    try {
+      final plaintext = switch (parsed['t']) {
+        CiphertextMessage.prekeyType =>
+          await cipher.decrypt(PreKeySignalMessage(body)),
+        CiphertextMessage.whisperType =>
+          await cipher.decryptFromSignal(SignalMessage.fromSerialized(body)),
+        _ => throw EncryptionFailed('unknown message type ${parsed['t']}'),
+      };
+      return utf8.decode(plaintext);
+    } on UntrustedIdentityException {
+      throw IdentityChanged(remoteUserId);
+    } on DuplicateMessageException {
+      // The ratchet refuses to process the same message twice. That is a
+      // replay defence working, not a failure, so it passes through for the
+      // caller to drop the duplicate quietly.
+      rethrow;
+    } catch (e) {
+      // Everything else — bad MAC, malformed message, missing session — is
+      // a decryption failure. Caught broadly on purpose: the library does
+      // not export all of its exception types, and an uncaught one here
+      // would escape as an unhandled error rather than a handled refusal.
+      throw EncryptionFailed('$e');
+    }
   }
 }

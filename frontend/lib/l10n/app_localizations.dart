@@ -2052,6 +2052,78 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'{count, plural, =0{لا نتائج} =1{نتيجة واحدة} =2{نتيجتان} few{{count} نتائج} other{{count} نتيجة}}'**
   String searchResultCount(int count);
+
+  /// No description provided for @secureIdentityChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'رمز الأمان الخاص بهذا الشخص تغيّر. لم يتم إرسال الرسالة.'**
+  String get secureIdentityChanged;
+
+  /// No description provided for @secureIdentityChangedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يحدث هذا عند إعادة تثبيت التطبيق، وهو أيضًا شكل انتحال الشخصية. تأكّد منه عبر وسيلة أخرى قبل المتابعة.'**
+  String get secureIdentityChangedBody;
+
+  /// No description provided for @secureAcceptNewIdentity.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحققت منه — تابع'**
+  String get secureAcceptNewIdentity;
+
+  /// No description provided for @securePeerHasNoKeys.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الشخص لا يستطيع استقبال رسائل سرية بعد.'**
+  String get securePeerHasNoKeys;
+
+  /// No description provided for @securePeerHasNoKeysBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'جهازه لم ينشر مفاتيح التشفير. اطلب منه فتح IronLink مرة واحدة.'**
+  String get securePeerHasNoKeysBody;
+
+  /// No description provided for @secureEncryptFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تُرسل الرسالة، لأنه تعذّر تشفيرها.'**
+  String get secureEncryptFailed;
+
+  /// No description provided for @secureDecryptFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فك تشفير إحدى الرسائل.'**
+  String get secureDecryptFailed;
+
+  /// No description provided for @secureMessageUnreadable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فك تشفير الرسالة'**
+  String get secureMessageUnreadable;
+
+  /// No description provided for @secretChatOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'المحادثة السرية مفعّلة'**
+  String get secretChatOn;
+
+  /// No description provided for @secretChatOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'المحادثة السرية غير مفعّلة'**
+  String get secretChatOff;
+
+  /// No description provided for @secretChatNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسائل هذه المحادثة مشفّرة من طرف إلى طرف. الخادم يحفظ نصًا مشفّرًا لا يستطيع قراءته.'**
+  String get secretChatNotice;
+
+  /// No description provided for @secretChatAttachmentWarning.
+  ///
+  /// In ar, this message translates to:
+  /// **'المرفقات ليست مشفّرة من طرف إلى طرف بعد — التشفير يشمل التعليقات فقط.'**
+  String get secretChatAttachmentWarning;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

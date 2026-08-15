@@ -534,5 +534,17 @@
         "type": "int"
       }
     }
-  }
+  },
+  "secureIdentityChanged": "This person's security code changed. The message was not sent.",
+  "secureIdentityChangedBody": "This happens when they reinstall the app — and it is also what an impersonation looks like. Confirm with them through another channel before continuing.",
+  "secureAcceptNewIdentity": "I verified it — continue",
+  "securePeerHasNoKeys": "This person cannot receive secret messages yet.",
+  "securePeerHasNoKeysBody": "Their device has not published encryption keys. Ask them to open IronLink once.",
+  "secureEncryptFailed": "The message was not sent, because it could not be encrypted.",
+  "secureDecryptFailed": "A message could not be decrypted.",
+  "secureMessageUnreadable": "Message could not be decrypted",
+  "secretChatOn": "Secret chat is on",
+  "secretChatOff": "Secret chat is off",
+  "secretChatNotice": "Messages in this chat are end-to-end encrypted. The server stores only ciphertext it cannot read.",
+  "secretChatAttachmentWarning": "Attachments are not yet encrypted end-to-end — only their captions are."
 }

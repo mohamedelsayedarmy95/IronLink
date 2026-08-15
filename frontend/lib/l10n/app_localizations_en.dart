@@ -1101,4 +1101,47 @@ class LEn extends L {
     );
     return '$_temp0';
   }
+
+  @override
+  String get secureIdentityChanged =>
+      'This person\'s security code changed. The message was not sent.';
+
+  @override
+  String get secureIdentityChangedBody =>
+      'This happens when they reinstall the app — and it is also what an impersonation looks like. Confirm with them through another channel before continuing.';
+
+  @override
+  String get secureAcceptNewIdentity => 'I verified it — continue';
+
+  @override
+  String get securePeerHasNoKeys =>
+      'This person cannot receive secret messages yet.';
+
+  @override
+  String get securePeerHasNoKeysBody =>
+      'Their device has not published encryption keys. Ask them to open IronLink once.';
+
+  @override
+  String get secureEncryptFailed =>
+      'The message was not sent, because it could not be encrypted.';
+
+  @override
+  String get secureDecryptFailed => 'A message could not be decrypted.';
+
+  @override
+  String get secureMessageUnreadable => 'Message could not be decrypted';
+
+  @override
+  String get secretChatOn => 'Secret chat is on';
+
+  @override
+  String get secretChatOff => 'Secret chat is off';
+
+  @override
+  String get secretChatNotice =>
+      'Messages in this chat are end-to-end encrypted. The server stores only ciphertext it cannot read.';
+
+  @override
+  String get secretChatAttachmentWarning =>
+      'Attachments are not yet encrypted end-to-end — only their captions are.';
 }

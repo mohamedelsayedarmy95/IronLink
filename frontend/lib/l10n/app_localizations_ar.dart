@@ -1087,4 +1087,46 @@ class LAr extends L {
     );
     return '$_temp0';
   }
+
+  @override
+  String get secureIdentityChanged =>
+      'رمز الأمان الخاص بهذا الشخص تغيّر. لم يتم إرسال الرسالة.';
+
+  @override
+  String get secureIdentityChangedBody =>
+      'يحدث هذا عند إعادة تثبيت التطبيق، وهو أيضًا شكل انتحال الشخصية. تأكّد منه عبر وسيلة أخرى قبل المتابعة.';
+
+  @override
+  String get secureAcceptNewIdentity => 'تحققت منه — تابع';
+
+  @override
+  String get securePeerHasNoKeys =>
+      'هذا الشخص لا يستطيع استقبال رسائل سرية بعد.';
+
+  @override
+  String get securePeerHasNoKeysBody =>
+      'جهازه لم ينشر مفاتيح التشفير. اطلب منه فتح IronLink مرة واحدة.';
+
+  @override
+  String get secureEncryptFailed => 'لم تُرسل الرسالة، لأنه تعذّر تشفيرها.';
+
+  @override
+  String get secureDecryptFailed => 'تعذّر فك تشفير إحدى الرسائل.';
+
+  @override
+  String get secureMessageUnreadable => 'تعذّر فك تشفير الرسالة';
+
+  @override
+  String get secretChatOn => 'المحادثة السرية مفعّلة';
+
+  @override
+  String get secretChatOff => 'المحادثة السرية غير مفعّلة';
+
+  @override
+  String get secretChatNotice =>
+      'رسائل هذه المحادثة مشفّرة من طرف إلى طرف. الخادم يحفظ نصًا مشفّرًا لا يستطيع قراءته.';
+
+  @override
+  String get secretChatAttachmentWarning =>
+      'المرفقات ليست مشفّرة من طرف إلى طرف بعد — التشفير يشمل التعليقات فقط.';
 }

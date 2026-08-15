@@ -239,15 +239,36 @@ Render: `ENV=staging` **first**, then `DEV_AUTH_BYPASS=true`. Login becomes: any
 phone → any military ID → code `000000`. Setting the bypass while
 `ENV=production` makes the service refuse to start — by design.
 
-**5.2 End-to-end encryption is a mock.**
-[`encryption_service.py`](app/services/encryption_service.py) returns
-`"mock_ciphertext"` and `"mock_plaintext"`. The Signal Protocol is not
-implemented. `signal-protocol` was removed from requirements because the pinned
-version never existed and nothing imported it.
+**5.2 End-to-end encryption — implemented for secret chats, RESOLVED with one
+caveat.**
+The server-side mock is gone. Encryption is now real Signal Protocol (X3DH +
+Double Ratchet) via `libsignal_protocol_dart`, run entirely on the device:
 
-The app is branded *منظومة التراسل المؤمَّنة* ("secure messaging system"). Either
-implement real E2EE or remove the claim. This is the largest single piece of
-remaining work.
+- [`core/crypto/signal.dart`](frontend/lib/core/crypto/signal.dart) — install,
+  session establishment, envelope.
+- [`core/crypto/signal_store.dart`](frontend/lib/core/crypto/signal_store.dart)
+  — key and ratchet state persisted in the platform keystore, so sessions
+  survive a restart.
+- [`app/api/routes/keys.py`](app/api/routes/keys.py) — public key directory.
+  Public material only; the server cannot decrypt anything.
+
+Verified by [`test/signal_test.dart`](frontend/test/signal_test.dart), where
+two devices share nothing but what crosses the wire: round trip, out-of-order
+delivery, replay rejection, a third party failing to decrypt, a tampered key
+bundle being refused, and state surviving a restart.
+
+Every failure path refuses rather than falling back to plaintext. The previous
+code caught encryption errors and sent the message unencrypted anyway, which is
+the one outcome worse than not sending.
+
+**Caveat — attachments are not yet end-to-end encrypted.** A secret chat
+encrypts message text, captions, and the media pointer, but the file bytes
+themselves are uploaded to object storage unencrypted. This is the next piece
+of the work and is called out in the UI rather than left implicit.
+
+**Still open: encryption is opt-in per chat.** Ordinary chats are transport-
+encrypted only. Making it the default is a product decision, not a technical
+one — the machinery is now in place for it.
 
 **5.3 The summary endpoint sends conversation text to Hugging Face.**
 The client posts message bodies because the server holds no plaintext. In a
@@ -299,7 +320,9 @@ not put real user data on it.
 
 ```
 [ ] Real authentication (Firebase Phone Auth)          P0
-[ ] Real E2EE, or remove the security claim            P0
+[x] Real E2EE for secret chats (Signal Protocol)       P0
+[ ] Encrypt attachment bytes, not just the pointer     P0
+[ ] Make encryption the default, not opt-in            P1
 [ ] Opt-in gate on AI summary                          P0
 [ ] Release keystore + signing config                  P1
 [ ] iOS: GoogleService-Info.plist + APNs key           P1

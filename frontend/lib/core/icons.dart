@@ -57,6 +57,10 @@ class IronIcons {
   static const IconData shield = LucideIcons.shield;
   static const IconData shieldAlert = LucideIcons.shieldAlert;
   static const IconData lock = LucideIcons.lock;
+
+  /// An open padlock, not a crossed-out one: this marks an ordinary chat,
+  /// which is a normal state rather than an error.
+  static const IconData unlock = LucideIcons.lockOpen;
   static const IconData verified = LucideIcons.badgeCheck;
   static const IconData militaryId = LucideIcons.idCard;
   static const IconData admin = LucideIcons.star;

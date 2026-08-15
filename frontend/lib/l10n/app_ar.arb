@@ -534,5 +534,17 @@
         "type": "int"
       }
     }
-  }
+  },
+  "secureIdentityChanged": "رمز الأمان الخاص بهذا الشخص تغيّر. لم يتم إرسال الرسالة.",
+  "secureIdentityChangedBody": "يحدث هذا عند إعادة تثبيت التطبيق، وهو أيضًا شكل انتحال الشخصية. تأكّد منه عبر وسيلة أخرى قبل المتابعة.",
+  "secureAcceptNewIdentity": "تحققت منه — تابع",
+  "securePeerHasNoKeys": "هذا الشخص لا يستطيع استقبال رسائل سرية بعد.",
+  "securePeerHasNoKeysBody": "جهازه لم ينشر مفاتيح التشفير. اطلب منه فتح IronLink مرة واحدة.",
+  "secureEncryptFailed": "لم تُرسل الرسالة، لأنه تعذّر تشفيرها.",
+  "secureDecryptFailed": "تعذّر فك تشفير إحدى الرسائل.",
+  "secureMessageUnreadable": "تعذّر فك تشفير الرسالة",
+  "secretChatOn": "المحادثة السرية مفعّلة",
+  "secretChatOff": "المحادثة السرية غير مفعّلة",
+  "secretChatNotice": "رسائل هذه المحادثة مشفّرة من طرف إلى طرف. الخادم يحفظ نصًا مشفّرًا لا يستطيع قراءته.",
+  "secretChatAttachmentWarning": "المرفقات ليست مشفّرة من طرف إلى طرف بعد — التشفير يشمل التعليقات فقط."
 }

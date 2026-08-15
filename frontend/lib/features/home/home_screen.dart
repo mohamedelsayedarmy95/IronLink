@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api_client.dart';
+import '../../core/crypto/key_repository.dart';
+import '../../core/crypto/signal.dart';
 import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../core/ws_service.dart';
@@ -25,16 +27,36 @@ import '../settings/ocr_settings_page.dart';
 import '../../core/icons.dart';
 
 /// Home: live chats list in tab 0; other tabs land in later sprints.
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, required this.user});
 
   final AuthUser user;
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    // Provided here rather than in main.dart because the service is scoped to
+    // a signed-in user: its key material belongs to this account, and the
+    // store refuses to hand another account's identity to it.
+    return RepositoryProvider(
+      create: (ctx) => SignalService(
+        user.id,
+        keys: KeyRepository(ctx.read<ApiClient>()),
+      ),
+      child: _HomeView(user: user),
+    );
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeView extends StatefulWidget {
+  const _HomeView({required this.user});
+
+  final AuthUser user;
+
+  @override
+  State<_HomeView> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<_HomeView> {
   int _tab = 0;
 
   List<({IconData icon, String label})> _tabs(L t) => [
@@ -51,6 +73,25 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<WsService>().connect();
     // FCM: register token + wire notification-tap routing
     context.read<PushService>().init();
+    _publishEncryptionKeys();
+  }
+
+  /// Generates this device's Signal keys on first launch and publishes the
+  /// public half.
+  ///
+  /// Has to happen here rather than lazily on the first secret chat: a peer
+  /// cannot start an encrypted conversation with someone whose bundle the
+  /// directory has never seen, so waiting until this user needs it would make
+  /// them unreachable until they happened to open a secret chat themselves.
+  Future<void> _publishEncryptionKeys() async {
+    try {
+      await context.read<SignalService>().ensureInstalled();
+    } catch (e) {
+      // Not fatal and not worth a dialog: normal messaging is unaffected, and
+      // the next launch retries. Secret chats surface their own error if the
+      // keys really are missing when one is opened.
+      debugPrint('[signal] key publish deferred: $e');
+    }
   }
 
   /// Opens the conversation a search hit belongs to.

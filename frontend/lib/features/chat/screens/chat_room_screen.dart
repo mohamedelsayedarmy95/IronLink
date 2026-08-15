@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/crypto/signal.dart';
 import '../../../core/env.dart';
 import '../../../core/failure.dart';
 import '../../../core/media_service.dart';
@@ -60,8 +61,12 @@ class ChatRoomScreen extends StatelessWidget {
         baseUrl: baseUrl,
         api: context.read<ApiClient>(),
         store: context.read<MessageStore>(),
+        // The one provided at Home, so every chat shares a single key store
+        // and session state rather than each screen building its own.
+        signalService: context.read<SignalService>(),
       )..add(const ChatOpened()),
       child: _ChatRoomView(
+        isSecret: isSecret,
         peerId: peerId,
         peerName: peerName,
         peerOnline: peerOnline,
@@ -72,11 +77,13 @@ class ChatRoomScreen extends StatelessWidget {
 
 class _ChatRoomView extends StatefulWidget {
   const _ChatRoomView({
+    required this.isSecret,
     required this.peerId,
     required this.peerName,
     required this.peerOnline,
   });
 
+  final bool isSecret;
   final String peerId;
   final String peerName;
   final bool peerOnline;
@@ -165,6 +172,42 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
     );
   }
 
+  /// Tells the user a message was refused, and why.
+  ///
+  /// A send that silently does nothing is barely better than a silent
+  /// downgrade — in both cases the user believes something happened that did
+  /// not. A changed identity gets a dialog rather than a toast because it is
+  /// the one case that needs a decision.
+  void _showSecureError(SecureChatError error) {
+    final t = L.of(context);
+    switch (error) {
+      case SecureChatError.identityChanged:
+        showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: IronColors.navySurface,
+            title: Text(t.secureIdentityChanged,
+                style: const TextStyle(color: IronColors.textHi)),
+            content: Text(t.secureIdentityChangedBody,
+                style: const TextStyle(color: IronColors.textTertiary)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(t.cancel,
+                    style: const TextStyle(color: IronColors.textTertiary)),
+              ),
+            ],
+          ),
+        );
+      case SecureChatError.peerHasNoKeys:
+        _toast(t.securePeerHasNoKeys);
+      case SecureChatError.encryptFailed:
+        _toast(t.secureEncryptFailed);
+      case SecureChatError.decryptFailed:
+        _toast(t.secureDecryptFailed);
+    }
+  }
+
   void _jumpToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
@@ -228,24 +271,41 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
           ],
         ),
         actions: [
-          // Secret chat toggle button (simplified)
-          BlocBuilder<ChatBloc, ChatRoomState>(
-            builder: (context, state) {
-              return IconButton(
-                tooltip: t.startSecretChat,
-                icon: const Icon(IronIcons.lock, color: IronColors.gold),
-                onPressed: () {
-                  // In a full implementation, we would restart the bloc with isSecret=true
-                  // For now, just show a snack bar
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(t.secretChatComingSoon),
-                      backgroundColor: IronColors.gold,
-                    ),
-                  );
-                },
-              );
-            },
+          // Reports the actual state of this conversation rather than
+          // offering a toggle. Switching mid-conversation would leave half
+          // the history unencrypted while still claiming to be secret, so
+          // the mode is fixed when the chat is opened.
+          IconButton(
+            tooltip: widget.isSecret ? t.secretChatOn : t.secretChatOff,
+            icon: Icon(
+              widget.isSecret ? IronIcons.lock : IronIcons.unlock,
+              color: widget.isSecret
+                  ? IronColors.accentText
+                  : IronColors.textTertiary,
+            ),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: IronColors.navySurface,
+                title: Text(
+                  widget.isSecret ? t.secretChatOn : t.secretChatOff,
+                  style: const TextStyle(color: IronColors.textHi),
+                ),
+                content: Text(
+                  widget.isSecret
+                      ? '${t.secretChatNotice}\n\n${t.secretChatAttachmentWarning}'
+                      : t.secretChatNotice,
+                  style: const TextStyle(color: IronColors.textTertiary),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(t.done,
+                        style: const TextStyle(color: IronColors.accentText)),
+                  ),
+                ],
+              ),
+            ),
           ),
           PopupMenuButton<String>(
             icon: const Icon(IronIcons.more, color: IronColors.textHi),
@@ -298,7 +358,11 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
           const NewsTicker(),
           Expanded(
             child: BlocConsumer<ChatBloc, ChatRoomState>(
-              listener: (_, __) => _jumpToBottom(),
+              listener: (context, state) {
+                _jumpToBottom();
+                final secureError = state.secureError;
+                if (secureError != null) _showSecureError(secureError);
+              },
               builder: (context, state) {
                 if (state.loading) {
                   return const Center(
@@ -545,6 +609,28 @@ class _MessageBubble extends StatelessWidget {
                     duration: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['duration'] as num?)?.toDouble() ?? 0,
                     waveform: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['waveform'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? [],
                   )
+                ] else if (message.content == null) ...[
+                  // Content is null on a message that failed to decrypt.
+                  // Rendering an empty bubble would read as an empty message
+                  // rather than as something that could not be verified.
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(IronIcons.lock,
+                          size: IronIcons.sizeCompact,
+                          color: IronColors.textLo),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          t.secureMessageUnreadable,
+                          style: const TextStyle(
+                              color: IronColors.textLo,
+                              fontStyle: FontStyle.italic,
+                              fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
                 ] else ...[
                   Text(
                     message.content ?? '',

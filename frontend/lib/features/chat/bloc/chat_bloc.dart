@@ -11,6 +11,7 @@ import '../../../core/api_client.dart';
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
 import '../local/message_store.dart';
+import '../../../core/crypto/key_repository.dart';
 import '../../../core/crypto/signal.dart';
 
 // ── Events ─────────────────────────────────────────────────────────────────────
@@ -168,6 +169,18 @@ class ChatModerateMessageFailure extends ChatEvent {
   List<Object?> get props => [messageId, error];
 }
 
+/// Why a secure chat could not carry a message.
+///
+/// Distinct cases rather than one flag, because the answers differ: a changed
+/// identity needs the user to decide, a peer with no keys cannot be messaged
+/// at all, and a failed decrypt affects one message rather than the session.
+enum SecureChatError {
+  identityChanged,
+  peerHasNoKeys,
+  encryptFailed,
+  decryptFailed,
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 class ChatRoomState extends Equatable {
@@ -185,6 +198,7 @@ class ChatRoomState extends Equatable {
     this.translationLoading = const {}, // map messageId -> bool
     this.moderationScores = const {}, // map messageId -> scores
     this.moderationLoading = const {}, // map messageId -> bool
+    this.secureError,
   });
 
   final List<ChatMessage> messages;
@@ -202,6 +216,10 @@ class ChatRoomState extends Equatable {
   final Map<String, Map<String, double>> moderationScores;
   final Map<String, bool> moderationLoading;
 
+  /// Set when encryption refused to carry a message. Cleared like [error]:
+  /// it describes the last attempt, not a lasting condition.
+  final SecureChatError? secureError;
+
   ChatRoomState copyWith({
     List<ChatMessage>? messages,
     bool? peerTyping,
@@ -215,6 +233,7 @@ class ChatRoomState extends Equatable {
     Map<String, bool>? translationLoading,
     Map<String, Map<String, double>>? moderationScores,
     Map<String, bool>? moderationLoading,
+    SecureChatError? secureError,
   }) =>
       ChatRoomState(
         messages: messages ?? this.messages,
@@ -229,11 +248,14 @@ class ChatRoomState extends Equatable {
         translationLoading: translationLoading ?? this.translationLoading,
         moderationScores: moderationScores ?? this.moderationScores,
         moderationLoading: moderationLoading ?? this.moderationLoading,
+        // Not `?? this.secureError` — like `error`, it must not persist into
+        // the next state or a one-off failure would look permanent.
+        secureError: secureError,
       );
 
   @override
   List<Object?> get props =>
-      [messages.length, _rev, peerTyping, loading, error, summary, summaryLoading, smartReplies, smartRepliesLoading];
+      [messages.length, _rev, peerTyping, loading, error, summary, summaryLoading, smartReplies, smartRepliesLoading, secureError];
 
   // Revision counter derived from mutable message fields so Equatable
   // notices tick/deletion changes inside the list.
@@ -254,11 +276,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     required String baseUrl,
     required ApiClient api,
     MessageStore? store,
+    SignalService? signalService,
   })  : _repo = repo,
         _api = api,
         _ws = ws,
         _store = store,
-        _signalService = SignalService(myId, baseUrl: baseUrl),
+        _signalService = signalService ??
+            SignalService(myId, keys: KeyRepository(api)),
         _isSecret = isSecret,
         _baseUrl = baseUrl,
         super(const ChatRoomState()) {
@@ -357,28 +381,23 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     String contentToSend = e.content;
 
     if (_isSecret) {
-      // For secret chats, we need to establish a session if we don't have one
-      final sessionExists = await _signalService.loadSession(peerId) != null;
-      if (!sessionExists) {
-        try {
-          // Perform X3DH key exchange to establish session
-          await _signalService.performX3DH(peerId);
-          // Initialize session as sender
-          await _signalService.initSessionAsSender(peerId, {});
-          // Note: In a full implementation, we'd need to exchange the ephemeral key
-          // and pre-key ID with the remote party, but for now we assume the
-          // signal service handles storing what it needs
-        } catch (e) {
-          // If key exchange fails, we fall back to unencrypted? Or show error?
-          // For now, we'll log and continue with unencrypted (not ideal but prevents blocking)
-          // In production, we'd show an error to the user
-          print('Failed to establish secure session: $e');
-        }
+      try {
+        // Opens the session on first use. Encryption failures are NOT
+        // swallowed: sending plaintext from a screen the user believes is
+        // encrypted is the worst outcome available here, so the send is
+        // abandoned and the reason surfaced instead.
+        contentToSend = await _signalService.encrypt(e.content, peerId);
+      } on IdentityChanged {
+        emit(state.copyWith(secureError: SecureChatError.identityChanged));
+        return;
+      } on PeerHasNoKeys {
+        emit(state.copyWith(secureError: SecureChatError.peerHasNoKeys));
+        return;
+      } catch (err) {
+        debugPrint('[signal] encrypt failed: $err');
+        emit(state.copyWith(secureError: SecureChatError.encryptFailed));
+        return;
       }
-
-      // Encrypt the message
-      final encrypted = await _signalService.encryptMessage(e.content, peerId);
-      contentToSend = encrypted['ciphertext'] as String;
     }
 
     // Optimistic bubble — replaced by the server ack
@@ -401,26 +420,36 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     String contentToSend = e.caption ?? '[${e.kind}]';
     String mediaKeyToSend = e.mediaKey;
 
-    if (_isSecret) {
-      // For secret chats, we need to establish a session if we don't have one
-      final sessionExists = await _signalService.loadSession(peerId) != null;
-      if (!sessionExists) {
-        try {
-          // Perform X3DH key exchange to establish session
-          await _signalService.performX3DH(peerId);
-          // Initialize session as sender
-          await _signalService.initSessionAsSender(peerId, {});
-        } catch (e) {
-          print('Failed to establish secure session: $e');
-        }
-      }
+    // What actually goes on the wire as the message body. Kept separate from
+    // `contentToSend`, which is what the local bubble shows: the previous
+    // code encrypted into `contentToSend` and then handed sendMedia the
+    // plaintext caption anyway, so the caption left the device in the clear.
+    String? wireContent = e.caption;
 
-      // For media in secret chats, we encrypt the media key and caption together
-      // as we did before, but now with real encryption
+    if (_isSecret) {
+      // The media key and caption travel together inside one envelope so the
+      // server cannot tell which object a secret message refers to.
+      //
+      // NOTE: this protects the caption and the pointer, not the file bytes.
+      // Attachments are still uploaded to object storage unencrypted — see
+      // MediaService. That is the next piece of this work, and until it lands
+      // a secret chat's text is end-to-end encrypted while its attachments
+      // are not.
       final combined = '${e.mediaKey}:${e.caption ?? ''}';
-      final encrypted = await _signalService.encryptMessage(combined, peerId);
-      contentToSend = encrypted['ciphertext'] as String;
-      mediaKeyToSend = ''; // Not used separately since it's in the encrypted content
+      try {
+        wireContent = await _signalService.encrypt(combined, peerId);
+      } on IdentityChanged {
+        emit(state.copyWith(secureError: SecureChatError.identityChanged));
+        return;
+      } on PeerHasNoKeys {
+        emit(state.copyWith(secureError: SecureChatError.peerHasNoKeys));
+        return;
+      } catch (err) {
+        debugPrint('[signal] media encrypt failed: $err');
+        emit(state.copyWith(secureError: SecureChatError.encryptFailed));
+        return;
+      }
+      mediaKeyToSend = ''; // carried inside the envelope instead
     }
 
     final optimistic = ChatMessage(
@@ -437,7 +466,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       kind: e.kind,
       mediaKey: mediaKeyToSend,
       mimeType: e.mimeType,
-      caption: e.caption,
+      caption: wireContent,
       clientRef: ref,
     );
     // Send typing_stop via HTTP when sending a message
@@ -509,15 +538,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
 
         if (_isSecret) {
           try {
-            // For secret chats, we need to decrypt the message
-            final decrypted = await _signalService.decryptMessage(
-                {'ciphertext': content}, peerId);
-            content = decrypted;
-          } catch (decryptionError) {
-            // If decryption fails, we might want to show an error or fallback
-            // For now, we'll keep the encrypted content and log the error
-            print('Failed to decrypt message: $decryptionError');
-            // Keep content as is (encrypted) so it doesn't break the UI completely
+            content = await _signalService.decrypt(content ?? '', peerId);
+          } on DuplicateMessageException {
+            // The ratchet already processed this one. Dropping it is the
+            // point — showing it twice is what a replay is trying to achieve.
+            return;
+          } catch (err) {
+            debugPrint('[signal] decrypt failed: $err');
+            // The previous code kept the undecryptable content and displayed
+            // it. Marking the message as unreadable is the honest outcome:
+            // rendering ciphertext, or worse an attacker's plaintext, as a
+            // normal bubble misrepresents what was verified.
+            content = null;
+            emit(state.copyWith(secureError: SecureChatError.decryptFailed));
           }
         }
 
