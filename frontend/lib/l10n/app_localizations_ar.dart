@@ -937,4 +937,154 @@ class LAr extends L {
 
   @override
   String get contactDataDeleted => 'تم حذف بيانات جهات الاتصال';
+
+  @override
+  String get blockUser => 'حظر المستخدم';
+
+  @override
+  String get unblockUser => 'إلغاء الحظر';
+
+  @override
+  String blockUserTitle(String name) {
+    return 'حظر $name؟';
+  }
+
+  @override
+  String get blockUserBody =>
+      'لن يستطيع مراسلتك ولن تستطيع مراسلته. ولن يتم إبلاغه بأنك حظرته.';
+
+  @override
+  String get blockedUsers => 'المستخدمون المحظورون';
+
+  @override
+  String get blockedUsersEmpty => 'لم تحظر أحدًا';
+
+  @override
+  String get blockedUsersEmptyHint =>
+      'من تحظرهم سيظهرون هنا، ويمكنك التراجع في أي وقت.';
+
+  @override
+  String blockedOn(String date) {
+    return 'محظور منذ $date';
+  }
+
+  @override
+  String userBlocked(String name) {
+    return 'تم حظر $name';
+  }
+
+  @override
+  String userUnblocked(String name) {
+    return 'تم إلغاء حظر $name';
+  }
+
+  @override
+  String get blockedBannerTitle => 'أنت حظرت هذا الشخص';
+
+  @override
+  String get blockedBannerBody => 'ألغِ الحظر لاستئناف إرسال واستقبال الرسائل.';
+
+  @override
+  String get reportUser => 'الإبلاغ عن المستخدم';
+
+  @override
+  String get reportTitle => 'إبلاغ';
+
+  @override
+  String get reportReasonQuestion => 'ما المشكلة؟';
+
+  @override
+  String get reportDetails => 'تفاصيل إضافية (اختياري)';
+
+  @override
+  String get reportSubmit => 'إرسال البلاغ';
+
+  @override
+  String get reportSubmitted => 'تم إرسال البلاغ';
+
+  @override
+  String get reportSubmittedBody =>
+      'سيراجعه أحد المسؤولين. يمكنك أيضًا حظر هذا الشخص حتى لا يتواصل معك في أثناء ذلك.';
+
+  @override
+  String get reportAlsoBlock => 'احظره أيضًا';
+
+  @override
+  String get reportAlreadySent => 'سبق أن أبلغت عن هذه الرسالة';
+
+  @override
+  String get reportEvidenceNotice =>
+      'تُرفق نسخة من الرسالة المُبلَّغ عنها، لتبقى متاحة حتى لو تم حذفها.';
+
+  @override
+  String get reasonSpam => 'رسائل مزعجة';
+
+  @override
+  String get reasonHarassment => 'تحرش أو إساءة';
+
+  @override
+  String get reasonImpersonation => 'انتحال شخصية';
+
+  @override
+  String get reasonScam => 'احتيال أو نصب';
+
+  @override
+  String get reasonIllegalContent => 'محتوى غير قانوني';
+
+  @override
+  String get reasonLeakedClassified => 'مواد سرية';
+
+  @override
+  String get reasonOther => 'شيء آخر';
+
+  @override
+  String get analyzeContent => 'تحليل المحتوى';
+
+  @override
+  String get myReports => 'بلاغاتي';
+
+  @override
+  String get reportStatusOpen => 'قيد المراجعة';
+
+  @override
+  String get reportStatusReviewing => 'تحت المراجعة';
+
+  @override
+  String get reportStatusActioned => 'تم اتخاذ إجراء';
+
+  @override
+  String get reportStatusDismissed => 'لم يُتخذ إجراء';
+
+  @override
+  String get searchMessages => 'البحث في الرسائل';
+
+  @override
+  String get searchMessagesTitle => 'البحث في الرسائل';
+
+  @override
+  String get searchMessagesHint => 'ابحث داخل هذه المحادثة';
+
+  @override
+  String get searchMessagesOnDeviceNotice =>
+      'البحث يتم على هذا الجهاز فقط. الرسائل مُشفّرة ولا يستطيع الخادم قراءتها، لذلك تشمل النتائج ما نزّله هذا الجهاز.';
+
+  @override
+  String get searchNoResults => 'لا توجد نتائج';
+
+  @override
+  String get searchNoResultsHint => 'جرّب كلمة أقصر أو إملاءً مختلفًا.';
+
+  @override
+  String searchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نتيجة',
+      few: '$count نتائج',
+      two: 'نتيجتان',
+      one: 'نتيجة واحدة',
+      zero: 'لا نتائج',
+    );
+    return '$_temp0';
+  }
 }

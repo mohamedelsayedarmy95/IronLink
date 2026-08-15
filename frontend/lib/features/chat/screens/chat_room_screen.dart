@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/env.dart';
+import '../../../core/failure.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
@@ -11,12 +12,17 @@ import '../../../core/widgets/ticker.dart';
 import '../../../l10n/app_localizations.dart';
 import '../bloc/chat_bloc.dart';
 import '../chat_repository.dart';
+import '../local/message_store.dart';
 import '../widgets/attach_flow.dart';
 import '../widgets/smart_replies.dart';
 import '../widgets/summary_banner.dart';
 import '../widgets/voice_player.dart';
 import '../widgets/voice_recorder.dart';
 import '../../../core/icons.dart';
+import '../../moderation/moderation_repository.dart';
+import '../../moderation/screens/blocked_users_screen.dart' show confirmBlock;
+import '../../moderation/widgets/report_sheet.dart';
+import '../../settings/ocr_settings_page.dart' show failureMessage;
 
 class ChatRoomScreen extends StatelessWidget {
   const ChatRoomScreen({
@@ -49,11 +55,14 @@ class ChatRoomScreen extends StatelessWidget {
         ws: ws,
         myId: myId,
         peerId: peerId,
+        peerName: peerName,
         isSecret: isSecret,
         baseUrl: baseUrl,
         authToken: authToken,
+        store: context.read<MessageStore>(),
       )..add(const ChatOpened()),
       child: _ChatRoomView(
+        peerId: peerId,
         peerName: peerName,
         peerOnline: peerOnline,
       ),
@@ -62,8 +71,13 @@ class ChatRoomScreen extends StatelessWidget {
 }
 
 class _ChatRoomView extends StatefulWidget {
-  const _ChatRoomView({required this.peerName, required this.peerOnline});
+  const _ChatRoomView({
+    required this.peerId,
+    required this.peerName,
+    required this.peerOnline,
+  });
 
+  final String peerId;
   final String peerName;
   final bool peerOnline;
 
@@ -75,11 +89,80 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
 
+  /// Null until the block state is known. The composer is not disabled while
+  /// it is unknown — guessing "blocked" would silently stop a normal
+  /// conversation on a slow network.
+  bool? _blocked;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBlockState();
+  }
+
   @override
   void dispose() {
     _input.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  ModerationRepository get _moderation => context.read<ModerationRepository>();
+
+  Future<void> _loadBlockState() async {
+    try {
+      final blocked = await _moderation.isBlocked(widget.peerId);
+      if (!mounted) return;
+      setState(() => _blocked = blocked);
+    } catch (_) {
+      // Left unknown on purpose. A failed status check must not decide that
+      // someone is blocked.
+    }
+  }
+
+  Future<void> _toggleBlock() async {
+    final t = L.of(context);
+    final blocked = _blocked ?? false;
+
+    if (!blocked && !await confirmBlock(context, widget.peerName)) return;
+    if (!mounted) return;
+
+    try {
+      if (blocked) {
+        await _moderation.unblock(widget.peerId);
+      } else {
+        await _moderation.block(widget.peerId);
+      }
+      if (!mounted) return;
+      setState(() => _blocked = !blocked);
+      _toast(blocked
+          ? t.userUnblocked(widget.peerName)
+          : t.userBlocked(widget.peerName));
+    } catch (e) {
+      if (!mounted) return;
+      _toast(failureMessage(t, NetworkFailureClassifier.from(e)));
+    }
+  }
+
+  Future<void> _report({String? messageId, String? snapshot}) async {
+    final outcome = await showReportSheet(
+      context,
+      repository: _moderation,
+      reportedUserId: widget.peerId,
+      reportedUserName: widget.peerName,
+      messageId: messageId,
+      contentSnapshot: snapshot,
+    );
+    if (outcome == null || !mounted) return;
+
+    if (outcome.alsoBlocked) setState(() => _blocked = true);
+    _toast(L.of(context).reportSubmitted);
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: IronColors.navySurface),
+    );
   }
 
   void _jumpToBottom() {
@@ -164,8 +247,49 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
               );
             },
           ),
-          // AI Summary toggle (for demo, we'll just show it automatically if there are many messages)
-          // In a real app, this could be a setting
+          PopupMenuButton<String>(
+            icon: const Icon(IronIcons.more, color: IronColors.textHi),
+            color: IronColors.navySurface,
+            onSelected: (value) {
+              if (value == 'block') {
+                _toggleBlock();
+              } else if (value == 'report') {
+                // Reporting the person rather than one message: no id and no
+                // snapshot, because there is nothing specific to attach.
+                _report();
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    const Icon(IronIcons.report,
+                        size: IronIcons.sizeCompact,
+                        color: IronColors.textTertiary),
+                    const SizedBox(width: 10),
+                    Text(t.reportUser,
+                        style: const TextStyle(color: IronColors.textHi)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'block',
+                child: Row(
+                  children: [
+                    const Icon(IronIcons.blocked,
+                        size: IronIcons.sizeCompact,
+                        color: IronColors.errorRed),
+                    const SizedBox(width: 10),
+                    Text(
+                      (_blocked ?? false) ? t.unblockUser : t.blockUser,
+                      style: const TextStyle(color: IronColors.textHi),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: Column(
@@ -232,6 +356,8 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                                 text: text,
                               ));
                             },
+                            onReportPressed: (messageId, snapshot) =>
+                                _report(messageId: messageId, snapshot: snapshot),
                           );
                         },
                       ),
@@ -249,24 +375,88 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                         },
                       ),
 
-                    _InputBar(
-                      controller: _input,
-                      onChanged: (text) => context
-                          .read<ChatBloc>()
-                          .add(TypingChanged(text.isNotEmpty)),
-                      onSend: () {
-                        final text = _input.text.trim();
-                        if (text.isEmpty) return;
-                        context.read<ChatBloc>().add(TextSent(text));
-                        _input.clear();
-                      },
-                    ),
+                    // The composer is replaced rather than merely disabled:
+                    // a greyed-out text field invites the user to keep
+                    // tapping it without saying why nothing happens.
+                    if (_blocked ?? false)
+                      _BlockedBanner(onUnblock: _toggleBlock)
+                    else
+                      _InputBar(
+                        controller: _input,
+                        onChanged: (text) => context
+                            .read<ChatBloc>()
+                            .add(TypingChanged(text.isNotEmpty)),
+                        onSend: () {
+                          final text = _input.text.trim();
+                          if (text.isEmpty) return;
+                          context.read<ChatBloc>().add(TextSent(text));
+                          _input.clear();
+                        },
+                      ),
                   ],
                 );
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown where the composer would be while this user has the peer blocked.
+class _BlockedBanner extends StatelessWidget {
+  const _BlockedBanner({required this.onUnblock});
+
+  final VoidCallback onUnblock;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = L.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      decoration: const BoxDecoration(
+        color: IronColors.navySurface,
+        border: Border(top: BorderSide(color: IronColors.navyBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(IronIcons.blocked,
+                    size: IronIcons.sizeCompact, color: IronColors.textTertiary),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    t.blockedBannerTitle,
+                    style: const TextStyle(
+                        color: IronColors.textHi,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              t.blockedBannerBody,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(color: IronColors.textTertiary, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: onUnblock,
+              child: Text(t.unblockUser,
+                  style: const TextStyle(color: IronColors.accentText)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -280,11 +470,17 @@ class _MessageBubble extends StatelessWidget {
     required this.message,
     required this.onTranslatePressed,
     required this.onModeratePressed,
+    required this.onReportPressed,
   });
 
   final ChatMessage message;
   final void Function(String text, String targetLang) onTranslatePressed;
   final void Function(String text) onModeratePressed;
+
+  /// Carries the decrypted text along with the id: the server holds only
+  /// ciphertext it cannot read, so this device is the only place the evidence
+  /// exists in a readable form.
+  final void Function(String messageId, String? snapshot) onReportPressed;
 
   static const _slateGrey = Color(0xFF3E4A5C);
 
@@ -297,10 +493,10 @@ class _MessageBubble extends StatelessWidget {
       alignment:
           mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
       child: GestureDetector(
-        // Long-press for options (translate, moderate, unsend)
-        onLongPress: mine && !message.deleted
-            ? () => _showMessageOptions(context)
-            : null,
+        // Available on the peer's messages too. Gating this on `mine` made
+        // reporting unreachable for exactly the messages worth reporting.
+        onLongPress:
+            message.deleted ? null : () => _showMessageOptions(context),
         child: Container(
           constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.75),
@@ -411,9 +607,12 @@ class _MessageBubble extends StatelessWidget {
                 }
               },
             ),
+            // This runs the AI classifier and shows scores — it never
+            // reaches a person. It was previously labelled "report", which
+            // told the user they had filed a complaint when they had not.
             ListTile(
-              leading: const Icon(IronIcons.report, color: IronColors.gold),
-              title: Text(t.reportMessage),
+              leading: const Icon(IronIcons.info, color: IronColors.gold),
+              title: Text(t.analyzeContent),
               onTap: () {
                 Navigator.pop(context);
                 final text = message.content ?? '';
@@ -422,6 +621,19 @@ class _MessageBubble extends StatelessWidget {
                 }
               },
             ),
+            // Reporting your own message would only report yourself, which
+            // the server rejects anyway.
+            if (!message.isMine)
+              ListTile(
+                leading:
+                    const Icon(IronIcons.report, color: IronColors.errorRed),
+                title: Text(t.reportMessage,
+                    style: const TextStyle(color: IronColors.textHi)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onReportPressed(message.id, message.content);
+                },
+              ),
             if (message.isMine && !message.deleted) ...[
               const Divider(color: IronColors.navyDeep),
               ListTile(

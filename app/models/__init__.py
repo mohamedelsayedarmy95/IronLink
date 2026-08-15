@@ -40,6 +40,12 @@ from .contact import (
     UserPhoneIndex,
 )
 from .device_key import OneTimePreKey, UserKeyBundle
+from .moderation import (
+    ContentReport,
+    ReportReason,
+    ReportStatus,
+    UserBlock,
+)
 from .verification_form import (
     MULTI_VALUE_FIELD_TYPES,
     OPTION_BEARING_FIELD_TYPES,
@@ -80,6 +86,10 @@ __all__ = [
     "ContactSyncState",
     "DiscoverabilityLevel",
     "PHONE_HASH_LENGTH",
+    "UserBlock",
+    "ContentReport",
+    "ReportReason",
+    "ReportStatus",
     "Broadcast",
     "BroadcastAck",
     "AuditLog",

@@ -1800,6 +1800,258 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'تم حذف بيانات جهات الاتصال'**
   String get contactDataDeleted;
+
+  /// No description provided for @blockUser.
+  ///
+  /// In ar, this message translates to:
+  /// **'حظر المستخدم'**
+  String get blockUser;
+
+  /// No description provided for @unblockUser.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الحظر'**
+  String get unblockUser;
+
+  /// No description provided for @blockUserTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حظر {name}؟'**
+  String blockUserTitle(String name);
+
+  /// No description provided for @blockUserBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لن يستطيع مراسلتك ولن تستطيع مراسلته. ولن يتم إبلاغه بأنك حظرته.'**
+  String get blockUserBody;
+
+  /// No description provided for @blockedUsers.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستخدمون المحظورون'**
+  String get blockedUsers;
+
+  /// No description provided for @blockedUsersEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تحظر أحدًا'**
+  String get blockedUsersEmpty;
+
+  /// No description provided for @blockedUsersEmptyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'من تحظرهم سيظهرون هنا، ويمكنك التراجع في أي وقت.'**
+  String get blockedUsersEmptyHint;
+
+  /// No description provided for @blockedOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'محظور منذ {date}'**
+  String blockedOn(String date);
+
+  /// No description provided for @userBlocked.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حظر {name}'**
+  String userBlocked(String name);
+
+  /// No description provided for @userUnblocked.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إلغاء حظر {name}'**
+  String userUnblocked(String name);
+
+  /// No description provided for @blockedBannerTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت حظرت هذا الشخص'**
+  String get blockedBannerTitle;
+
+  /// No description provided for @blockedBannerBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغِ الحظر لاستئناف إرسال واستقبال الرسائل.'**
+  String get blockedBannerBody;
+
+  /// No description provided for @reportUser.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإبلاغ عن المستخدم'**
+  String get reportUser;
+
+  /// No description provided for @reportTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إبلاغ'**
+  String get reportTitle;
+
+  /// No description provided for @reportReasonQuestion.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما المشكلة؟'**
+  String get reportReasonQuestion;
+
+  /// No description provided for @reportDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل إضافية (اختياري)'**
+  String get reportDetails;
+
+  /// No description provided for @reportSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال البلاغ'**
+  String get reportSubmit;
+
+  /// No description provided for @reportSubmitted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال البلاغ'**
+  String get reportSubmitted;
+
+  /// No description provided for @reportSubmittedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيراجعه أحد المسؤولين. يمكنك أيضًا حظر هذا الشخص حتى لا يتواصل معك في أثناء ذلك.'**
+  String get reportSubmittedBody;
+
+  /// No description provided for @reportAlsoBlock.
+  ///
+  /// In ar, this message translates to:
+  /// **'احظره أيضًا'**
+  String get reportAlsoBlock;
+
+  /// No description provided for @reportAlreadySent.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبق أن أبلغت عن هذه الرسالة'**
+  String get reportAlreadySent;
+
+  /// No description provided for @reportEvidenceNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تُرفق نسخة من الرسالة المُبلَّغ عنها، لتبقى متاحة حتى لو تم حذفها.'**
+  String get reportEvidenceNotice;
+
+  /// No description provided for @reasonSpam.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسائل مزعجة'**
+  String get reasonSpam;
+
+  /// No description provided for @reasonHarassment.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحرش أو إساءة'**
+  String get reasonHarassment;
+
+  /// No description provided for @reasonImpersonation.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتحال شخصية'**
+  String get reasonImpersonation;
+
+  /// No description provided for @reasonScam.
+  ///
+  /// In ar, this message translates to:
+  /// **'احتيال أو نصب'**
+  String get reasonScam;
+
+  /// No description provided for @reasonIllegalContent.
+  ///
+  /// In ar, this message translates to:
+  /// **'محتوى غير قانوني'**
+  String get reasonIllegalContent;
+
+  /// No description provided for @reasonLeakedClassified.
+  ///
+  /// In ar, this message translates to:
+  /// **'مواد سرية'**
+  String get reasonLeakedClassified;
+
+  /// No description provided for @reasonOther.
+  ///
+  /// In ar, this message translates to:
+  /// **'شيء آخر'**
+  String get reasonOther;
+
+  /// No description provided for @analyzeContent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحليل المحتوى'**
+  String get analyzeContent;
+
+  /// No description provided for @myReports.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلاغاتي'**
+  String get myReports;
+
+  /// No description provided for @reportStatusOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get reportStatusOpen;
+
+  /// No description provided for @reportStatusReviewing.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحت المراجعة'**
+  String get reportStatusReviewing;
+
+  /// No description provided for @reportStatusActioned.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم اتخاذ إجراء'**
+  String get reportStatusActioned;
+
+  /// No description provided for @reportStatusDismissed.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يُتخذ إجراء'**
+  String get reportStatusDismissed;
+
+  /// No description provided for @searchMessages.
+  ///
+  /// In ar, this message translates to:
+  /// **'البحث في الرسائل'**
+  String get searchMessages;
+
+  /// No description provided for @searchMessagesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'البحث في الرسائل'**
+  String get searchMessagesTitle;
+
+  /// No description provided for @searchMessagesHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث داخل هذه المحادثة'**
+  String get searchMessagesHint;
+
+  /// No description provided for @searchMessagesOnDeviceNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'البحث يتم على هذا الجهاز فقط. الرسائل مُشفّرة ولا يستطيع الخادم قراءتها، لذلك تشمل النتائج ما نزّله هذا الجهاز.'**
+  String get searchMessagesOnDeviceNotice;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نتائج'**
+  String get searchNoResults;
+
+  /// No description provided for @searchNoResultsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'جرّب كلمة أقصر أو إملاءً مختلفًا.'**
+  String get searchNoResultsHint;
+
+  /// No description provided for @searchResultCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =0{لا نتائج} =1{نتيجة واحدة} =2{نتيجتان} few{{count} نتائج} other{{count} نتيجة}}'**
+  String searchResultCount(int count);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

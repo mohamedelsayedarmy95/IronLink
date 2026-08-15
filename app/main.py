@@ -17,6 +17,7 @@ from app.api.routes import (
     chats,
     communities,
     contacts,
+    moderation,
     group_entry,
     groups,
     keys,
@@ -71,6 +72,7 @@ app.include_router(chats.router, prefix=settings.API_PREFIX)
 app.include_router(groups.router, prefix=settings.API_PREFIX)
 app.include_router(group_entry.router, prefix=settings.API_PREFIX)
 app.include_router(contacts.router, prefix=settings.API_PREFIX)
+app.include_router(moderation.router, prefix=settings.API_PREFIX)
 app.include_router(media.router, prefix=settings.API_PREFIX)
 app.include_router(broadcasts.router, prefix=settings.API_PREFIX)
 app.include_router(admin.router, prefix=settings.API_PREFIX)

@@ -138,17 +138,28 @@ async def _handle_frame(
             return
 
         async with AsyncSessionLocal() as db:
-            msg = await message_service.save_message(
-                db,
-                sender_id=user_id,
-                recipient_id=to,
-                group_id=None,
-                message_type=frame_type,
-                content_ciphertext=frame.get("content"),
-                media_object_key=frame.get("media_key"),
-                media_mime_type=frame.get("media_mime"),
-                destruct_after_seconds=frame.get("destruct_after"),
-            )
+            try:
+                msg = await message_service.save_message(
+                    db,
+                    sender_id=user_id,
+                    recipient_id=to,
+                    group_id=None,
+                    message_type=frame_type,
+                    content_ciphertext=frame.get("content"),
+                    media_object_key=frame.get("media_key"),
+                    media_mime_type=frame.get("media_mime"),
+                    destruct_after_seconds=frame.get("destruct_after"),
+                )
+            except message_service.BlockedDelivery:
+                # Reported as an undeliverable message rather than as a block.
+                # Saying "you are blocked" would tell the sender something the
+                # recipient chose not to disclose, and turns a quiet boundary
+                # into a confrontation.
+                await websocket.send_json({
+                    "type": "error",
+                    "detail": "This message could not be delivered.",
+                })
+                return
             # Offline recipient → FCM push with sender name + short preview.
             # Checked while the session is open so we read fcm_token in one trip.
             recipient_offline = not await manager.is_online(to)

@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
+import '../local/message_store.dart';
 import '../../../core/crypto/signal.dart';
 
 // ── Events ─────────────────────────────────────────────────────────────────────
@@ -246,11 +248,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     required WsService ws,
     required this.myId,
     required this.peerId,
+    this.peerName,
     bool isSecret = false,
     required String baseUrl,
     required String authToken,
+    MessageStore? store,
   })  : _repo = repo,
         _ws = ws,
+        _store = store,
         _signalService = SignalService(myId, baseUrl: baseUrl),
         _isSecret = isSecret,
         _baseUrl = baseUrl,
@@ -284,8 +289,31 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   final WsService _ws;
   final String myId;
   final String peerId;
+
+  /// Stored alongside cached messages so a search hit can name the
+  /// conversation it came from without a network call.
+  final String? peerName;
+
   final bool _isSecret;
   final SignalService _signalService;
+
+  /// Local cache that makes search possible. Null when the device could not
+  /// open the database — the chat still works, it just is not searchable.
+  final MessageStore? _store;
+
+  /// Writes to the cache never block or break the conversation: a full disk
+  /// must not stop a message from being displayed. Secret chats are filtered
+  /// inside [MessageStore.upsertAll], which refuses to persist them at all.
+  void _cache(List<ChatMessage> messages) {
+    final store = _store;
+    if (store == null || messages.isEmpty) return;
+    unawaited(
+      store
+          .upsertAll(peerId, messages,
+              peerName: peerName, isSecret: _isSecret)
+          .catchError((Object e) => debugPrint('[cache] $e')),
+    );
+  }
 
   final String _baseUrl;
   final String _authToken;
@@ -298,6 +326,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     try {
       final history = await _repo.history(peerId, myId: myId);
       emit(state.copyWith(messages: history, loading: false));
+      _cache(history);
       // Everything from the peer that we just displayed is now read
       for (final m in history.where((m) => !m.isMine && m.tick != MessageTick.read)) {
         _ws.sendRead(m.id);
@@ -428,6 +457,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       m.content = null;
     }
     emit(state.copyWith(messages: updated));
+    // Re-cached so the retracted text stops matching searches. upsertAll
+    // stores null content for a deleted message, which is the point.
+    _cache([
+      for (final m in updated)
+        if (m.id == e.messageId) m
+    ]);
   }
 
   Future<void> _onFrame(_FrameReceived e, Emitter<ChatRoomState> emit) async {
@@ -450,6 +485,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
               m
         ];
         emit(state.copyWith(messages: updated));
+        // Cached only now, not at send time: before the ack the message has
+        // a client ref rather than its real id, and caching that would leave
+        // a row search could never match back to the conversation.
+        _cache([
+          for (final m in updated)
+            if (m.id == f['message_id']) m
+        ]);
 
       case 'message':
         if (f['from'] != peerId) return; // other conversation
@@ -481,6 +523,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
           messages: [...state.messages, msg],
           peerTyping: false,
         ));
+        _cache([msg]);
         // Chat room is open → delivered AND read immediately
         _ws.sendDelivered(msg.id);
         _ws.sendRead(msg.id);

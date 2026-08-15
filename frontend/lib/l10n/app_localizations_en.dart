@@ -951,4 +951,154 @@ class LEn extends L {
 
   @override
   String get contactDataDeleted => 'Contact data deleted';
+
+  @override
+  String get blockUser => 'Block user';
+
+  @override
+  String get unblockUser => 'Unblock';
+
+  @override
+  String blockUserTitle(String name) {
+    return 'Block $name?';
+  }
+
+  @override
+  String get blockUserBody =>
+      'They will not be able to message you, and you will not be able to message them. They are not told that you blocked them.';
+
+  @override
+  String get blockedUsers => 'Blocked users';
+
+  @override
+  String get blockedUsersEmpty => 'You have not blocked anyone';
+
+  @override
+  String get blockedUsersEmptyHint =>
+      'People you block will appear here, and you can undo it at any time.';
+
+  @override
+  String blockedOn(String date) {
+    return 'Blocked $date';
+  }
+
+  @override
+  String userBlocked(String name) {
+    return '$name is blocked';
+  }
+
+  @override
+  String userUnblocked(String name) {
+    return '$name is unblocked';
+  }
+
+  @override
+  String get blockedBannerTitle => 'You blocked this person';
+
+  @override
+  String get blockedBannerBody =>
+      'Unblock them to send and receive messages again.';
+
+  @override
+  String get reportUser => 'Report user';
+
+  @override
+  String get reportTitle => 'Report';
+
+  @override
+  String get reportReasonQuestion => 'What is wrong?';
+
+  @override
+  String get reportDetails => 'Anything else we should know (optional)';
+
+  @override
+  String get reportSubmit => 'Send report';
+
+  @override
+  String get reportSubmitted => 'Report sent';
+
+  @override
+  String get reportSubmittedBody =>
+      'A reviewer will look at it. You can also block this person so they cannot contact you meanwhile.';
+
+  @override
+  String get reportAlsoBlock => 'Block them as well';
+
+  @override
+  String get reportAlreadySent => 'You have already reported this message';
+
+  @override
+  String get reportEvidenceNotice =>
+      'A copy of the reported message is attached, so it stays available even if it is deleted.';
+
+  @override
+  String get reasonSpam => 'Spam';
+
+  @override
+  String get reasonHarassment => 'Harassment or abuse';
+
+  @override
+  String get reasonImpersonation => 'Pretending to be someone else';
+
+  @override
+  String get reasonScam => 'Scam or fraud';
+
+  @override
+  String get reasonIllegalContent => 'Illegal content';
+
+  @override
+  String get reasonLeakedClassified => 'Classified material';
+
+  @override
+  String get reasonOther => 'Something else';
+
+  @override
+  String get analyzeContent => 'Analyse content';
+
+  @override
+  String get myReports => 'Reports I sent';
+
+  @override
+  String get reportStatusOpen => 'Under review';
+
+  @override
+  String get reportStatusReviewing => 'Being reviewed';
+
+  @override
+  String get reportStatusActioned => 'Action taken';
+
+  @override
+  String get reportStatusDismissed => 'No action taken';
+
+  @override
+  String get searchMessages => 'Search messages';
+
+  @override
+  String get searchMessagesTitle => 'Search messages';
+
+  @override
+  String get searchMessagesHint => 'Search in this conversation';
+
+  @override
+  String get searchMessagesOnDeviceNotice =>
+      'Search runs on this device only. Messages are encrypted, so the server cannot read them — results cover what this device has downloaded.';
+
+  @override
+  String get searchNoResults => 'Nothing found';
+
+  @override
+  String get searchNoResultsHint =>
+      'Try a shorter word, or a different spelling.';
+
+  @override
+  String searchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+      zero: 'No results',
+    );
+    return '$_temp0';
+  }
 }

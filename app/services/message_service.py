@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Message
+from app.models import Message, UserBlock
 from app.models.message import MessageStatus, MessageType
 
 UNSEND_WINDOW = timedelta(minutes=5)
@@ -14,6 +14,33 @@ UNSEND_WINDOW = timedelta(minutes=5)
 
 class UnsendDenied(Exception):
     """Raised when the unsend window has passed or the caller is not the sender."""
+
+
+class BlockedDelivery(Exception):
+    """Raised when a block stands between the two parties.
+
+    Carries no detail about which direction the block runs: telling a sender
+    they were blocked turns a quiet boundary into a confrontation, which is
+    the outcome blocking exists to avoid.
+    """
+
+
+async def _blocked_between(db: AsyncSession, a: UUID, b: UUID) -> bool:
+    """Whether either party has blocked the other.
+
+    Symmetric at enforcement even though a block is directional: if A blocked
+    B, B must not be able to message A either, or the block only stops the
+    person who did not ask for it.
+    """
+    row = await db.scalar(
+        select(UserBlock.id).where(
+            or_(
+                (UserBlock.blocker_id == a) & (UserBlock.blocked_id == b),
+                (UserBlock.blocker_id == b) & (UserBlock.blocked_id == a),
+            )
+        ).limit(1)
+    )
+    return row is not None
 
 
 async def save_message(
@@ -28,6 +55,14 @@ async def save_message(
     media_mime_type: str | None = None,
     destruct_after_seconds: int | None = None,
 ) -> Message:
+    # Enforced here rather than in the route, because this is the single
+    # point every message passes through — REST and WebSocket both. A check
+    # in one caller would leave the other open.
+    if recipient_id is not None and await _blocked_between(
+        db, sender_id, recipient_id
+    ):
+        raise BlockedDelivery
+
     now = datetime.now(timezone.utc)
     msg = Message(
         sender_id=sender_id,

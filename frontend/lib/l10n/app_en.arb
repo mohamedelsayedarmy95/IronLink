@@ -457,5 +457,82 @@
   "deleteContactDataTitle": "Delete everything",
   "deleteContactDataConfirm": "All fingerprints and matches are permanently deleted, and you disappear from other people's discovery lists.",
   "deleteEverything": "Delete all",
-  "contactDataDeleted": "Contact data deleted"
+  "contactDataDeleted": "Contact data deleted",
+  "blockUser": "Block user",
+  "unblockUser": "Unblock",
+  "blockUserTitle": "Block {name}?",
+  "@blockUserTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockUserBody": "They will not be able to message you, and you will not be able to message them. They are not told that you blocked them.",
+  "blockedUsers": "Blocked users",
+  "blockedUsersEmpty": "You have not blocked anyone",
+  "blockedUsersEmptyHint": "People you block will appear here, and you can undo it at any time.",
+  "blockedOn": "Blocked {date}",
+  "@blockedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "userBlocked": "{name} is blocked",
+  "@userBlocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userUnblocked": "{name} is unblocked",
+  "@userUnblocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedBannerTitle": "You blocked this person",
+  "blockedBannerBody": "Unblock them to send and receive messages again.",
+  "reportUser": "Report user",
+  "reportTitle": "Report",
+  "reportReasonQuestion": "What is wrong?",
+  "reportDetails": "Anything else we should know (optional)",
+  "reportSubmit": "Send report",
+  "reportSubmitted": "Report sent",
+  "reportSubmittedBody": "A reviewer will look at it. You can also block this person so they cannot contact you meanwhile.",
+  "reportAlsoBlock": "Block them as well",
+  "reportAlreadySent": "You have already reported this message",
+  "reportEvidenceNotice": "A copy of the reported message is attached, so it stays available even if it is deleted.",
+  "reasonSpam": "Spam",
+  "reasonHarassment": "Harassment or abuse",
+  "reasonImpersonation": "Pretending to be someone else",
+  "reasonScam": "Scam or fraud",
+  "reasonIllegalContent": "Illegal content",
+  "reasonLeakedClassified": "Classified material",
+  "reasonOther": "Something else",
+  "analyzeContent": "Analyse content",
+  "myReports": "Reports I sent",
+  "reportStatusOpen": "Under review",
+  "reportStatusReviewing": "Being reviewed",
+  "reportStatusActioned": "Action taken",
+  "reportStatusDismissed": "No action taken",
+  "searchMessages": "Search messages",
+  "searchMessagesTitle": "Search messages",
+  "searchMessagesHint": "Search in this conversation",
+  "searchMessagesOnDeviceNotice": "Search runs on this device only. Messages are encrypted, so the server cannot read them — results cover what this device has downloaded.",
+  "searchNoResults": "Nothing found",
+  "searchNoResultsHint": "Try a shorter word, or a different spelling.",
+  "searchResultCount": "{count, plural, =0{No results} =1{1 result} other{{count} results}}",
+  "@searchResultCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

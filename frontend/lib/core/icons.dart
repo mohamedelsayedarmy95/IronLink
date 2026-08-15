@@ -98,8 +98,19 @@ class IronIcons {
   static const IconData noSignal = LucideIcons.wifiOff;
   static const IconData delete = LucideIcons.trash2;
 
+  /// Overflow menu. Vertical dots rather than horizontal: the vertical form
+  /// does not need mirroring in a right-to-left layout.
+  static const IconData more = LucideIcons.ellipsisVertical;
+
+  // ── Selection ───────────────────────────────────────────────────────────
+  // Drawn rather than using a Radio widget so the choice reads the same in
+  // both directions of a bidirectional layout.
+  static const IconData radioOn = LucideIcons.circleDot;
+  static const IconData radioOff = LucideIcons.circle;
+
   // ── Settings ────────────────────────────────────────────────────────────
   static const IconData keyword = LucideIcons.tag;
+  static const IconData search = LucideIcons.search;
   static const IconData keywordSearch = LucideIcons.fileSearch;
   static const IconData show = LucideIcons.eye;
   static const IconData hide = LucideIcons.eyeOff;

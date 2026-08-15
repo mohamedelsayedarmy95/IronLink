@@ -35,3 +35,8 @@ alembic/versions/*.pyc
 # OS
 .DS_Store
 Thumbs.db
+
+# Local secrets — never commit
+سري مفتاح.txt
+*.key
+.pytest_cache/

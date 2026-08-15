@@ -10,8 +10,12 @@ import '../../l10n/app_localizations.dart';
 import '../auth/auth_repository.dart';
 import '../broadcast/broadcast_banner.dart';
 import '../chat/chat_repository.dart';
+import '../chat/local/message_store.dart';
 import '../chat/screens/chat_room_screen.dart';
+import '../chat/screens/message_search_screen.dart';
 import '../chat/screens/chats_list_screen.dart';
+import '../moderation/moderation_repository.dart';
+import '../moderation/screens/blocked_users_screen.dart';
 import '../contacts/contact_sync_service.dart';
 import '../contacts/contacts_repository.dart';
 import '../contacts/screens/contacts_discovery_screen.dart';
@@ -49,6 +53,27 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<PushService>().init();
   }
 
+  /// Opens the conversation a search hit belongs to.
+  ///
+  /// Falls back to the peer id when the cached row predates the stored name.
+  /// Showing an id is poor, but refusing to open the conversation the user
+  /// just tapped would be worse.
+  void _openChatWithPeer(String peerId, String? peerName) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatRoomScreen(
+          repo: context.read<ChatRepository>(),
+          ws: context.read<WsService>(),
+          myId: widget.user.id,
+          peerId: peerId,
+          peerName: peerName ?? peerId,
+          peerOnline: false,
+          isSecret: false,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = L.of(context);
@@ -63,6 +88,36 @@ class _HomeScreenState extends State<HomeScreen> {
               color: IronColors.gold, fontWeight: FontWeight.w700),
         ),
         actions: [
+          if (_tab == 0)
+            IconButton(
+              tooltip: t.searchMessages,
+              icon: const Icon(IronIcons.search, size: IronIcons.sizeNav),
+              color: IronColors.gold,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MessageSearchScreen(
+                    store: context.read<MessageStore>(),
+                    onOpenConversation: _openChatWithPeer,
+                  ),
+                ),
+              ),
+            ),
+          // The settings tab itself is the OCR keyword list, so the blocked
+          // list gets its own action rather than being wedged into a page
+          // about something else.
+          if (_tab == 3)
+            IconButton(
+              tooltip: t.blockedUsers,
+              icon: const Icon(IronIcons.blocked, size: IronIcons.sizeNav),
+              color: IronColors.gold,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BlockedUsersScreen(
+                    repository: context.read<ModerationRepository>(),
+                  ),
+                ),
+              ),
+            ),
           // Finding people belongs beside the conversation list rather than
           // buried in settings — it is what you reach for when the list is
           // empty, which is exactly when it is most needed.

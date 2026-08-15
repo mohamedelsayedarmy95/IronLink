@@ -14,8 +14,10 @@ import 'features/auth/auth_repository.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/chat/chat_repository.dart';
+import 'features/chat/local/message_store.dart';
 import 'features/contacts/contact_sync_service.dart';
 import 'features/contacts/contacts_repository.dart';
+import 'features/moderation/moderation_repository.dart';
 import 'features/groups/entry/entry_repository.dart';
 import 'features/groups/groups_repository.dart';
 import 'l10n/app_localizations.dart';
@@ -31,17 +33,31 @@ void main() async {
     // No Firebase config (local dev without google-services.json): Phone
     // Auth and push both stay unavailable rather than crashing the app.
   }
-  runApp(const MilAcademyApp());
+
+  // The local message cache. Opened here so the failure is handled once:
+  // if the database cannot be opened the app runs with a null store, which
+  // costs search and nothing else.
+  MessageStore store;
+  try {
+    store = await MessageStore.open();
+  } catch (_) {
+    store = NullMessageStore();
+  }
+
+  runApp(MilAcademyApp(store: store));
 }
 
 class MilAcademyApp extends StatelessWidget {
-  const MilAcademyApp({super.key});
+  const MilAcademyApp({super.key, required this.store});
+
+  final MessageStore store;
 
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider(create: (_) => ApiClient()),
+        RepositoryProvider<MessageStore>.value(value: store),
         RepositoryProvider(
             create: (ctx) => AuthRepository(ctx.read<ApiClient>())),
         RepositoryProvider(
@@ -59,6 +75,8 @@ class MilAcademyApp extends StatelessWidget {
         RepositoryProvider(
             create: (ctx) =>
                 ContactSyncService(ctx.read<ContactsRepository>())),
+        RepositoryProvider(
+            create: (ctx) => ModerationRepository(ctx.read<ApiClient>())),
         RepositoryProvider(
             create: (ctx) => PushService(ctx.read<ApiClient>())),
       ],
