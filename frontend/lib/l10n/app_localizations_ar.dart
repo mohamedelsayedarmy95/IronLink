@@ -1207,4 +1207,8 @@ class LAr extends L {
 
   @override
   String get ownerMustTransfer => 'سلّم ملكية المجموعة قبل المغادرة';
+
+  @override
+  String get verificationTimedOut =>
+      'خدمة التحقق لم تستجب. اتصالك سليم — غالبًا التطبيق لسه غير مُهيّأ لتسجيل الدخول بالهاتف.';
 }

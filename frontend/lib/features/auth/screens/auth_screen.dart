@@ -127,6 +127,7 @@ class AuthScreen extends StatelessWidget {
 /// said something specific; everything else has copy of its own.
 String authErrorText(L t, AuthErrorCode code, String? detail) => switch (code) {
       AuthErrorCode.network => t.failureOffline,
+      AuthErrorCode.verificationTimeout => t.verificationTimedOut,
       AuthErrorCode.invalidPhone => t.errorInvalidPhone,
       AuthErrorCode.tooManyRequests => t.errorTooManyRequests,
       AuthErrorCode.invalidCode => t.errorInvalidCode,

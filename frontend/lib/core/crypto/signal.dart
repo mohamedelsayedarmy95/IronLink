@@ -74,6 +74,14 @@ class SignalService {
   /// Safe to call on every launch: it returns immediately once installed.
   Future<void> ensureInstalled() async {
     if (await _store.installedFor(userId)) {
+      // Installed locally, but the upload may never have landed. Retried on
+      // every launch until it does — otherwise one failed request at first
+      // login leaves this device permanently unreachable, with peers simply
+      // finding no keys for it.
+      if (!await _store.isPublished) {
+        await _publishExisting();
+        return;
+      }
       await _replenishIfLow();
       return;
     }
@@ -96,15 +104,44 @@ class SignalService {
       await _store.storePreKey(pk.id, pk);
     }
 
-    // Published last. If this throws, the device keeps its keys and retries
-    // on next launch; publishing first would advertise keys whose private
-    // halves might not have been stored.
+    // Published last: publishing first would advertise keys whose private
+    // halves might not have been stored. If it throws, the keys stay and
+    // ensureInstalled retries the upload on the next launch — which only
+    // works because "published" is recorded separately from "installed".
     await _keys.publishBundle(
       registrationId: registrationId,
       identityKey: identity.getPublicKey(),
       signedPreKey: signedPreKey,
       oneTimePreKeys: preKeys,
     );
+    await _store.markPublished();
+  }
+
+  /// Uploads the bundle for keys this device already holds.
+  ///
+  /// Reuses the stored identity and signed pre-key rather than generating new
+  /// ones: regenerating would change this device's identity every time an
+  /// upload failed, invalidating sessions that peers had already built.
+  Future<void> _publishExisting() async {
+    final identity = await _store.getIdentityKeyPair();
+    final registrationId = await _store.getLocalRegistrationId();
+
+    final signedPreKeys = await _store.loadSignedPreKeys();
+    if (signedPreKeys.isEmpty) return;
+
+    final preKeys = <PreKeyRecord>[];
+    for (final id in await _store.localPreKeyIds()) {
+      preKeys.add(await _store.loadPreKey(id));
+    }
+
+    await _keys.publishBundle(
+      registrationId: registrationId,
+      identityKey: identity.getPublicKey(),
+      signedPreKey: signedPreKeys.first,
+      // The server caps a single upload; the rest replenish later.
+      oneTimePreKeys: preKeys.take(_preKeyBatch).toList(),
+    );
+    await _store.markPublished();
   }
 
   Future<void> _replenishIfLow() async {

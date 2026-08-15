@@ -265,6 +265,62 @@ void main() {
           firstKey);
     });
 
+    test('a failed publish is retried on the next launch', () async {
+      // Found on a real device: the upload 401'd at first login, the device
+      // recorded itself as installed, and every later launch skipped
+      // publishing. The directory had no keys for it, so nobody could ever
+      // message it — silently, and permanently.
+      final secrets = MemorySecretStore();
+      directory.failNextPublish = true;
+
+      final first = SignalService('alice', keys: directory, secrets: secrets);
+      directory.publishingAs = 'alice';
+      await expectLater(first.ensureInstalled(), throwsA(anything));
+      expect(directory.rawBundle('alice'), isNull);
+
+      // Same storage, new launch. The upload now succeeds.
+      final second = SignalService('alice', keys: directory, secrets: secrets);
+      directory.publishingAs = 'alice';
+      await second.ensureInstalled();
+
+      expect(directory.rawBundle('alice'), isNotNull,
+          reason: 'the bundle must reach the directory eventually');
+    });
+
+    test('a retried publish keeps the identity it already had', () async {
+      // Regenerating on retry would change this device's identity every time
+      // an upload failed, invalidating sessions peers had already built.
+      final secrets = MemorySecretStore();
+      directory.failNextPublish = true;
+
+      final first = SignalService('alice', keys: directory, secrets: secrets);
+      directory.publishingAs = 'alice';
+      await expectLater(first.ensureInstalled(), throwsA(anything));
+      final identity = (await first.store.getIdentityKeyPair()).getPublicKey();
+
+      final second = SignalService('alice', keys: directory, secrets: secrets);
+      directory.publishingAs = 'alice';
+      await second.ensureInstalled();
+
+      expect((await second.store.getIdentityKeyPair()).getPublicKey(),
+          identity);
+    });
+
+    test('a successful install is not re-published on every launch', () async {
+      final secrets = MemorySecretStore();
+      final first = SignalService('alice', keys: directory, secrets: secrets);
+      directory.publishingAs = 'alice';
+      await first.ensureInstalled();
+      final publishes = directory.publishCount;
+
+      final second = SignalService('alice', keys: directory, secrets: secrets);
+      directory.publishingAs = 'alice';
+      await second.ensureInstalled();
+
+      // Re-publishing would reset the pre-key set on the server for no reason.
+      expect(directory.publishCount, publishes);
+    });
+
     test('sign-out erases the key material', () async {
       final secrets = MemorySecretStore();
       final alice = await device('alice', secrets: secrets);

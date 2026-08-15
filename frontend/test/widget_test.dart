@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironlink/core/api_client.dart';
 import 'package:ironlink/core/theme.dart';
+import 'package:ironlink/features/auth/auth_repository.dart';
 import 'package:ironlink/features/auth/screens/splash_screen.dart';
 import 'package:ironlink/l10n/app_localizations.dart';
 
@@ -10,18 +13,25 @@ import 'package:ironlink/l10n/app_localizations.dart';
 /// The localization delegates are the part that matters: every screen now
 /// reads its copy through `L.of(context)`, so a test that omits them fails
 /// on the first string rather than on anything it meant to check.
+///
+/// AuthRepository is here because the welcome screen looks for an existing
+/// session on launch. There is no keystore under `flutter test`, so the
+/// lookup fails and returns null — which is the path this test wants anyway.
 Widget _wrap(Widget child, {Locale locale = const Locale('ar')}) {
-  return MaterialApp(
-    theme: ironLinkDarkTheme(),
-    locale: locale,
-    localizationsDelegates: const [
-      L.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: L.supportedLocales,
-    home: child,
+  return RepositoryProvider(
+    create: (_) => AuthRepository(ApiClient()),
+    child: MaterialApp(
+      theme: ironLinkDarkTheme(),
+      locale: locale,
+      localizationsDelegates: const [
+        L.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: L.supportedLocales,
+      home: child,
+    ),
   );
 }
 

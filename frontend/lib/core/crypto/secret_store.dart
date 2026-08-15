@@ -1,5 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../secure_storage.dart';
+
 /// Key-value storage for private key material.
 ///
 /// An interface rather than a direct dependency on flutter_secure_storage so
@@ -15,17 +17,11 @@ abstract class SecretStore {
 }
 
 class SecureSecretStore implements SecretStore {
+  // The shared instance, not a locally-configured one. Configuring storage
+  // here independently is what broke auth-token persistence on a real device
+  // — see secure_storage.dart.
   SecureSecretStore([FlutterSecureStorage? storage])
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              // Without this, values land in plain SharedPreferences on
-              // Android, which any process with the same UID — and any rooted
-              // device — can read. Private keys must not sit there.
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
-              iOptions: IOSOptions(
-                accessibility: KeychainAccessibility.first_unlock_this_device,
-              ),
-            );
+      : _storage = storage ?? ironSecureStorage;
 
   final FlutterSecureStorage _storage;
 

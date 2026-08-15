@@ -1221,4 +1221,8 @@ class LEn extends L {
 
   @override
   String get ownerMustTransfer => 'Hand over ownership before leaving';
+
+  @override
+  String get verificationTimedOut =>
+      'The verification service did not respond. Your connection is fine — this usually means the app is not set up for phone sign-in yet.';
 }

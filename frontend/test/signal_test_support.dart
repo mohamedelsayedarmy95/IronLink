@@ -19,6 +19,14 @@ class FakeDirectory implements KeyRepository {
 
   int handedOutWithoutOneTimeKey = 0;
 
+  /// How many bundles have been published, so a test can assert a device does
+  /// not needlessly re-upload on every launch.
+  int publishCount = 0;
+
+  /// Makes the next publish fail, standing in for the 401 seen on a real
+  /// device when the auth token could not be read.
+  bool failNextPublish = false;
+
   /// Lets a test replace a published bundle, to simulate a malicious server.
   void overrideBundle(String userId, Map<String, dynamic> bundle) {
     _bundles[userId] = bundle;
@@ -37,6 +45,12 @@ class FakeDirectory implements KeyRepository {
     required SignedPreKeyRecord signedPreKey,
     required List<PreKeyRecord> oneTimePreKeys,
   }) async {
+    if (failNextPublish) {
+      failNextPublish = false;
+      throw Exception('publish rejected (401)');
+    }
+    publishCount++;
+
     final user = publishingAs!;
     _bundles[user] = {
       'registration_id': registrationId,

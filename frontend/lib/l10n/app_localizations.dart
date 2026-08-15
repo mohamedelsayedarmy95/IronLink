@@ -2250,6 +2250,12 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'سلّم ملكية المجموعة قبل المغادرة'**
   String get ownerMustTransfer;
+
+  /// No description provided for @verificationTimedOut.
+  ///
+  /// In ar, this message translates to:
+  /// **'خدمة التحقق لم تستجب. اتصالك سليم — غالبًا التطبيق لسه غير مُهيّأ لتسجيل الدخول بالهاتف.'**
+  String get verificationTimedOut;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

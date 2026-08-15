@@ -444,6 +444,17 @@ async def _issue_login(
 WS_TICKET_TTL_SECONDS = 30
 
 
+@router.get("/me", response_model=UserOut)
+async def me(user: User = Depends(get_current_user)) -> UserOut:
+    """The signed-in user, for restoring a session on launch.
+
+    Without this the app has no way to tell a stored token that still works
+    from one that does not, so it cannot safely skip the login screen — which
+    is why it was asking for an SMS code on every single launch.
+    """
+    return UserOut.model_validate(user)
+
+
 @router.post("/ws-ticket", response_model=WsTicketOut)
 async def create_ws_ticket(user: User = Depends(get_current_user)) -> WsTicketOut:
     ticket = secrets.token_urlsafe(32)

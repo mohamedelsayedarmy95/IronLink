@@ -34,6 +34,7 @@ class PersistentSignalStore implements SignalProtocolStore {
   static const _kIdentity = 'sig.identity';
   static const _kRegistrationId = 'sig.regid';
   static const _kOwner = 'sig.owner';
+  static const _kPublished = 'sig.published';
   static const _pPreKey = 'sig.pre.';
   static const _pSignedPreKey = 'sig.spk.';
   static const _pSession = 'sig.sess.';
@@ -89,6 +90,19 @@ class PersistentSignalStore implements SignalProtocolStore {
     _identityCache = identity;
     _registrationCache = registrationId;
   }
+
+  /// Whether the public half of this device's bundle reached the server.
+  ///
+  /// Tracked separately from being installed, because the two can diverge:
+  /// keys are stored locally first (publishing first would advertise keys
+  /// whose private halves might not have been saved), so a failed upload
+  /// leaves a device that believes it is set up while the directory has
+  /// nothing. Every peer then finds no keys and cannot message it — silently,
+  /// and forever, because nothing retries.
+  Future<bool> get isPublished async =>
+      await _secrets.read(_kPublished) == 'true';
+
+  Future<void> markPublished() => _secrets.write(_kPublished, 'true');
 
   /// Erases every key and session. Used on sign-out: leaving identity keys on
   /// a shared device would let the next person decrypt cached traffic.

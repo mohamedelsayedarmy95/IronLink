@@ -574,5 +574,6 @@
   "leaveGroup": "Leave group",
   "leaveGroupConfirm": "You will stop receiving messages from this group, and will not be able to read what is said after you leave.",
   "groupLeft": "You left the group",
-  "ownerMustTransfer": "Hand over ownership before leaving"
+  "ownerMustTransfer": "Hand over ownership before leaving",
+  "verificationTimedOut": "The verification service did not respond. Your connection is fine — this usually means the app is not set up for phone sign-in yet."
 }

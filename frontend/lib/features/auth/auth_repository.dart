@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -15,6 +17,15 @@ enum AuthErrorCode {
   invalidCode,
   sessionExpired,
   phoneVerificationFailed,
+
+  /// Firebase accepted the request and never came back.
+  ///
+  /// Distinct from [network] because the device is usually online — saying
+  /// "you appear to be offline" sends the user to check a connection that is
+  /// working, which is worse than saying nothing. In practice this means the
+  /// app is not registered in Firebase under its real package and signing
+  /// fingerprint, so verification can never complete.
+  verificationTimeout,
 }
 
 class AuthUser {
@@ -93,27 +104,59 @@ class AuthRepository {
     required void Function(AuthErrorCode code, String? detail) onError,
     int? forceResendingToken,
   }) async {
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      forceResendingToken: forceResendingToken,
-      timeout: const Duration(seconds: 60),
-      verificationCompleted: (credential) async {
-        try {
-          final idToken = await _signInAndGetIdToken(credential);
-          onAutoVerified(idToken);
-        } catch (e) {
+    // Whether any of Firebase's callbacks has fired. Without it the guard
+    // below could report a timeout after the code had already been sent.
+    var settled = false;
+
+    // A wall-clock guard, which `timeout:` below is NOT: that one only governs
+    // Android's SMS auto-retrieval and fires codeAutoRetrievalTimeout. If the
+    // underlying request never comes back — which is what happens when the app
+    // is not registered in Firebase under its real package and signing
+    // fingerprint — then none of the three callbacks fire and the caller waits
+    // forever. Observed on a real device: 70 seconds with no error and no
+    // timeout, just a spinner.
+    final guard = Timer(const Duration(seconds: 45), () {
+      if (settled) return;
+      settled = true;
+      onError(AuthErrorCode.verificationTimeout, null);
+    });
+
+    void finish(void Function() callback) {
+      if (settled) return;
+      settled = true;
+      guard.cancel();
+      callback();
+    }
+
+    try {
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        forceResendingToken: forceResendingToken,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (credential) async {
+          // Not routed through finish(): signing in is itself slow, and the
+          // guard must stay armed until it either works or throws.
+          if (settled) return;
+          try {
+            final idToken = await _signInAndGetIdToken(credential);
+            finish(() => onAutoVerified(idToken));
+          } catch (e) {
+            final (code, detail) = firebaseErrorCode(e);
+            finish(() => onError(code, detail));
+          }
+        },
+        verificationFailed: (e) {
           final (code, detail) = firebaseErrorCode(e);
-          onError(code, detail);
-        }
-      },
-      verificationFailed: (e) {
-        final (code, detail) = firebaseErrorCode(e);
-        onError(code, detail);
-      },
-      codeSent: (verificationId, resendToken) =>
-          onCodeSent(verificationId, resendToken),
-      codeAutoRetrievalTimeout: (_) {},
-    );
+          finish(() => onError(code, detail));
+        },
+        codeSent: (verificationId, resendToken) =>
+            finish(() => onCodeSent(verificationId, resendToken)),
+        codeAutoRetrievalTimeout: (_) {},
+      );
+    } catch (e) {
+      final (code, detail) = firebaseErrorCode(e);
+      finish(() => onError(code, detail));
+    }
   }
 
   /// Exchanges the OTP the user typed for a Firebase ID token.
@@ -162,6 +205,41 @@ class AuthRepository {
       refresh: data['refresh_token'] as String,
     );
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  /// The signed-in user, or null if there is no usable session.
+  ///
+  /// Returns null rather than throwing for an expired or rejected token,
+  /// because "not signed in" is a normal state at launch and not an error to
+  /// report. Tokens that the server refuses are cleared, so a stale pair does
+  /// not sit there failing every request.
+  Future<AuthUser?> restoreSession() async {
+    try {
+      final token = await _client.accessToken;
+      if (token == null) return null;
+
+      final res = await _client.dio.get<Map<String, dynamic>>(
+        '/auth/me',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return AuthUser.fromJson(res.data!);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403) {
+        // Refused, so it will keep being refused. Cleared rather than left
+        // to fail every subsequent request.
+        await _client.clearTokens();
+        return null;
+      }
+      // A network failure is not proof the session is gone, so the tokens
+      // stay and the next launch tries again.
+      return null;
+    } catch (_) {
+      // Anything else — no keystore on this platform, storage unreadable.
+      // Failing to answer "is there a session" must never stop the app from
+      // starting; the welcome screen is a safe answer.
+      return null;
+    }
   }
 
   /// Registers a new account from a verified phone number.

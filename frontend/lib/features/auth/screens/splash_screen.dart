@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme.dart';
 import '../../../core/widgets/iron_button.dart';
@@ -58,6 +59,26 @@ class _SplashScreenState extends State<SplashScreen>
     } else {
       _controller.forward();
     }
+    _restoreSession();
+  }
+
+  /// Sends an already-signed-in user straight to their conversations.
+  ///
+  /// Without this the app asked for an SMS code on every launch, because
+  /// nothing ever looked at the token it had stored.
+  ///
+  /// The buttons stay live while this runs rather than showing a spinner: the
+  /// check can take as long as a cold server takes to answer, and a welcome
+  /// screen that sits disabled for that long looks broken. If the user starts
+  /// signing in first, _goToAuth replaces this route, so `mounted` is false
+  /// here and nothing yanks them back.
+  Future<void> _restoreSession() async {
+    final user = await context.read<AuthRepository>().restoreSession();
+    if (!mounted || user == null) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+      (_) => false,
+    );
   }
 
   @override

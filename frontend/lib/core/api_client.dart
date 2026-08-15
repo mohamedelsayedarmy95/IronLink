@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'env.dart';
+import 'secure_storage.dart';
 
 /// Thin Dio wrapper. Tokens live in the platform keystore
 /// (flutter_secure_storage), never in SharedPreferences.
@@ -17,7 +17,11 @@ class ApiClient {
         ));
 
   final Dio _dio;
-  static const _storage = FlutterSecureStorage();
+
+  // Shared, not a local FlutterSecureStorage(): see secure_storage.dart. A
+  // differently-configured instance elsewhere in the app silently destroys
+  // whatever this one wrote.
+  static const _storage = ironSecureStorage;
 
   static const _kAccess = 'mil_access_token';
   static const _kRefresh = 'mil_refresh_token';
