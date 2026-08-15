@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.config import settings
 from app.core.database import get_db
 from app.models import (
     ContactHash,
@@ -29,6 +30,21 @@ from app.services.contact_discovery import (
 )
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
+
+
+def _require_discovery_configured() -> None:
+    """Refuse the feature rather than the whole service.
+
+    Without a salt these endpoints cannot produce matching digests, and
+    running them unsalted would defeat the point. 503 says "not available
+    here" — which is true and actionable — instead of a 500 that reads like
+    a bug.
+    """
+    if not settings.contact_discovery_enabled:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "contact discovery is not configured on this server",
+        )
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -188,6 +204,7 @@ async def sync_contacts(
 
     The device does the hashing; this never sees a phone number.
     """
+    _require_discovery_configured()
     state = await _sync_state(db, user.id)
     if not state.sync_enabled:
         raise HTTPException(
@@ -299,6 +316,8 @@ async def invite(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> InviteOut:
+    _require_discovery_configured()
+
     normalized = normalize_phone(body.phone_number)
     if normalized is None:
         raise HTTPException(
@@ -360,7 +379,19 @@ async def set_privacy(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    index = await _ensure_indexed(db, user)
+    existing = await db.scalar(
+        select(UserPhoneIndex).where(UserPhoneIndex.user_id == user.id)
+    )
+
+    if existing is None and not settings.contact_discovery_enabled:
+        # Nothing has been indexed and nothing can be, so this user is
+        # already undiscoverable. Creating the row would require hashing,
+        # which is impossible without a salt — and failing here would mean a
+        # misconfigured server could stop someone from tightening their own
+        # privacy. Reporting success is accurate: the requested state holds.
+        return
+
+    index = existing or await _ensure_indexed(db, user)
     index.allows_discovery = body.discoverability
     await db.commit()
 
@@ -377,6 +408,9 @@ async def delete_all(
     discoverable all go. Invites are kept, since those were sent to other
     people and revoking them retroactively would break links already
     delivered.
+
+    Deliberately not gated on the salt being configured: a server that lost
+    its salt must not also strip the user of their ability to opt out.
     """
     await db.execute(delete(ContactHash).where(ContactHash.owner_id == user.id))
     await db.execute(

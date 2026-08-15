@@ -810,4 +810,131 @@ class LAr extends L {
 
   @override
   String get statusExpiredBody => 'انتهت صلاحية طلبك. يمكنك تقديم طلب جديد.';
+
+  @override
+  String get contactsTitle => 'جهات الاتصال';
+
+  @override
+  String get findContactsTitle => 'اكتشاف جهات اتصالك';
+
+  @override
+  String get findContactsHeadline => 'اعثر على من تعرفهم';
+
+  @override
+  String get findContactsBody =>
+      'نطابق دفتر عناوينك مع مستخدمي آيرون لينك، من غير ما نعرف أرقامك.';
+
+  @override
+  String get contactsPointHashedTitle => 'التجزئة تتم على جهازك';
+
+  @override
+  String get contactsPointHashedBody =>
+      'كل رقم يتحوّل إلى بصمة مشفّرة قبل أن يغادر الهاتف.';
+
+  @override
+  String get contactsPointNoNumbersTitle => 'لا تُرسَل أرقام أبدًا';
+
+  @override
+  String get contactsPointNoNumbersBody =>
+      'الخادم يستقبل بصمات فقط، ولا يمكنه استرجاع الرقم منها.';
+
+  @override
+  String get contactsPointReversibleTitle => 'قابل للتراجع في أي وقت';
+
+  @override
+  String get contactsPointReversibleBody =>
+      'يمكنك حذف كل ما تم مطابقته بضغطة واحدة.';
+
+  @override
+  String get contactsDeniedHint =>
+      'بدون الإذن لن نستطيع اقتراح من تعرفهم. يمكنك تفعيله لاحقًا من إعدادات النظام.';
+
+  @override
+  String get allowContactAccess => 'السماح بالوصول';
+
+  @override
+  String get notNow => 'ليس الآن';
+
+  @override
+  String get contactSyncOff => 'المزامنة غير مفعّلة';
+
+  @override
+  String get contactSyncOffHint => 'فعّلها لاكتشاف من تعرفهم على آيرون لينك.';
+
+  @override
+  String get enableContactSync => 'تفعيل المزامنة';
+
+  @override
+  String get syncNow => 'مزامنة الآن';
+
+  @override
+  String syncFoundNew(int count) {
+    return 'تم العثور على $count جهة اتصال جديدة';
+  }
+
+  @override
+  String get syncNoNewContacts => 'لا توجد جهات اتصال جديدة';
+
+  @override
+  String get noContactsFound => 'لم نجد أحدًا بعد';
+
+  @override
+  String get noContactsFoundHint =>
+      'لا أحد من جهات اتصالك على آيرون لينك حاليًا.';
+
+  @override
+  String get contactsLoadFailedTitle => 'تعذّر تحميل جهات الاتصال';
+
+  @override
+  String onIronLink(int count) {
+    return 'على آيرون لينك ($count)';
+  }
+
+  @override
+  String get badgeNew => 'جديد';
+
+  @override
+  String get contactPrivacyTitle => 'خصوصية جهات الاتصال';
+
+  @override
+  String get whoCanFindMe => 'من يمكنه العثور عليّ برقم هاتفي';
+
+  @override
+  String get discoverEveryone => 'الجميع';
+
+  @override
+  String get discoverEveryoneHint => 'أي شخص لديه رقمك يمكنه اكتشافك.';
+
+  @override
+  String get discoverMutual => 'من أعرفهم فقط';
+
+  @override
+  String get discoverMutualHint => 'فقط من يظهر رقمك عندهم وتظهر أرقامهم عندك.';
+
+  @override
+  String get discoverNobody => 'لا أحد';
+
+  @override
+  String get discoverNobodyHint => 'لن يعثر عليك أحد عبر رقم هاتفك.';
+
+  @override
+  String storedHashesNotice(int count) {
+    return 'نحتفظ بـ $count بصمة مشفّرة، بدون أي أرقام.';
+  }
+
+  @override
+  String get deleteContactData => 'حذف بيانات جهات الاتصال';
+
+  @override
+  String get deleteContactDataTitle => 'حذف كل البيانات';
+
+  @override
+  String get deleteContactDataConfirm =>
+      'سيتم حذف كل البصمات والمطابقات نهائيًا، وستختفي من قوائم اكتشاف الآخرين.';
+
+  @override
+  String get deleteEverything => 'حذف الكل';
+
+  @override
+  String get contactDataDeleted => 'تم حذف بيانات جهات الاتصال';
 }

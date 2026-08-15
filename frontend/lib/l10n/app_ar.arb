@@ -398,5 +398,64 @@
   "statusApprovedBody": "تمت الموافقة على طلبك! يمكنك الآن المشاركة في المجموعة.",
   "statusRejectedBody": "لم تتم الموافقة على طلبك.",
   "statusMoreInfoBody": "يحتاج المشرف إلى معلومات إضافية. يرجى تعديل طلبك.",
-  "statusExpiredBody": "انتهت صلاحية طلبك. يمكنك تقديم طلب جديد."
+  "statusExpiredBody": "انتهت صلاحية طلبك. يمكنك تقديم طلب جديد.",
+  "contactsTitle": "جهات الاتصال",
+  "findContactsTitle": "اكتشاف جهات اتصالك",
+  "findContactsHeadline": "اعثر على من تعرفهم",
+  "findContactsBody": "نطابق دفتر عناوينك مع مستخدمي آيرون لينك، من غير ما نعرف أرقامك.",
+  "contactsPointHashedTitle": "التجزئة تتم على جهازك",
+  "contactsPointHashedBody": "كل رقم يتحوّل إلى بصمة مشفّرة قبل أن يغادر الهاتف.",
+  "contactsPointNoNumbersTitle": "لا تُرسَل أرقام أبدًا",
+  "contactsPointNoNumbersBody": "الخادم يستقبل بصمات فقط، ولا يمكنه استرجاع الرقم منها.",
+  "contactsPointReversibleTitle": "قابل للتراجع في أي وقت",
+  "contactsPointReversibleBody": "يمكنك حذف كل ما تم مطابقته بضغطة واحدة.",
+  "contactsDeniedHint": "بدون الإذن لن نستطيع اقتراح من تعرفهم. يمكنك تفعيله لاحقًا من إعدادات النظام.",
+  "allowContactAccess": "السماح بالوصول",
+  "notNow": "ليس الآن",
+  "contactSyncOff": "المزامنة غير مفعّلة",
+  "contactSyncOffHint": "فعّلها لاكتشاف من تعرفهم على آيرون لينك.",
+  "enableContactSync": "تفعيل المزامنة",
+  "syncNow": "مزامنة الآن",
+  "syncFoundNew": "تم العثور على {count} جهة اتصال جديدة",
+  "@syncFoundNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncNoNewContacts": "لا توجد جهات اتصال جديدة",
+  "noContactsFound": "لم نجد أحدًا بعد",
+  "noContactsFoundHint": "لا أحد من جهات اتصالك على آيرون لينك حاليًا.",
+  "contactsLoadFailedTitle": "تعذّر تحميل جهات الاتصال",
+  "onIronLink": "على آيرون لينك ({count})",
+  "@onIronLink": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeNew": "جديد",
+  "contactPrivacyTitle": "خصوصية جهات الاتصال",
+  "whoCanFindMe": "من يمكنه العثور عليّ برقم هاتفي",
+  "discoverEveryone": "الجميع",
+  "discoverEveryoneHint": "أي شخص لديه رقمك يمكنه اكتشافك.",
+  "discoverMutual": "من أعرفهم فقط",
+  "discoverMutualHint": "فقط من يظهر رقمك عندهم وتظهر أرقامهم عندك.",
+  "discoverNobody": "لا أحد",
+  "discoverNobodyHint": "لن يعثر عليك أحد عبر رقم هاتفك.",
+  "storedHashesNotice": "نحتفظ بـ {count} بصمة مشفّرة، بدون أي أرقام.",
+  "@storedHashesNotice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteContactData": "حذف بيانات جهات الاتصال",
+  "deleteContactDataTitle": "حذف كل البيانات",
+  "deleteContactDataConfirm": "سيتم حذف كل البصمات والمطابقات نهائيًا، وستختفي من قوائم اكتشاف الآخرين.",
+  "deleteEverything": "حذف الكل",
+  "contactDataDeleted": "تم حذف بيانات جهات الاتصال"
 }

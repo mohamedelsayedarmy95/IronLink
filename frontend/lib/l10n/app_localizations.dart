@@ -1572,6 +1572,234 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'انتهت صلاحية طلبك. يمكنك تقديم طلب جديد.'**
   String get statusExpiredBody;
+
+  /// No description provided for @contactsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جهات الاتصال'**
+  String get contactsTitle;
+
+  /// No description provided for @findContactsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتشاف جهات اتصالك'**
+  String get findContactsTitle;
+
+  /// No description provided for @findContactsHeadline.
+  ///
+  /// In ar, this message translates to:
+  /// **'اعثر على من تعرفهم'**
+  String get findContactsHeadline;
+
+  /// No description provided for @findContactsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'نطابق دفتر عناوينك مع مستخدمي آيرون لينك، من غير ما نعرف أرقامك.'**
+  String get findContactsBody;
+
+  /// No description provided for @contactsPointHashedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التجزئة تتم على جهازك'**
+  String get contactsPointHashedTitle;
+
+  /// No description provided for @contactsPointHashedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل رقم يتحوّل إلى بصمة مشفّرة قبل أن يغادر الهاتف.'**
+  String get contactsPointHashedBody;
+
+  /// No description provided for @contactsPointNoNumbersTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا تُرسَل أرقام أبدًا'**
+  String get contactsPointNoNumbersTitle;
+
+  /// No description provided for @contactsPointNoNumbersBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخادم يستقبل بصمات فقط، ولا يمكنه استرجاع الرقم منها.'**
+  String get contactsPointNoNumbersBody;
+
+  /// No description provided for @contactsPointReversibleTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'قابل للتراجع في أي وقت'**
+  String get contactsPointReversibleTitle;
+
+  /// No description provided for @contactsPointReversibleBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك حذف كل ما تم مطابقته بضغطة واحدة.'**
+  String get contactsPointReversibleBody;
+
+  /// No description provided for @contactsDeniedHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدون الإذن لن نستطيع اقتراح من تعرفهم. يمكنك تفعيله لاحقًا من إعدادات النظام.'**
+  String get contactsDeniedHint;
+
+  /// No description provided for @allowContactAccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'السماح بالوصول'**
+  String get allowContactAccess;
+
+  /// No description provided for @notNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليس الآن'**
+  String get notNow;
+
+  /// No description provided for @contactSyncOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'المزامنة غير مفعّلة'**
+  String get contactSyncOff;
+
+  /// No description provided for @contactSyncOffHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'فعّلها لاكتشاف من تعرفهم على آيرون لينك.'**
+  String get contactSyncOffHint;
+
+  /// No description provided for @enableContactSync.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفعيل المزامنة'**
+  String get enableContactSync;
+
+  /// No description provided for @syncNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزامنة الآن'**
+  String get syncNow;
+
+  /// No description provided for @syncFoundNew.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم العثور على {count} جهة اتصال جديدة'**
+  String syncFoundNew(int count);
+
+  /// No description provided for @syncNoNewContacts.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد جهات اتصال جديدة'**
+  String get syncNoNewContacts;
+
+  /// No description provided for @noContactsFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم نجد أحدًا بعد'**
+  String get noContactsFound;
+
+  /// No description provided for @noContactsFoundHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا أحد من جهات اتصالك على آيرون لينك حاليًا.'**
+  String get noContactsFoundHint;
+
+  /// No description provided for @contactsLoadFailedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل جهات الاتصال'**
+  String get contactsLoadFailedTitle;
+
+  /// No description provided for @onIronLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'على آيرون لينك ({count})'**
+  String onIronLink(int count);
+
+  /// No description provided for @badgeNew.
+  ///
+  /// In ar, this message translates to:
+  /// **'جديد'**
+  String get badgeNew;
+
+  /// No description provided for @contactPrivacyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'خصوصية جهات الاتصال'**
+  String get contactPrivacyTitle;
+
+  /// No description provided for @whoCanFindMe.
+  ///
+  /// In ar, this message translates to:
+  /// **'من يمكنه العثور عليّ برقم هاتفي'**
+  String get whoCanFindMe;
+
+  /// No description provided for @discoverEveryone.
+  ///
+  /// In ar, this message translates to:
+  /// **'الجميع'**
+  String get discoverEveryone;
+
+  /// No description provided for @discoverEveryoneHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أي شخص لديه رقمك يمكنه اكتشافك.'**
+  String get discoverEveryoneHint;
+
+  /// No description provided for @discoverMutual.
+  ///
+  /// In ar, this message translates to:
+  /// **'من أعرفهم فقط'**
+  String get discoverMutual;
+
+  /// No description provided for @discoverMutualHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'فقط من يظهر رقمك عندهم وتظهر أرقامهم عندك.'**
+  String get discoverMutualHint;
+
+  /// No description provided for @discoverNobody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا أحد'**
+  String get discoverNobody;
+
+  /// No description provided for @discoverNobodyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'لن يعثر عليك أحد عبر رقم هاتفك.'**
+  String get discoverNobodyHint;
+
+  /// No description provided for @storedHashesNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'نحتفظ بـ {count} بصمة مشفّرة، بدون أي أرقام.'**
+  String storedHashesNotice(int count);
+
+  /// No description provided for @deleteContactData.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف بيانات جهات الاتصال'**
+  String get deleteContactData;
+
+  /// No description provided for @deleteContactDataTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف كل البيانات'**
+  String get deleteContactDataTitle;
+
+  /// No description provided for @deleteContactDataConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم حذف كل البصمات والمطابقات نهائيًا، وستختفي من قوائم اكتشاف الآخرين.'**
+  String get deleteContactDataConfirm;
+
+  /// No description provided for @deleteEverything.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف الكل'**
+  String get deleteEverything;
+
+  /// No description provided for @contactDataDeleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف بيانات جهات الاتصال'**
+  String get contactDataDeleted;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

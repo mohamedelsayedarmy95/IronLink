@@ -31,6 +31,9 @@ class IronIcons {
   /// Empty and error states, where the icon is the largest element.
   static const double sizeDisplay = 32;
 
+  /// Mark inside an empty state.
+  static const double sizeEmptyState = 32;
+
   // ── Navigation ──────────────────────────────────────────────────────────
   /// Mirrors under RTL, so "back" always points away from the reading start.
   static const IconData back = LucideIcons.arrowLeftDir;
@@ -46,6 +49,7 @@ class IronIcons {
   // ── Tabs ────────────────────────────────────────────────────────────────
   static const IconData chats = LucideIcons.messageCircle;
   static const IconData groups = LucideIcons.users;
+  static const IconData contacts = LucideIcons.contact;
   static const IconData broadcasts = LucideIcons.megaphone;
   static const IconData settings = LucideIcons.settings;
 

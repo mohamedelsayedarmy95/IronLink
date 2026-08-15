@@ -398,5 +398,64 @@
   "statusApprovedBody": "You have been approved! You can now participate in the group.",
   "statusRejectedBody": "Your request was not approved.",
   "statusMoreInfoBody": "The admin needs more information. Please amend your request.",
-  "statusExpiredBody": "Your request has expired. You can submit a new request."
+  "statusExpiredBody": "Your request has expired. You can submit a new request.",
+  "contactsTitle": "Contacts",
+  "findContactsTitle": "Find your contacts",
+  "findContactsHeadline": "Find people you know",
+  "findContactsBody": "We match your address book against IronLink members without ever learning your numbers.",
+  "contactsPointHashedTitle": "Hashed on your device",
+  "contactsPointHashedBody": "Each number becomes a cryptographic fingerprint before it leaves your phone.",
+  "contactsPointNoNumbersTitle": "Numbers are never sent",
+  "contactsPointNoNumbersBody": "The server receives fingerprints only, and cannot recover a number from one.",
+  "contactsPointReversibleTitle": "Reversible at any time",
+  "contactsPointReversibleBody": "You can delete everything we matched in a single tap.",
+  "contactsDeniedHint": "Without access we can't suggest people you know. You can enable it later in system settings.",
+  "allowContactAccess": "Allow access",
+  "notNow": "Not now",
+  "contactSyncOff": "Sync is off",
+  "contactSyncOffHint": "Turn it on to discover people you know on IronLink.",
+  "enableContactSync": "Turn on sync",
+  "syncNow": "Sync now",
+  "syncFoundNew": "Found {count} new contacts",
+  "@syncFoundNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncNoNewContacts": "No new contacts",
+  "noContactsFound": "Nobody found yet",
+  "noContactsFoundHint": "None of your contacts are on IronLink right now.",
+  "contactsLoadFailedTitle": "Couldn't load contacts",
+  "onIronLink": "On IronLink ({count})",
+  "@onIronLink": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeNew": "New",
+  "contactPrivacyTitle": "Contact privacy",
+  "whoCanFindMe": "Who can find me by phone number",
+  "discoverEveryone": "Everyone",
+  "discoverEveryoneHint": "Anyone with your number can discover you.",
+  "discoverMutual": "People I know",
+  "discoverMutualHint": "Only people who have your number and whose numbers you have.",
+  "discoverNobody": "Nobody",
+  "discoverNobodyHint": "Nobody can find you by phone number.",
+  "storedHashesNotice": "We hold {count} fingerprints, and no phone numbers.",
+  "@storedHashesNotice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteContactData": "Delete contact data",
+  "deleteContactDataTitle": "Delete everything",
+  "deleteContactDataConfirm": "All fingerprints and matches are permanently deleted, and you disappear from other people's discovery lists.",
+  "deleteEverything": "Delete all",
+  "contactDataDeleted": "Contact data deleted"
 }

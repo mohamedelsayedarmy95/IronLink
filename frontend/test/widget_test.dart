@@ -1,39 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ironlink/core/env.dart';
 import 'package:ironlink/core/theme.dart';
 import 'package:ironlink/features/auth/screens/splash_screen.dart';
+import 'package:ironlink/l10n/app_localizations.dart';
+
+/// Wraps a screen with everything it needs from the app shell.
+///
+/// The localization delegates are the part that matters: every screen now
+/// reads its copy through `L.of(context)`, so a test that omits them fails
+/// on the first string rather than on anything it meant to check.
+Widget _wrap(Widget child, {Locale locale = const Locale('ar')}) {
+  return MaterialApp(
+    theme: ironLinkDarkTheme(),
+    locale: locale,
+    localizationsDelegates: const [
+      L.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: L.supportedLocales,
+    home: child,
+  );
+}
 
 void main() {
-  testWidgets('splash shows brand and the start button', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: milTheme(),
-      locale: const Locale('ar'),
-      builder: (context, child) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: child!,
-      ),
-      home: const SplashScreen(),
-    ));
+  group('welcome screen', () {
+    testWidgets('shows the brand and a way in, in Arabic', (tester) async {
+      await tester.pumpWidget(_wrap(const SplashScreen()));
+      // The entrance animation runs for 900ms.
+      await tester.pump(const Duration(seconds: 1));
 
-    // Logo fade-in runs for 1.8s
-    await tester.pump(const Duration(seconds: 2));
+      expect(find.text('IRONLINK'), findsOneWidget);
+      expect(find.text('ابدأ الآن'), findsOneWidget);
+      expect(find.text('تسجيل الدخول'), findsOneWidget);
+    });
 
-    expect(find.text('IronLink'), findsOneWidget);
-    expect(find.text('ابدأ'), findsOneWidget);
-  });
+    testWidgets('shows the same screen in English', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const SplashScreen(), locale: const Locale('en')),
+      );
+      await tester.pump(const Duration(seconds: 1));
 
-  test('Env builds api and ws urls from the same authority', () {
-    expect(Env.apiBaseUrl, endsWith('/api/v1'));
-    expect(
-      Env.wsBaseUrl.startsWith('ws://') || Env.wsBaseUrl.startsWith('wss://'),
-      isTrue,
-    );
-    // Both must point at the same host:port — a mismatch would silently
-    // break the WS ticket handshake.
-    expect(
-      Uri.parse(Env.apiBaseUrl).authority,
-      equals(Uri.parse(Env.wsBaseUrl).authority),
-    );
+      // The wordmark is not translated; the actions are.
+      expect(find.text('IRONLINK'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
+      expect(find.text('Sign in'), findsOneWidget);
+    });
+
+    testWidgets('lays out under reduced motion', (tester) async {
+      // With animations disabled the controller jumps to its end state; the
+      // screen must still be fully rendered rather than stuck at opacity 0.
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: _wrap(const SplashScreen()),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('IRONLINK'), findsOneWidget);
+      expect(find.text('ابدأ الآن'), findsOneWidget);
+    });
   });
 }

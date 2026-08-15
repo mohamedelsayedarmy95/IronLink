@@ -254,21 +254,25 @@ class Settings(BaseSettings):
     # space to brute-force without it — so it is kept out of the database
     # entirely and must never be rotated once contacts are indexed, or every
     # stored hash stops matching and discovery silently returns nothing.
+    # Deliberately NOT validated at startup, unlike DB_ENCRYPTION_KEY. That
+    # key is needed for core authentication, so booting without it would be
+    # incoherent. This one gates a single feature, and making the whole
+    # service refuse to start over it would mean shipping contact discovery
+    # could take messaging down with it.
+    #
+    # Instead the contacts endpoints check it and return 503 while everything
+    # else runs — the same "degrade, don't crash" shape the S3 settings use.
+    # Hashing itself still refuses to run unsalted (see contact_discovery),
+    # so a missing salt can never silently produce reversible digests.
     CONTACT_HASH_SALT: str = Field(
-        default="", description="Required — salts contact discovery hashes"
+        default="", description="Salts contact-discovery hashes; feature is "
+                                "disabled while unset"
     )
 
-    @field_validator("CONTACT_HASH_SALT", mode="before")
-    @classmethod
-    def _require_contact_salt(cls, v: str) -> str:
-        if not v:
-            raise ValueError(
-                "CONTACT_HASH_SALT must be set — unsalted phone hashes are "
-                "trivially reversible"
-            )
-        if len(v) < 32:
-            raise ValueError("CONTACT_HASH_SALT must be at least 32 characters")
-        return v
+    @property
+    def contact_discovery_enabled(self) -> bool:
+        """Whether the salt is present and long enough to be worth anything."""
+        return len(self.CONTACT_HASH_SALT) >= 32
 
     # ── Rate limiting ──────────────────────────────────────────────────────────
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60

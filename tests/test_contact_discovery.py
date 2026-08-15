@@ -305,3 +305,78 @@ def test_route_registered(path: str, method: str) -> None:
 #   * mutual-contact resolution with rows actually present on both sides
 #   * cascade delete of hashes and relations when a user is removed
 #   * migration 0004 applying cleanly on a database already at 0003
+
+
+# ── Degradation ───────────────────────────────────────────────────────────────
+
+def test_missing_salt_disables_the_feature_without_blocking_startup() -> None:
+    """A missing salt must not take the whole service down.
+
+    DB_ENCRYPTION_KEY is validated at startup because core authentication
+    needs it. This one gates a single feature, so shipping contact discovery
+    should not be able to stop messaging from booting.
+    """
+    from app.config import Settings
+
+    assert not hasattr(Settings, "_require_contact_salt"), (
+        "CONTACT_HASH_SALT must not be a startup-blocking validator"
+    )
+
+
+def test_short_salt_counts_as_unconfigured() -> None:
+    """A two-character salt is not meaningfully better than none."""
+    from app.config import settings
+
+    original = settings.CONTACT_HASH_SALT
+    try:
+        object.__setattr__(settings, "CONTACT_HASH_SALT", "abc")
+        assert not settings.contact_discovery_enabled
+        object.__setattr__(settings, "CONTACT_HASH_SALT", "x" * 32)
+        assert settings.contact_discovery_enabled
+    finally:
+        object.__setattr__(settings, "CONTACT_HASH_SALT", original)
+
+
+def test_hashing_endpoints_refuse_when_unconfigured() -> None:
+    """503 rather than a 500 that reads like a bug, or worse, unsalted
+    hashing that silently produces reversible digests."""
+    import inspect
+
+    from app.api.routes import contacts
+
+    for handler in (contacts.sync_contacts, contacts.invite):
+        assert "_require_discovery_configured()" in inspect.getsource(handler)
+
+    guard = inspect.getsource(contacts._require_discovery_configured)
+    assert "503" in guard or "SERVICE_UNAVAILABLE" in guard
+
+
+def test_reading_stored_data_still_works_without_the_salt() -> None:
+    """Matches and privacy settings read what is already stored and do no
+    hashing, so they should keep working — otherwise a server that loses its
+    salt also loses the user's ability to opt out."""
+    import inspect
+
+    from app.api.routes import contacts
+
+    for handler in (contacts.matches, contacts.delete_all, contacts.sync_state):
+        assert "_require_discovery_configured()" not in inspect.getsource(handler)
+
+
+def test_tightening_privacy_never_fails_on_a_misconfigured_server() -> None:
+    """Setting yourself to NOBODY must not depend on the salt.
+
+    Indexing requires hashing, so a server with no salt cannot create the
+    row — but failing the request would let a misconfiguration stop someone
+    from making themselves less discoverable. With nothing indexed they are
+    already undiscoverable, so reporting success is accurate.
+    """
+    import inspect
+
+    from app.api.routes import contacts
+
+    source = inspect.getsource(contacts.set_privacy)
+    assert "contact_discovery_enabled" in source
+    assert "_ensure_indexed" in source
+    # The unconfigured path returns rather than hashing.
+    assert source.index("return") < source.index("_ensure_indexed(db, user)")

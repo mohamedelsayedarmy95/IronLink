@@ -16,6 +16,10 @@
     <!-- FCM push (Android 13+ requires runtime grant) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Contact discovery. Read-only: the app never writes to the address
+         book, and numbers are hashed on-device before anything is sent. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+
     <!-- Hardware is optional: never block a device that lacks a camera/mic -->
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>

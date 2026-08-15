@@ -10,7 +10,11 @@ import '../../l10n/app_localizations.dart';
 import '../auth/auth_repository.dart';
 import '../broadcast/broadcast_banner.dart';
 import '../chat/chat_repository.dart';
+import '../chat/screens/chat_room_screen.dart';
 import '../chat/screens/chats_list_screen.dart';
+import '../contacts/contact_sync_service.dart';
+import '../contacts/contacts_repository.dart';
+import '../contacts/screens/contacts_discovery_screen.dart';
 import '../groups/groups_repository.dart';
 import '../groups/groups_screen.dart';
 import '../settings/ocr_settings_page.dart';
@@ -59,6 +63,36 @@ class _HomeScreenState extends State<HomeScreen> {
               color: IronColors.gold, fontWeight: FontWeight.w700),
         ),
         actions: [
+          // Finding people belongs beside the conversation list rather than
+          // buried in settings — it is what you reach for when the list is
+          // empty, which is exactly when it is most needed.
+          if (_tab == 0)
+            IconButton(
+              tooltip: t.contactsTitle,
+              icon: const Icon(IronIcons.contacts, size: IronIcons.sizeNav),
+              color: IronColors.gold,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ContactsDiscoveryScreen(
+                    repository: context.read<ContactsRepository>(),
+                    service: context.read<ContactSyncService>(),
+                    onOpenChat: (contact) => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ChatRoomScreen(
+                          repo: context.read<ChatRepository>(),
+                          ws: context.read<WsService>(),
+                          myId: widget.user.id,
+                          peerId: contact.userId,
+                          peerName: contact.fullName,
+                          peerOnline: false,
+                          isSecret: false,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 16),
             child: CircleAvatar(

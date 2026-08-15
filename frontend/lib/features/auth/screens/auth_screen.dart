@@ -435,14 +435,19 @@ class _OtpStepState extends State<_OtpStep> {
                 ExcludeSemantics(
                   child: Directionality(
                     textDirection: TextDirection.ltr,
+                    // Cells share the available width rather than each taking
+                    // a fixed 46px: six fixed cells plus their gaps overflowed
+                    // a 360dp screen by 4px, and would overflow further on
+                    // anything narrower.
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         for (var i = 0; i < 6; i++) ...[
-                          _DigitCell(
-                            digit: i < filled ? _controller.text[i] : '',
-                            active: i == filled && _focus.hasFocus,
-                            hasError: showError,
+                          Expanded(
+                            child: _DigitCell(
+                              digit: i < filled ? _controller.text[i] : '',
+                              active: i == filled && _focus.hasFocus,
+                              hasError: showError,
+                            ),
                           ),
                           if (i < 5) const SizedBox(width: IronSpacing.xs),
                         ],
@@ -495,7 +500,8 @@ class _DigitCell extends StatelessWidget {
     return AnimatedContainer(
       duration: IronMotion.press,
       curve: IronMotion.pressCurve,
-      width: 46,
+      // Width comes from the parent Expanded; only the height is fixed so the
+      // cells stay on the 56px input rhythm.
       height: 56,
       alignment: Alignment.center,
       decoration: BoxDecoration(

@@ -821,4 +821,134 @@ class LEn extends L {
   @override
   String get statusExpiredBody =>
       'Your request has expired. You can submit a new request.';
+
+  @override
+  String get contactsTitle => 'Contacts';
+
+  @override
+  String get findContactsTitle => 'Find your contacts';
+
+  @override
+  String get findContactsHeadline => 'Find people you know';
+
+  @override
+  String get findContactsBody =>
+      'We match your address book against IronLink members without ever learning your numbers.';
+
+  @override
+  String get contactsPointHashedTitle => 'Hashed on your device';
+
+  @override
+  String get contactsPointHashedBody =>
+      'Each number becomes a cryptographic fingerprint before it leaves your phone.';
+
+  @override
+  String get contactsPointNoNumbersTitle => 'Numbers are never sent';
+
+  @override
+  String get contactsPointNoNumbersBody =>
+      'The server receives fingerprints only, and cannot recover a number from one.';
+
+  @override
+  String get contactsPointReversibleTitle => 'Reversible at any time';
+
+  @override
+  String get contactsPointReversibleBody =>
+      'You can delete everything we matched in a single tap.';
+
+  @override
+  String get contactsDeniedHint =>
+      'Without access we can\'t suggest people you know. You can enable it later in system settings.';
+
+  @override
+  String get allowContactAccess => 'Allow access';
+
+  @override
+  String get notNow => 'Not now';
+
+  @override
+  String get contactSyncOff => 'Sync is off';
+
+  @override
+  String get contactSyncOffHint =>
+      'Turn it on to discover people you know on IronLink.';
+
+  @override
+  String get enableContactSync => 'Turn on sync';
+
+  @override
+  String get syncNow => 'Sync now';
+
+  @override
+  String syncFoundNew(int count) {
+    return 'Found $count new contacts';
+  }
+
+  @override
+  String get syncNoNewContacts => 'No new contacts';
+
+  @override
+  String get noContactsFound => 'Nobody found yet';
+
+  @override
+  String get noContactsFoundHint =>
+      'None of your contacts are on IronLink right now.';
+
+  @override
+  String get contactsLoadFailedTitle => 'Couldn\'t load contacts';
+
+  @override
+  String onIronLink(int count) {
+    return 'On IronLink ($count)';
+  }
+
+  @override
+  String get badgeNew => 'New';
+
+  @override
+  String get contactPrivacyTitle => 'Contact privacy';
+
+  @override
+  String get whoCanFindMe => 'Who can find me by phone number';
+
+  @override
+  String get discoverEveryone => 'Everyone';
+
+  @override
+  String get discoverEveryoneHint =>
+      'Anyone with your number can discover you.';
+
+  @override
+  String get discoverMutual => 'People I know';
+
+  @override
+  String get discoverMutualHint =>
+      'Only people who have your number and whose numbers you have.';
+
+  @override
+  String get discoverNobody => 'Nobody';
+
+  @override
+  String get discoverNobodyHint => 'Nobody can find you by phone number.';
+
+  @override
+  String storedHashesNotice(int count) {
+    return 'We hold $count fingerprints, and no phone numbers.';
+  }
+
+  @override
+  String get deleteContactData => 'Delete contact data';
+
+  @override
+  String get deleteContactDataTitle => 'Delete everything';
+
+  @override
+  String get deleteContactDataConfirm =>
+      'All fingerprints and matches are permanently deleted, and you disappear from other people\'s discovery lists.';
+
+  @override
+  String get deleteEverything => 'Delete all';
+
+  @override
+  String get contactDataDeleted => 'Contact data deleted';
 }
