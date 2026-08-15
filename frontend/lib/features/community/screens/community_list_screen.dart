@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/api_client.dart';
 import '../../../core/env.dart';
 import '../bloc/community_bloc.dart';
 import '../widgets/community_card.dart';
@@ -27,7 +28,7 @@ class CommunityListScreen extends StatelessWidget {
       body: BlocProvider(
         create: (_) => CommunityBloc(
           baseUrl: Env.apiBaseUrl,
-          token: '', // TODO: Get token from auth state
+          api: context.read<ApiClient>(),
         )..add(CommunityFetchStarted()),
         child: BlocBuilder<CommunityBloc, CommunityState>(
           builder: (context, state) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/api_client.dart';
 import '../../../core/env.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -37,7 +38,7 @@ class ChannelListScreen extends StatelessWidget {
       body: BlocProvider(
         create: (_) => ChannelBloc(
           baseUrl: Env.apiBaseUrl,
-          token: '', // TODO: read from secure storage once the auth session is wired here
+          api: context.read<ApiClient>(),
         )..add(ChannelFetchStarted()),
         child: BlocBuilder<ChannelBloc, ChannelState>(
           builder: (context, state) {

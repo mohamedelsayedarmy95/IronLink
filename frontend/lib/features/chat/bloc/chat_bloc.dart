@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../core/api_client.dart';
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
 import '../local/message_store.dart';
@@ -251,15 +252,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     this.peerName,
     bool isSecret = false,
     required String baseUrl,
-    required String authToken,
+    required ApiClient api,
     MessageStore? store,
   })  : _repo = repo,
+        _api = api,
         _ws = ws,
         _store = store,
         _signalService = SignalService(myId, baseUrl: baseUrl),
         _isSecret = isSecret,
         _baseUrl = baseUrl,
-        _authToken = authToken,
         super(const ChatRoomState()) {
     on<ChatOpened>(_onOpened);
     on<TextSent>(_onTextSent);
@@ -316,7 +317,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   }
 
   final String _baseUrl;
-  final String _authToken;
+  final ApiClient _api;
+
+  /// Read per request rather than captured once when the bloc is built.
+  /// The stored token is refreshed while a chat screen stays open, so a
+  /// copy taken at construction goes stale — and it was being constructed
+  /// from an empty string, which made every AI call a guaranteed 401.
+  Future<Map<String, String>> _authHeaders() async => {
+        'Authorization': 'Bearer ${await _api.accessToken ?? ''}',
+        'Content-Type': 'application/json',
+      };
 
   StreamSubscription? _sub;
   Timer? _typingDebounce;
@@ -599,10 +609,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       // Call AI summary endpoint
       final response = await http.post(
         Uri.parse('$_baseUrl/chats/$peerId/summary'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'messages': messageTexts,
         }),
@@ -642,10 +649,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       }
       final response = await http.post(
         Uri.parse('$_baseUrl/ai/smart-replies'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'context': context,
           'num_replies': 3,
@@ -683,10 +687,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/ai/translate'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'text': event.text,
           'target_lang': event.targetLang,
@@ -741,10 +742,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/ai/moderate'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'text': event.text,
         }),

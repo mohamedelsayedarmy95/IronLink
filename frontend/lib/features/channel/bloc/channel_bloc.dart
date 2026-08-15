@@ -4,20 +4,27 @@ import 'package:equatable/equatable.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../../../core/api_client.dart';
+
 // We'll create a simple API service for channels
 class ChannelApiService {
   final String baseUrl;
-  final String token; // JWT token
+  final ApiClient api;
 
-  ChannelApiService({required this.baseUrl, required this.token});
+  ChannelApiService({required this.baseUrl, required this.api});
+
+  /// Read per request from secure storage. Passing a token in at
+  /// construction meant the screen sent an empty bearer and every channel
+  /// call came back 401.
+  Future<Map<String, String>> _headers() async => {
+        'Authorization': 'Bearer ${await api.accessToken ?? ''}',
+        'Content-Type': 'application/json',
+      };
 
   Future<List<Channel>> getChannels() async {
     final response = await http.get(
       Uri.parse('$baseUrl/channels'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+      headers: await _headers(),
     );
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -30,10 +37,7 @@ class ChannelApiService {
   Future<Channel> createChannel(Map<String, dynamic> channelData) async {
     final response = await http.post(
       Uri.parse('$baseUrl/channels'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+      headers: await _headers(),
       body: jsonEncode(channelData),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -107,8 +111,8 @@ class ChannelCreated extends ChannelEvent {
 class ChannelBloc extends Bloc<ChannelEvent, ChannelState> {
   final ChannelApiService _apiService;
 
-  ChannelBloc({required String baseUrl, required String token})
-      : _apiService = ChannelApiService(baseUrl: baseUrl, token: token),
+  ChannelBloc({required String baseUrl, required ApiClient api})
+      : _apiService = ChannelApiService(baseUrl: baseUrl, api: api),
         super(ChannelInitial()) {
     on<ChannelFetchStarted>(_onChannelFetchStarted);
   }

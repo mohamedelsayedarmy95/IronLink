@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/api_client.dart';
 import '../../../core/env.dart';
 import '../../../core/failure.dart';
 import '../../../core/media_service.dart';
@@ -47,7 +48,6 @@ class ChatRoomScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseUrl = Env.apiBaseUrl;
-    final authToken = ''; // TODO: get from secure storage
 
     return BlocProvider(
       create: (_) => ChatBloc(
@@ -58,7 +58,7 @@ class ChatRoomScreen extends StatelessWidget {
         peerName: peerName,
         isSecret: isSecret,
         baseUrl: baseUrl,
-        authToken: authToken,
+        api: context.read<ApiClient>(),
         store: context.read<MessageStore>(),
       )..add(const ChatOpened()),
       child: _ChatRoomView(

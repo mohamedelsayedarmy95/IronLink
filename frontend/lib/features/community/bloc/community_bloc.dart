@@ -3,21 +3,26 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../../../core/theme.dart';
+
+import '../../../core/api_client.dart';
 
 class CommunityApiService {
   final String baseUrl;
-  final String token; // JWT token
+  final ApiClient api;
 
-  CommunityApiService({required this.baseUrl, required this.token});
+  CommunityApiService({required this.baseUrl, required this.api});
+
+  /// Read per request from secure storage rather than captured once, which
+  /// is what left this sending an empty bearer on every call.
+  Future<Map<String, String>> _headers() async => {
+        'Authorization': 'Bearer ${await api.accessToken ?? ''}',
+        'Content-Type': 'application/json',
+      };
 
   Future<List<Community>> getCommunities() async {
     final response = await http.get(
       Uri.parse('$baseUrl/communities'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+      headers: await _headers(),
     );
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -30,10 +35,7 @@ class CommunityApiService {
   Future<Community> createCommunity(Map<String, dynamic> communityData) async {
     final response = await http.post(
       Uri.parse('$baseUrl/communities'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+      headers: await _headers(),
       body: jsonEncode(communityData),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -104,8 +106,8 @@ class CommunityCreated extends CommunityEvent {
 class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
   final CommunityApiService _apiService;
 
-  CommunityBloc({required String baseUrl, required String token})
-      : _apiService = CommunityApiService(baseUrl: baseUrl, token: token),
+  CommunityBloc({required String baseUrl, required ApiClient api})
+      : _apiService = CommunityApiService(baseUrl: baseUrl, api: api),
         super(CommunityInitial()) {
     on<CommunityFetchStarted>(_onCommunityFetchStarted);
   }
