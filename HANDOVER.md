@@ -313,10 +313,22 @@ the old key is still used, because one cannot be written.
 Distribution messages ride the existing pairwise sessions, one ciphertext per
 recipient, which is what stops the server substituting its own key.
 
-The honest limit: a removed member can still read what was sent *before* they
-left. Nothing retracts a message someone already received, and
-`group_signal_test.dart` says so explicitly rather than leaving a better
-impression.
+Attachments and voice notes work in groups too. The body is sealed once with
+its own AES-GCM key, and that key rides the group envelope — one attachment
+encryption for the whole group, not one per member. The pointer, caption,
+duration and waveform are all inside the envelope rather than wire fields, so
+the server cannot tell which stored object a group message refers to, or how
+long a voice note is.
+
+The honest limits, both covered by tests rather than left to assumption:
+
+- A removed member can still read what was sent *before* they left. Nothing
+  retracts a message someone already received.
+- Object storage has no per-group access control: any authenticated user who
+  knows a media key can fetch the object. Under encryption they get
+  ciphertext they hold no key for, which is why this is a privacy nuisance
+  (it leaks that an object exists and its size) rather than a disclosure. A
+  membership check on `/media/{key}/url` would still be worth adding.
 
 **5.3 The summary endpoint sends conversation text to Hugging Face.**
 The client posts message bodies because the server holds no plaintext. In a
@@ -372,7 +384,8 @@ not put real user data on it.
 [x] Encrypt attachment bytes (AES-256-GCM)             P0
 [x] Make encryption the default, not opt-in            P1
 [x] Group messages: sender keys + epoch rotation       P1
-[ ] Group attachments and voice notes (text only now)  P1
+[x] Group attachments and voice notes, encrypted       P1
+[ ] Membership check on the media presign endpoint     P2
 [x] Voice notes: real upload, real waveform, encrypted P0
 [ ] Opt-in gate on AI summary                          P0
 [ ] Release keystore + signing config                  P1

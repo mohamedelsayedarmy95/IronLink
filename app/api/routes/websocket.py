@@ -199,7 +199,7 @@ async def _handle_frame(
         return
 
     # ── Group messages ────────────────────────────────────────────────────────
-    if frame_type in ("group_text", "group_image", "group_file"):
+    if frame_type in ("group_text", "group_image", "group_file", "group_voice"):
         group_id = _uuid_or_none(frame.get("group"))
         if group_id is None:
             await websocket.send_json(

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart' show Options;
 
 import '../../core/api_client.dart';
+import '../../core/crypto/attachment_crypto.dart';
 
 class GroupInfo {
   const GroupInfo({
@@ -145,6 +146,10 @@ class GroupChatMessage {
     this.pending = false,
     this.encrypted = false,
     this.senderName,
+    this.mediaKey,
+    this.attachmentKey,
+    this.duration,
+    this.waveform,
   });
 
   final String id;
@@ -162,6 +167,21 @@ class GroupChatMessage {
   /// Filled in from the member list. Groups show who is speaking, which a
   /// one-to-one chat does not need.
   String? senderName;
+
+  /// Where an attachment's body is stored.
+  ///
+  /// Arrives inside the group envelope rather than as a wire field, so the
+  /// server cannot tell which stored object a given group message refers to.
+  String? mediaKey;
+
+  /// Opens that body. One key per attachment, carried in the same envelope —
+  /// which means one attachment encryption for the whole group, not one per
+  /// member.
+  AttachmentKey? attachmentKey;
+
+  /// Voice notes only.
+  double? duration;
+  List<double>? waveform;
 
   factory GroupChatMessage.fromJson(Map<String, dynamic> json,
           {required String myId}) =>

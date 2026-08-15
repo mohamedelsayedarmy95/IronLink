@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironlink/core/crypto/attachment_crypto.dart';
 import 'package:ironlink/core/crypto/group_signal.dart';
 import 'package:ironlink/core/crypto/secret_store.dart';
 import 'package:ironlink/core/crypto/sender_key_store.dart';
@@ -193,6 +195,133 @@ void main() {
             .decrypt(groupId: 'g1', senderId: 'alice', envelope: one),
         '1',
       );
+    });
+  });
+
+  group('attachments and voice notes', () {
+    // A group attachment is encrypted ONCE with its own AES-GCM key, and
+    // that key rides the group envelope — so the cost is one attachment
+    // encryption for the whole group, not one per member.
+
+    test('the key that opens an attachment reaches every member', () async {
+      final alice = await device('alice');
+      final bob = await device('bob');
+      final carol = await device('carol');
+      await distribute(
+        from: alice,
+        fromId: 'alice',
+        groupId: 'g1',
+        epoch: 1,
+        recipients: {'bob': bob, 'carol': carol},
+      );
+
+      final crypto = AttachmentCrypto();
+      final plaintext =
+          Uint8List.fromList(utf8.encode('the contents of a briefing'));
+      final key = crypto.newKey(mimeType: 'image/jpeg', sizeBytes: 11);
+      final stored = crypto.encrypt(plaintext, key);
+
+      final envelope = await alice.group.encrypt(
+        groupId: 'g1',
+        epoch: 1,
+        plaintext: jsonEncode({
+          'media_key': 'obj-1',
+          'caption': 'map',
+          'mime': 'image/jpeg',
+          'att': key.toJson(),
+        }),
+      );
+
+      for (final member in [bob, carol]) {
+        final payload = jsonDecode(await member.group
+            .decrypt(groupId: 'g1', senderId: 'alice', envelope: envelope));
+        final recovered = AttachmentKey.fromJson(
+            (payload as Map<String, dynamic>)['att'] as Map<String, dynamic>);
+
+        expect(payload['media_key'], 'obj-1');
+        expect(crypto.decrypt(stored, recovered), plaintext);
+      }
+    });
+
+    test('a removed member cannot open an attachment sent afterwards',
+        () async {
+      final alice = await device('alice');
+      final bob = await device('bob');
+      final carol = await device('carol');
+      await distribute(
+        from: alice,
+        fromId: 'alice',
+        groupId: 'g1',
+        epoch: 1,
+        recipients: {'bob': bob, 'carol': carol},
+      );
+
+      // Bob is removed; epoch 2 goes to Carol only.
+      await distribute(
+        from: alice,
+        fromId: 'alice',
+        groupId: 'g1',
+        epoch: 2,
+        recipients: {'carol': carol},
+      );
+
+      final key = AttachmentCrypto()
+          .newKey(mimeType: 'application/pdf', sizeBytes: 4);
+      final envelope = await alice.group.encrypt(
+        groupId: 'g1',
+        epoch: 2,
+        plaintext: jsonEncode({'media_key': 'obj-2', 'att': key.toJson()}),
+      );
+
+      // The stored object is reachable by anyone who knows its key — but the
+      // key to open it is inside an envelope Bob can no longer read.
+      await expectLater(
+        bob.group.decrypt(groupId: 'g1', senderId: 'alice', envelope: envelope),
+        throwsA(isA<GroupDecryptionFailed>()),
+      );
+      expect(
+        await carol.group
+            .decrypt(groupId: 'g1', senderId: 'alice', envelope: envelope),
+        contains('obj-2'),
+      );
+    });
+
+    test('voice metadata travels inside the envelope, not beside it',
+        () async {
+      final alice = await device('alice');
+      final bob = await device('bob');
+      await distribute(
+        from: alice,
+        fromId: 'alice',
+        groupId: 'g1',
+        epoch: 1,
+        recipients: {'bob': bob},
+      );
+
+      final key = AttachmentCrypto()
+          .newKey(mimeType: 'audio/mp4', sizeBytes: 2048);
+      final envelope = await alice.group.encrypt(
+        groupId: 'g1',
+        epoch: 1,
+        plaintext: jsonEncode({
+          'media_key': 'obj-3',
+          'mime': 'audio/mp4',
+          'att': key.toJson(),
+          'dur': 12.5,
+          'wave': [0.1, 0.8, 0.3],
+        }),
+      );
+
+      // How long a message is, and its shape, are things the server should
+      // not learn — so they are not wire fields.
+      expect(envelope, isNot(contains('12.5')));
+      expect(envelope, isNot(contains('obj-3')));
+
+      final payload = jsonDecode(await bob.group
+          .decrypt(groupId: 'g1', senderId: 'alice', envelope: envelope));
+      expect(payload['dur'], 12.5);
+      expect(payload['wave'], [0.1, 0.8, 0.3]);
+      expect(payload['media_key'], 'obj-3');
     });
   });
 

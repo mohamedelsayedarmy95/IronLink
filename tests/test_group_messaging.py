@@ -167,6 +167,33 @@ def test_skdm_requires_both_parties_to_be_members() -> None:
     assert window.count("assert_member") == 2
 
 
+def test_group_attachments_and_voice_are_routed_like_text() -> None:
+    """Same path, so an attachment cannot end up on a route with different
+    membership checks from the messages around it."""
+    from app.api.routes import websocket
+
+    source = _source(websocket._handle_frame)
+    assert (
+        '("group_text", "group_image", "group_file", "group_voice")' in source
+    )
+
+
+def test_a_group_attachment_carries_no_media_key_on_the_wire() -> None:
+    """The pointer and the key that opens it live inside the envelope, so the
+    server cannot tell which stored object a group message refers to."""
+    from pathlib import Path
+
+    dart = Path("frontend/lib/core/ws_service.dart")
+    if not dart.exists():
+        pytest.skip("frontend not present")
+
+    source = dart.read_text(encoding="utf-8")
+    start = source.index("void sendGroupMedia(")
+    body = source[start:start + 600]
+    assert "'media_key'" not in body
+    assert "'content': content" in body
+
+
 def test_group_fan_out_skips_the_sender() -> None:
     from app.api.routes import websocket
 

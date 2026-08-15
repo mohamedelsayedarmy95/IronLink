@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -6,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart'
     show DuplicateMessageException;
 
+import '../../../core/crypto/attachment_crypto.dart';
 import '../../../core/crypto/group_signal.dart';
 import '../../../core/crypto/signal.dart';
 import '../../../core/ws_service.dart';
@@ -28,6 +30,34 @@ class GroupTextSent extends GroupChatEvent {
   final String content;
   @override
   List<Object?> get props => [content];
+}
+
+/// An attachment or voice note, already uploaded and encrypted.
+class GroupMediaSent extends GroupChatEvent {
+  const GroupMediaSent({
+    required this.kind,
+    required this.mediaKey,
+    required this.mimeType,
+    required this.attachmentKey,
+    this.caption,
+    this.duration,
+    this.waveform,
+  });
+
+  final String kind; // 'image' | 'file' | 'voice'
+  final String mediaKey;
+  final String mimeType;
+
+  /// Required, not optional: a group attachment is always encrypted, so a
+  /// missing key would mean the body went up in the clear.
+  final AttachmentKey attachmentKey;
+
+  final String? caption;
+  final double? duration;
+  final List<double>? waveform;
+
+  @override
+  List<Object?> get props => [kind, mediaKey];
 }
 
 class GroupFrameReceived extends GroupChatEvent {
@@ -122,6 +152,7 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
         super(const GroupChatState()) {
     on<GroupChatOpened>(_onOpened);
     on<GroupTextSent>(_onTextSent);
+    on<GroupMediaSent>(_onMediaSent);
     on<GroupFrameReceived>(_onFrame);
 
     _sub = _ws.frames.listen((f) => add(GroupFrameReceived(f)));
@@ -170,12 +201,16 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
         if (m.isMine || m.deleted) continue;
         if (!GroupSignalService.isEnvelope(m.content)) continue;
         try {
-          m.content = await _crypto.decrypt(
+          final decrypted = await _crypto.decrypt(
             groupId: groupId,
             senderId: m.senderId,
             envelope: m.content!,
           );
+          m.content = decrypted;
           m.encrypted = true;
+          if (m.kind != 'text' && !_applyMediaPayload(m, decrypted)) {
+            m.content = null;
+          }
         } catch (_) {
           // Expected for anything sent before this device held the sender's
           // key. Shown as unreadable rather than as ciphertext.
@@ -299,6 +334,102 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
     ));
   }
 
+  Future<void> _onMediaSent(
+      GroupMediaSent e, Emitter<GroupChatState> emit) async {
+    emit(state.copyWith(sending: true));
+
+    // The same payload shape the direct chat uses, so one envelope format
+    // covers both and a reader does not have to learn two.
+    final payload = jsonEncode({
+      'media_key': e.mediaKey,
+      'caption': e.caption,
+      'mime': e.mimeType,
+      'att': e.attachmentKey.toJson(),
+      if (e.duration != null) 'dur': e.duration,
+      if (e.waveform != null) 'wave': e.waveform,
+    });
+
+    final int epoch;
+    final String envelope;
+    try {
+      epoch = await _ensureDistributed();
+      envelope = await _crypto.encrypt(
+        groupId: groupId,
+        epoch: epoch,
+        plaintext: payload,
+      );
+    } on _NoLongerAMember {
+      emit(state.copyWith(sending: false, error: GroupChatError.notAMember));
+      return;
+    } on IdentityChanged {
+      emit(state.copyWith(
+          sending: false, error: GroupChatError.identityChanged));
+      return;
+    } catch (err) {
+      debugPrint('[group] media encrypt failed: $err');
+      // The body is already in storage, but it is ciphertext nobody holds a
+      // key for, so abandoning the send leaks nothing.
+      emit(state.copyWith(
+          sending: false, error: GroupChatError.encryptFailed));
+      return;
+    }
+
+    final ref = 'ref_${++_refCounter}';
+    _ws.sendGroupMedia(
+      group: groupId,
+      kind: e.kind,
+      content: envelope,
+      clientRef: ref,
+    );
+
+    emit(state.copyWith(
+      sending: false,
+      epoch: epoch,
+      messages: [
+        ...state.messages,
+        GroupChatMessage(
+          id: ref,
+          senderId: myId,
+          content: e.caption,
+          createdAt: DateTime.now(),
+          isMine: true,
+          kind: e.kind,
+          pending: true,
+          encrypted: true,
+          mediaKey: e.mediaKey,
+          attachmentKey: e.attachmentKey,
+          duration: e.duration,
+          waveform: e.waveform,
+        ),
+      ],
+    ));
+  }
+
+  /// Unpacks a decrypted media envelope onto a message.
+  ///
+  /// Returns false when the payload is not the shape we sent, which is
+  /// treated as an unreadable message rather than guessed at.
+  bool _applyMediaPayload(GroupChatMessage message, String decrypted) {
+    try {
+      final payload = jsonDecode(decrypted) as Map<String, dynamic>;
+      message.mediaKey = payload['media_key'] as String?;
+      message.content = payload['caption'] as String?;
+      final att = payload['att'];
+      if (att != null) {
+        message.attachmentKey =
+            AttachmentKey.fromJson(att as Map<String, dynamic>);
+      }
+      message.duration = (payload['dur'] as num?)?.toDouble();
+      final wave = payload['wave'] as List<dynamic>?;
+      message.waveform =
+          wave == null ? null : [for (final v in wave) (v as num).toDouble()];
+      return true;
+    } catch (err) {
+      debugPrint('[group] media envelope malformed: $err');
+      return false;
+    }
+  }
+
   Future<void> _onFrame(
       GroupFrameReceived e, Emitter<GroupChatState> emit) async {
     final f = e.frame;
@@ -310,6 +441,9 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
         emit(state.copyWith(messages: [
           for (final m in state.messages)
             if (m.id == ref)
+              // Carries the media fields across. Rebuilding without them
+              // blanks the sender's own attachment the instant it is
+              // confirmed — the same way it did in the direct chat.
               GroupChatMessage(
                 id: f['message_id'] as String,
                 senderId: myId,
@@ -318,6 +452,10 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
                 isMine: true,
                 kind: m.kind,
                 encrypted: m.encrypted,
+                mediaKey: m.mediaKey,
+                attachmentKey: m.attachmentKey,
+                duration: m.duration,
+                waveform: m.waveform,
               )
             else
               m
@@ -368,19 +506,28 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
           }
         }
 
-        emit(state.copyWith(messages: [
-          ...state.messages,
-          GroupChatMessage(
-            id: f['message_id'] as String,
-            senderId: from,
-            content: content,
-            createdAt: DateTime.parse(f['created_at'] as String).toLocal(),
-            isMine: false,
-            kind: f['message_type'] as String? ?? 'text',
-            encrypted: encrypted,
-            senderName: _nameOf(from),
-          ),
-        ]));
+        final kind = f['message_type'] as String? ?? 'text';
+        final message = GroupChatMessage(
+          id: f['message_id'] as String,
+          senderId: from,
+          content: content,
+          createdAt: DateTime.parse(f['created_at'] as String).toLocal(),
+          isMine: false,
+          kind: kind,
+          encrypted: encrypted,
+          senderName: _nameOf(from),
+        );
+
+        // A media message carries its pointer and key inside the envelope,
+        // so they only exist once it has been opened.
+        if (encrypted && kind != 'text' && content != null) {
+          if (!_applyMediaPayload(message, content)) {
+            message.content = null;
+            emit(state.copyWith(error: GroupChatError.decryptFailed));
+          }
+        }
+
+        emit(state.copyWith(messages: [...state.messages, message]));
     }
   }
 }

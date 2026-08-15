@@ -4,10 +4,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/crypto/group_signal.dart';
 import '../../../core/crypto/signal.dart';
 import '../../../core/icons.dart';
+import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../chat/widgets/attach_flow.dart';
+import '../../chat/widgets/encrypted_image.dart';
+import '../../chat/widgets/voice_player.dart';
+import '../../chat/widgets/voice_recorder.dart';
 import '../bloc/group_chat_bloc.dart';
 import '../groups_repository.dart';
 
@@ -261,7 +266,33 @@ class _GroupBubble extends StatelessWidget {
               ),
               const SizedBox(height: 3),
             ],
-            if (message.content == null)
+            if (message.kind == 'voice' && message.attachmentKey != null)
+              VoicePlayer(
+                media: context.read<MediaService>(),
+                mediaKey: message.mediaKey ?? '',
+                duration: message.duration ?? 0,
+                waveform: message.waveform ?? const [],
+                attachmentKey: message.attachmentKey,
+                tint: mine ? IronColors.navyDeep : IronColors.gold,
+              )
+            else if (message.attachmentKey != null &&
+                message.mediaKey != null) ...[
+              EncryptedImage(
+                media: context.read<MediaService>(),
+                mediaKey: message.mediaKey!,
+                attachmentKey: message.attachmentKey!,
+              ),
+              if ((message.content ?? '').isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  message.content!,
+                  style: TextStyle(
+                    color: mine ? IronColors.navyDeep : IronColors.textHi,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ] else if (message.content == null)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -365,6 +396,32 @@ class _GroupInputBar extends StatelessWidget {
         ),
         child: Row(
           children: [
+            IconButton(
+              tooltip: t.attach,
+              icon: const Icon(IronIcons.attach, color: IronColors.gold),
+              onPressed: sending
+                  ? null
+                  : () async {
+                      final bloc = context.read<GroupChatBloc>();
+                      final result = await showAttachFlow(
+                        context,
+                        media: context.read<MediaService>(),
+                        // Always. A group is encrypted, so an attachment
+                        // that went up in the clear would be the one part
+                        // of the conversation the server could read.
+                        encrypted: true,
+                      );
+                      final key = result?.key;
+                      if (result == null || key == null) return;
+                      bloc.add(GroupMediaSent(
+                        kind: 'image',
+                        mediaKey: result.mediaKey,
+                        mimeType: result.mimeType,
+                        attachmentKey: key,
+                        caption: result.caption,
+                      ));
+                    },
+            ),
             Expanded(
               child: TextField(
                 controller: controller,
@@ -377,7 +434,30 @@ class _GroupInputBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
+            Builder(
+              builder: (context) {
+                final bloc = context.read<GroupChatBloc>();
+                return VoiceRecorder(
+                  media: context.read<MediaService>(),
+                  encrypted: true,
+                  onSend: (note) {
+                    final key = note.attachmentKey;
+                    if (key == null) return;
+                    bloc.add(GroupMediaSent(
+                      kind: 'voice',
+                      mediaKey: note.mediaKey,
+                      mimeType: 'audio/mp4',
+                      attachmentKey: key,
+                      duration: note.duration,
+                      waveform: note.waveform,
+                    ));
+                  },
+                  onCancel: () {},
+                );
+              },
+            ),
+            const SizedBox(width: 4),
             CircleAvatar(
               backgroundColor: IronColors.gold,
               child: sending

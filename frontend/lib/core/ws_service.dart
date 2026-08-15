@@ -104,6 +104,24 @@ class WsService {
         'client_ref': clientRef,
       });
 
+  /// A group attachment or voice note.
+  ///
+  /// The pointer, the caption and the key that opens the body all live inside
+  /// [content] — the group envelope — so the server cannot tell which stored
+  /// object this refers to. media_key is deliberately not sent alongside.
+  void sendGroupMedia({
+    required String group,
+    required String kind, // 'image' | 'file' | 'voice'
+    required String content,
+    required String clientRef,
+  }) =>
+      send({
+        'type': 'group_$kind',
+        'group': group,
+        'content': content,
+        'client_ref': clientRef,
+      });
+
   /// A sender-key distribution message, pairwise encrypted for one member.
   ///
   /// Separate from sendText so it can never be mistaken for something the
