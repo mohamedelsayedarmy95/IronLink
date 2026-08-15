@@ -28,6 +28,7 @@ from app.models import (
     VerificationFormField,
 )
 from app.models.group import GROUP_ROLE_RANK
+from app.services import group_message_service
 from app.services.form_validation import (
     FormValidationError,
     expiry_for,
@@ -860,6 +861,12 @@ async def ban_from_group(
     # they are barred from rejoining would be incoherent.
     if target is not None:
         await db.delete(target)
+        # The membership row is not what keeps them out of the conversation —
+        # the sender keys they already hold decrypt every future message
+        # until each remaining sender mints a new one. Bumping the epoch is
+        # what actually ends their access; without it a ban only removes the
+        # name from the member list.
+        await group_message_service.bump_epoch(db, group_id)
 
     # Any live request is closed too, so an admin cannot later approve someone
     # who is banned.

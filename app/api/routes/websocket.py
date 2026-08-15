@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.core.database import AsyncSessionLocal
 from app.core.redis import redis_pubsub, redis_sessions
 from app.models import User
-from app.services import message_service, push_service
+from app.services import group_message_service, message_service, push_service
 from app.services.message_service import UnsendDenied
 from app.services.ws_manager import ConnectionManager
 
@@ -194,6 +194,121 @@ async def _handle_frame(
             "content": frame.get("content"),
             "media_key": frame.get("media_key"),
             "media_mime": frame.get("media_mime"),
+            "created_at": msg.created_at.isoformat(),
+        })
+        return
+
+    # ── Group messages ────────────────────────────────────────────────────────
+    if frame_type in ("group_text", "group_image", "group_file"):
+        group_id = _uuid_or_none(frame.get("group"))
+        if group_id is None:
+            await websocket.send_json(
+                {"type": "error", "detail": "missing/invalid 'group'"}
+            )
+            return
+
+        async with AsyncSessionLocal() as db:
+            try:
+                msg = await group_message_service.save_group_message(
+                    db,
+                    group_id=group_id,
+                    sender_id=user_id,
+                    message_type=frame_type.removeprefix("group_"),
+                    content_ciphertext=frame.get("content"),
+                    media_object_key=frame.get("media_key"),
+                    media_mime_type=frame.get("media_mime"),
+                    destruct_after_seconds=frame.get("destruct_after"),
+                )
+            except group_message_service.NotAMember:
+                await websocket.send_json(
+                    {"type": "error", "detail": "not a member of that group"}
+                )
+                return
+            except group_message_service.PostingNotAllowed:
+                await websocket.send_json(
+                    {"type": "error", "detail": "only admins can post here"}
+                )
+                return
+
+            recipients = await group_message_service.member_ids(db, group_id)
+
+        await websocket.send_json({
+            "type": "ack",
+            "client_ref": frame.get("client_ref"),
+            "message_id": str(msg.id),
+            "created_at": msg.created_at.isoformat(),
+        })
+
+        # One publish per member. The ciphertext is identical for all of
+        # them — a sender key is encrypted once, not per recipient, which is
+        # the whole reason groups do not cost O(members) encryptions.
+        event = {
+            "type": "group_message",
+            "group": str(group_id),
+            "message_id": str(msg.id),
+            "message_type": msg.message_type,
+            "from": str(user_id),
+            "content": frame.get("content"),
+            "media_key": frame.get("media_key"),
+            "media_mime": frame.get("media_mime"),
+            "created_at": msg.created_at.isoformat(),
+        }
+        for member_id in recipients:
+            if member_id == user_id:
+                continue  # the sender already has it
+            await publish(member_id, event)
+        return
+
+    # ── Sender-key distribution ───────────────────────────────────────────────
+    #
+    # Key material, pairwise encrypted by the sender for one member. Persisted
+    # so a member who is offline still receives it, and excluded from history
+    # so it never surfaces as a message.
+    if frame_type == "skdm":
+        to = _uuid_or_none(frame.get("to"))
+        group_id = _uuid_or_none(frame.get("group"))
+        if to is None or group_id is None:
+            await websocket.send_json(
+                {"type": "error", "detail": "skdm needs 'to' and 'group'"}
+            )
+            return
+
+        async with AsyncSessionLocal() as db:
+            try:
+                await group_message_service.assert_member(db, group_id, user_id)
+                # The recipient has to be a member too, or this becomes a way
+                # to push arbitrary payloads at any user.
+                await group_message_service.assert_member(db, group_id, to)
+            except group_message_service.NotAMember:
+                await websocket.send_json(
+                    {"type": "error", "detail": "not a member of that group"}
+                )
+                return
+
+            msg = await message_service.save_message(
+                db,
+                sender_id=user_id,
+                recipient_id=to,
+                group_id=None,
+                message_type=group_message_service.SKDM_MESSAGE_TYPE,
+                content_ciphertext=frame.get("content"),
+                # See save_message: a block must not withhold the key to
+                # messages that are delivered regardless.
+                enforce_blocks=False,
+            )
+
+        await publish(to, {
+            "type": "skdm",
+            "group": str(group_id),
+            "from": str(user_id),
+            "content": frame.get("content"),
+            "message_id": str(msg.id),
+            "created_at": msg.created_at.isoformat(),
+        })
+        await websocket.send_json({
+            "type": "ack",
+            "client_ref": frame.get("client_ref"),
+            "message_id": str(msg.id),
             "created_at": msg.created_at.isoformat(),
         })
         return

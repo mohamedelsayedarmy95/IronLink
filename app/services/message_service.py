@@ -54,12 +54,22 @@ async def save_message(
     media_object_key: str | None = None,
     media_mime_type: str | None = None,
     destruct_after_seconds: int | None = None,
+    enforce_blocks: bool = True,
 ) -> Message:
     # Enforced here rather than in the route, because this is the single
     # point every message passes through — REST and WebSocket both. A check
     # in one caller would leave the other open.
-    if recipient_id is not None and await _blocked_between(
-        db, sender_id, recipient_id
+    #
+    # enforce_blocks is off for one case only: group sender-key distribution.
+    # Group messages are deliberately not blocked — silencing someone in a
+    # shared group would turn a personal boundary into a way to disrupt
+    # everyone's conversation — so withholding the key that decrypts them
+    # would not stop anything, it would just make the group unreadable for
+    # one member with no explanation anywhere.
+    if (
+        enforce_blocks
+        and recipient_id is not None
+        and await _blocked_between(db, sender_id, recipient_id)
     ):
         raise BlockedDelivery
 

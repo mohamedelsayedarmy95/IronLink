@@ -84,6 +84,23 @@ class Group(Base):
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    #: Bumped on every membership change. This is the whole basis of group
+    #: encryption's forward security.
+    #:
+    #: Group messages are encrypted with a per-sender key that every member
+    #: holds a copy of. Anyone who ever received that key can decrypt every
+    #: later message from that sender — so removing someone from the group
+    #: means nothing until each remaining sender generates a fresh key. The
+    #: epoch is how a client learns it must do that: it is compared against
+    #: the epoch its current sender key was minted for.
+    #:
+    #: The server cannot enforce the rotation, because it cannot see the keys.
+    #: What it can do is make the change impossible to miss, which is what
+    #: this column is for.
+    members_epoch: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1", default=1
+    )
     avatar_object_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     group_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default=GroupType.TASK_FORCE, index=True
