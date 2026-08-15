@@ -261,10 +261,21 @@ Every failure path refuses rather than falling back to plaintext. The previous
 code caught encryption errors and sent the message unencrypted anyway, which is
 the one outcome worse than not sending.
 
-**Caveat — attachments are not yet end-to-end encrypted.** A secret chat
-encrypts message text, captions, and the media pointer, but the file bytes
-themselves are uploaded to object storage unencrypted. This is the next piece
-of the work and is called out in the UI rather than left implicit.
+**Attachments are encrypted too.** Bodies are sealed with AES-256-GCM before
+upload; the key and nonce travel inside the Signal envelope alongside the
+caption, so the server never sees them. A fresh key per attachment — reusing a
+key/nonce pair in GCM leaks the XOR of the two plaintexts.
+
+The server is told a body is opaque (`encrypted: true`, declared as
+`application/octet-stream`). That flag is load-bearing: the completion path
+re-compresses images, builds thumbnails, and runs OCR, and on ciphertext the
+first two destroy the object while the third would be reading the user's
+attachments. All three are skipped, and an upload in flight across the deploy
+defaults to "encrypted" rather than the other way round.
+
+GCM authenticates, so an attachment altered in storage is refused rather than
+displayed — see `attachment_crypto_test.dart`, which covers a flipped byte, a
+truncated file, and the wrong key.
 
 **Still open: encryption is opt-in per chat.** Ordinary chats are transport-
 encrypted only. Making it the default is a product decision, not a technical
@@ -321,8 +332,9 @@ not put real user data on it.
 ```
 [ ] Real authentication (Firebase Phone Auth)          P0
 [x] Real E2EE for secret chats (Signal Protocol)       P0
-[ ] Encrypt attachment bytes, not just the pointer     P0
+[x] Encrypt attachment bytes (AES-256-GCM)             P0
 [ ] Make encryption the default, not opt-in            P1
+[ ] Voice notes: recorder never uploads (fakes a key)  P0
 [ ] Opt-in gate on AI summary                          P0
 [ ] Release keystore + signing config                  P1
 [ ] iOS: GoogleService-Info.plist + APNs key           P1

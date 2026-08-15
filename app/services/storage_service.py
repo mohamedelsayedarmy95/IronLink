@@ -18,7 +18,16 @@ ALLOWED_MIME_TYPES: dict[str, str] = {
     "audio/ogg": ".ogg",
     "audio/mpeg": ".mp3",
     "application/pdf": ".pdf",
+    # Only legitimate for an end-to-end encrypted body, where the real type is
+    # inside the envelope and the server is meant to learn nothing beyond the
+    # length. The media route rejects it on any upload not marked encrypted,
+    # so it cannot be used to smuggle a disallowed type past the check.
+    "application/octet-stream": ".bin",
 }
+
+#: What an encrypted attachment declares itself as. Its real type travels
+#: inside the end-to-end encrypted envelope instead.
+ENCRYPTED_MIME_TYPE = "application/octet-stream"
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # matches nginx client_max_body_size
 

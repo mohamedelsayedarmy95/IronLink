@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/crypto/attachment_crypto.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
@@ -17,17 +18,24 @@ class AttachmentReady {
     required this.mediaKey,
     required this.mimeType,
     this.caption,
+    this.key,
   });
 
   final String mediaKey;
   final String mimeType;
   final String? caption;
+
+  /// Set when the body was encrypted before upload. The chat bloc puts this
+  /// inside the Signal envelope; without it the stored object is unreadable
+  /// to everyone, including the recipient.
+  final AttachmentKey? key;
 }
 
 /// Gold attach sheet: gallery / camera / PDF / (voice lives on the input bar).
 Future<AttachmentReady?> showAttachFlow(
   BuildContext context, {
   required MediaService media,
+  required bool isSecret,
 }) async {
   // Obtain WsService from providers to listen for OCR alerts
   final ws = context.read<WsService>();
@@ -103,6 +111,7 @@ Future<AttachmentReady?> showAttachFlow(
         builder: (_) => _ImagePreviewScreen(
           file: File(picked.path),
           media: media,
+          isSecret: isSecret,
         ),
       ),
     );
@@ -149,10 +158,15 @@ class _AttachOption extends StatelessWidget {
 }
 
 class _ImagePreviewScreen extends StatefulWidget {
-  const _ImagePreviewScreen({required this.file, required this.media});
+  const _ImagePreviewScreen({
+    required this.file,
+    required this.media,
+    required this.isSecret,
+  });
 
   final File file;
   final MediaService media;
+  final bool isSecret;
 
   @override
   State<_ImagePreviewScreen> createState() => _ImagePreviewScreenState();
@@ -171,6 +185,28 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
   Future<void> _send() async {
     setState(() => _progress = 0);
     try {
+      final caption =
+          _caption.text.trim().isEmpty ? null : _caption.text.trim();
+
+      if (widget.isSecret) {
+        // Encrypted before it leaves the device, so what reaches storage is
+        // opaque. The server is told so explicitly — otherwise it would
+        // re-compress the "image" and destroy it.
+        final encrypted = await widget.media.uploadEncrypted(
+          widget.file,
+          mimeType: 'image/jpeg',
+          onProgress: (p) => setState(() => _progress = p),
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop(AttachmentReady(
+          mediaKey: encrypted.upload.mediaKey,
+          mimeType: 'image/jpeg',
+          caption: caption,
+          key: encrypted.key,
+        ));
+        return;
+      }
+
       final result = await widget.media.upload(
         widget.file,
         mimeType: 'image/jpeg',
@@ -180,7 +216,7 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
       Navigator.of(context).pop(AttachmentReady(
         mediaKey: result.mediaKey,
         mimeType: result.mimeType,
-        caption: _caption.text.trim().isEmpty ? null : _caption.text.trim(),
+        caption: caption,
       ));
     } catch (e) {
       if (!mounted) return;

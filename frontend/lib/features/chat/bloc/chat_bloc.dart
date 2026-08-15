@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/api_client.dart';
+import '../../../core/crypto/attachment_crypto.dart';
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
 import '../local/message_store.dart';
@@ -39,12 +40,17 @@ class MediaSent extends ChatEvent {
     required this.mediaKey,
     required this.mimeType,
     this.caption,
+    this.attachmentKey,
   });
 
   final String kind;
   final String mediaKey;
   final String mimeType;
   final String? caption;
+
+  /// Present when the body was encrypted before upload. Carried inside the
+  /// Signal envelope, never as a field on the wire.
+  final AttachmentKey? attachmentKey;
 
   @override
   List<Object?> get props => [kind, mediaKey];
@@ -427,17 +433,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     String? wireContent = e.caption;
 
     if (_isSecret) {
-      // The media key and caption travel together inside one envelope so the
-      // server cannot tell which object a secret message refers to.
+      // The pointer, the caption, the real MIME type and the attachment's
+      // decryption key all travel together inside one envelope. The key in
+      // particular must never reach the server: with it, the stored object
+      // stops being opaque.
       //
-      // NOTE: this protects the caption and the pointer, not the file bytes.
-      // Attachments are still uploaded to object storage unencrypted — see
-      // MediaService. That is the next piece of this work, and until it lands
-      // a secret chat's text is end-to-end encrypted while its attachments
-      // are not.
-      final combined = '${e.mediaKey}:${e.caption ?? ''}';
+      // JSON rather than the "$mediaKey:$caption" concatenation this used to
+      // be — that had no room for key material, and a caption containing a
+      // colon split in the wrong place.
+      final payload = jsonEncode({
+        'media_key': e.mediaKey,
+        'caption': e.caption,
+        'mime': e.mimeType,
+        if (e.attachmentKey != null) 'att': e.attachmentKey!.toJson(),
+      });
       try {
-        wireContent = await _signalService.encrypt(combined, peerId);
+        wireContent = await _signalService.encrypt(payload, peerId);
       } on IdentityChanged {
         emit(state.copyWith(secureError: SecureChatError.identityChanged));
         return;
@@ -554,13 +565,39 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
           }
         }
 
+        final kind = f['kind'] as String? ?? 'text';
+        String? mediaKey = f['media_key'] as String?;
+        AttachmentKey? attachmentKey;
+
+        // A secret media message carries its pointer and key inside the
+        // envelope rather than in wire fields, so they have to be unpacked
+        // after decryption before the message means anything.
+        if (_isSecret && kind != 'text' && content != null) {
+          try {
+            final payload = jsonDecode(content) as Map<String, dynamic>;
+            mediaKey = payload['media_key'] as String?;
+            content = payload['caption'] as String?;
+            final att = payload['att'];
+            if (att != null) {
+              attachmentKey =
+                  AttachmentKey.fromJson(att as Map<String, dynamic>);
+            }
+          } catch (err) {
+            debugPrint('[signal] media envelope malformed: $err');
+            content = null;
+            emit(state.copyWith(secureError: SecureChatError.decryptFailed));
+          }
+        }
+
         final msg = ChatMessage(
           id: f['message_id'] as String,
           senderId: f['from'] as String,
           content: content,
           createdAt: DateTime.parse(f['created_at'] as String),
           isMine: false,
-          kind: f['kind'] as String? ?? 'text',
+          mediaKey: mediaKey,
+          attachmentKey: attachmentKey,
+          kind: kind,
         );
         emit(state.copyWith(
           messages: [...state.messages, msg],

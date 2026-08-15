@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart' show Options;
 
 import '../../core/api_client.dart';
+import '../../core/crypto/attachment_crypto.dart';
 
 enum MessageTick { sent, delivered, read }
 
@@ -15,6 +16,8 @@ class ChatMessage {
     this.tick = MessageTick.sent,
     this.deleted = false,
     this.pending = false,
+    this.mediaKey,
+    this.attachmentKey,
   });
 
   final String id;
@@ -23,6 +26,15 @@ class ChatMessage {
   final DateTime createdAt;
   final bool isMine;
   String kind; // 'text' | 'voice' | 'image' | ...
+
+  /// Where the body is stored. For a secret chat this arrives inside the
+  /// encrypted envelope rather than as a field on the wire.
+  String? mediaKey;
+
+  /// Set when the stored body is encrypted. Held in memory only — writing it
+  /// to the local cache would put the key next to nothing worth protecting,
+  /// and secret chats are not cached at all.
+  AttachmentKey? attachmentKey;
   MessageTick tick;
   bool deleted;
   bool pending; // optimistic — awaiting server ack
@@ -43,6 +55,7 @@ class ChatMessage {
         _ => MessageTick.sent,
       },
       deleted: (json['deleted_for_everyone'] as bool?) ?? false,
+      mediaKey: json['media_object_key'] as String?,
     );
   }
 }

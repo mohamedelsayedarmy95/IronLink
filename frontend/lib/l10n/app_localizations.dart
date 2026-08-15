@@ -2124,6 +2124,24 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'المرفقات ليست مشفّرة من طرف إلى طرف بعد — التشفير يشمل التعليقات فقط.'**
   String get secretChatAttachmentWarning;
+
+  /// No description provided for @attachmentLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المرفق'**
+  String get attachmentLoadFailed;
+
+  /// No description provided for @attachmentTampered.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المرفق تم التلاعب به ولم يُفتح'**
+  String get attachmentTampered;
+
+  /// No description provided for @attachmentEncrypted.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفق مشفّر'**
+  String get attachmentEncrypted;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

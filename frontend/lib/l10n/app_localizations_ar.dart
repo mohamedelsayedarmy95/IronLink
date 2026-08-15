@@ -1129,4 +1129,13 @@ class LAr extends L {
   @override
   String get secretChatAttachmentWarning =>
       'المرفقات ليست مشفّرة من طرف إلى طرف بعد — التشفير يشمل التعليقات فقط.';
+
+  @override
+  String get attachmentLoadFailed => 'تعذّر تحميل المرفق';
+
+  @override
+  String get attachmentTampered => 'هذا المرفق تم التلاعب به ولم يُفتح';
+
+  @override
+  String get attachmentEncrypted => 'مرفق مشفّر';
 }

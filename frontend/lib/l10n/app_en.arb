@@ -546,5 +546,8 @@
   "secretChatOn": "Secret chat is on",
   "secretChatOff": "Secret chat is off",
   "secretChatNotice": "Messages in this chat are end-to-end encrypted. The server stores only ciphertext it cannot read.",
-  "secretChatAttachmentWarning": "Attachments are not yet encrypted end-to-end — only their captions are."
+  "secretChatAttachmentWarning": "Attachments are not yet encrypted end-to-end — only their captions are.",
+  "attachmentLoadFailed": "Attachment could not be loaded",
+  "attachmentTampered": "This attachment was altered and was not opened",
+  "attachmentEncrypted": "Encrypted attachment"
 }

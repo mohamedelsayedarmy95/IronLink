@@ -16,6 +16,7 @@ import '../bloc/chat_bloc.dart';
 import '../chat_repository.dart';
 import '../local/message_store.dart';
 import '../widgets/attach_flow.dart';
+import '../widgets/encrypted_image.dart';
 import '../widgets/smart_replies.dart';
 import '../widgets/summary_banner.dart';
 import '../widgets/voice_player.dart';
@@ -446,6 +447,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                       _BlockedBanner(onUnblock: _toggleBlock)
                     else
                       _InputBar(
+                        isSecret: widget.isSecret,
                         controller: _input,
                         onChanged: (text) => context
                             .read<ChatBloc>()
@@ -609,6 +611,25 @@ class _MessageBubble extends StatelessWidget {
                     duration: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['duration'] as num?)?.toDouble() ?? 0,
                     waveform: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['waveform'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? [],
                   )
+                ] else if (message.attachmentKey != null &&
+                    message.mediaKey != null) ...[
+                  // Fetched and decrypted on the device: the stored object is
+                  // ciphertext, so there is no URL that renders directly.
+                  EncryptedImage(
+                    media: context.read<MediaService>(),
+                    mediaKey: message.mediaKey!,
+                    attachmentKey: message.attachmentKey!,
+                  ),
+                  if ((message.content ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      message.content!,
+                      style: TextStyle(
+                        color: mine ? IronColors.navyDeep : IronColors.textHi,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ] else if (message.content == null) ...[
                   // Content is null on a message that failed to decrypt.
                   // Rendering an empty bubble would read as an empty message
@@ -845,11 +866,15 @@ class _InputBar extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     required this.onSend,
+    required this.isSecret,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onSend;
+
+  /// Decides whether an attachment is encrypted before upload.
+  final bool isSecret;
 
   @override
   Widget build(BuildContext context) {
@@ -869,14 +894,18 @@ class _InputBar extends StatelessWidget {
               icon: const Icon(IronIcons.attach, color: IronColors.gold),
               onPressed: () async {
                 final media = context.read<MediaService>();
-                final result =
-                    await showAttachFlow(context, media: media);
+                final result = await showAttachFlow(
+                  context,
+                  media: media,
+                  isSecret: isSecret,
+                );
                 if (result != null) {
                   bloc.add(MediaSent(
                     kind: 'image',
                     mediaKey: result.mediaKey,
                     mimeType: result.mimeType,
                     caption: result.caption,
+                    attachmentKey: result.key,
                   ));
                 }
               },

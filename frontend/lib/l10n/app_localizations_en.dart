@@ -1144,4 +1144,14 @@ class LEn extends L {
   @override
   String get secretChatAttachmentWarning =>
       'Attachments are not yet encrypted end-to-end — only their captions are.';
+
+  @override
+  String get attachmentLoadFailed => 'Attachment could not be loaded';
+
+  @override
+  String get attachmentTampered =>
+      'This attachment was altered and was not opened';
+
+  @override
+  String get attachmentEncrypted => 'Encrypted attachment';
 }

@@ -17,6 +17,7 @@ from app.core.redis import redis_sessions
 from app.models import User
 from app.services.storage_service import (
     ALLOWED_MIME_TYPES,
+    ENCRYPTED_MIME_TYPE,
     MAX_UPLOAD_BYTES,
     StorageNotConfigured,
     StorageService,
@@ -47,6 +48,16 @@ class UploadInitIn(BaseModel):
     filename: str = Field(..., max_length=255)
     mime_type: str
     total_size: int = Field(..., gt=0, le=MAX_UPLOAD_BYTES)
+
+    #: Declares the body as end-to-end encrypted, which changes what the
+    #: server is permitted to do with it.
+    #:
+    #: Every step on the completion path assumes readable content:
+    #: re-compression rewrites the bytes, thumbnailing decodes them, and OCR
+    #: reads them. On ciphertext the first two corrupt the object beyond
+    #: recovery, and the third is precisely what end-to-end encryption exists
+    #: to prevent. Setting this skips all three and stores the bytes untouched.
+    encrypted: bool = False
 
 
 class UploadInitOut(BaseModel):
@@ -117,6 +128,17 @@ async def upload_init(
             f"MIME type not allowed: {body.mime_type}",
         )
 
+    # The two must agree, in both directions. Opaque bytes claiming to be a
+    # JPEG would be re-compressed into rubble on completion; and an upload
+    # that is not encrypted must not be able to declare octet-stream to
+    # sidestep the type allow-list.
+    if body.encrypted != (body.mime_type == ENCRYPTED_MIME_TYPE):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"encrypted uploads must declare {ENCRYPTED_MIME_TYPE}, "
+            "and only encrypted uploads may use it",
+        )
+
     upload_id = secrets.token_urlsafe(24)
     total_chunks = (body.total_size + CHUNK_SIZE - 1) // CHUNK_SIZE
 
@@ -128,6 +150,7 @@ async def upload_init(
             "mime_type": body.mime_type,
             "total_size": body.total_size,
             "total_chunks": total_chunks,
+            "encrypted": body.encrypted,
         }),
         ex=UPLOAD_STATE_TTL,
     )
@@ -208,8 +231,18 @@ async def upload_complete(
 
     mime = state["mime_type"]
     thumbnail_key: str | None = None
+    # Defaults to True for a state written before this field existed, which
+    # only happens for an upload in flight across the deploy. Treating an
+    # unknown as plaintext would be the wrong way round: it would hand
+    # ciphertext to the image processor and to OCR.
+    encrypted = state.get("encrypted", mime == ENCRYPTED_MIME_TYPE)
 
-    if mime.startswith("image/"):
+    if encrypted:
+        # No re-compression, no thumbnail, no OCR. The bytes are stored
+        # exactly as received, because the server cannot read them and any
+        # attempt to interpret them destroys the object.
+        pass
+    elif mime.startswith("image/"):
         assembled, thumb = _process_image(assembled, mime)
         if thumb is not None:
             thumbnail_key = _storage.put_object(
@@ -230,8 +263,11 @@ async def upload_complete(
     _storage.delete_staging(upload_id, state["total_chunks"])
     await redis_sessions.delete(_state_key(upload_id), _chunks_key(upload_id))
 
-    # Schedule OCR processing in the background (non-blocking)
-    if background_tasks is not None:
+    # Schedule OCR processing in the background (non-blocking).
+    # Never for an encrypted body: running text extraction over a user's
+    # attachments is exactly what end-to-end encryption promises does not
+    # happen, and on ciphertext it would only produce noise anyway.
+    if background_tasks is not None and not encrypted:
         background_tasks.add_task(
             _process_ocr,
             file_bytes=assembled,
