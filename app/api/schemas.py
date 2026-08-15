@@ -52,6 +52,34 @@ class FirebaseVerifyIn(BaseModel):
     device_fingerprint: str = Field(..., min_length=16, max_length=128)
 
 
+class FirebaseRegisterIn(BaseModel):
+    """Self-registration with a real phone number.
+
+    Like FirebaseVerifyIn, the number is read out of the verified ID token
+    rather than taken from the client — someone registering must control the
+    number they are registering.
+
+    The military ID is SET here rather than checked. It becomes this account's
+    second factor for every later login, so it is a credential the user
+    chooses once, not proof of anything on its own. Whether a self-registered
+    account may use the system immediately is a policy decision — see
+    SELF_REGISTRATION_AUTO_APPROVE.
+    """
+
+    id_token: str = Field(..., min_length=20)
+    full_name: str = Field(..., min_length=2, max_length=120)
+    military_id: str = Field(..., min_length=4, max_length=40)
+    device_fingerprint: str = Field(..., min_length=16, max_length=128)
+
+    @field_validator("full_name")
+    @classmethod
+    def _clean_name(cls, v: str) -> str:
+        v = " ".join(v.split())
+        if not v:
+            raise ValueError("full_name must not be blank")
+        return v
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -69,6 +97,16 @@ class VerifyOut(BaseModel):
     expires_in: int                 # seconds
     session_id: UUID                # this device's session — used for remote-kick UX
     user: UserOut
+
+
+class RegisterOut(BaseModel):
+    """Either a session, or a plain statement that approval is pending.
+
+    Handing back a token that does not work yet would be worse than saying so.
+    """
+
+    approved: bool
+    session: VerifyOut | None = None
 
 
 class SessionOut(BaseModel):

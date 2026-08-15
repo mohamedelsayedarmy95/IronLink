@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.api.schemas import (
+    FirebaseRegisterIn,
     FirebaseVerifyIn,
+    RegisterOut,
     RequestOtpIn,
     RequestOtpOut,
     SessionOut,
@@ -227,6 +229,16 @@ async def verify_firebase(
         raise generic_error
 
     user = await db.scalar(select(User).where(User.phone_number == phone_number))
+
+    # Told plainly rather than folded into the generic failure. The caller has
+    # just proved they control this number, so "your code is wrong" would be
+    # both false and impossible to act on — they would retry the SMS forever.
+    if user is not None and user.status == UserStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account is waiting for approval.",
+        )
+
     if user is None or user.status != UserStatus.ACTIVE:
         raise generic_error
 
@@ -248,6 +260,114 @@ async def verify_firebase(
         raise generic_error
 
     return await _issue_login(db, user, body.device_fingerprint, ip, user_agent)
+
+
+@router.post("/register-firebase", response_model=RegisterOut)
+async def register_firebase(
+    body: FirebaseRegisterIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> RegisterOut:
+    """Register a new account from a verified phone number.
+
+    This is what makes the app usable by anyone with a real number, instead
+    of only by accounts seeded by hand.
+
+    The number is read out of the Firebase ID token, never from the request
+    body, so registering requires actually controlling the number. The
+    military ID is *set* here — it is the account's second factor from now
+    on, not evidence of anything by itself.
+    """
+    ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")[:512]
+
+    if not settings.SELF_REGISTRATION_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is closed. Contact your administrator.",
+        )
+
+    if not push_service.ensure_initialized():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone verification is temporarily unavailable.",
+        )
+
+    from firebase_admin import auth as firebase_auth
+
+    try:
+        decoded = firebase_auth.verify_id_token(body.id_token)
+    except Exception as exc:
+        logger.warning("firebase_id_token_rejected", error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Verification failed. Request a new code and try again.",
+        ) from None
+
+    phone_number = decoded.get("phone_number")
+    if not phone_number:
+        logger.warning("firebase_id_token_missing_phone", uid=decoded.get("uid"))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Verification failed. Request a new code and try again.",
+        )
+
+    existing = await db.scalar(
+        select(User).where(User.phone_number == phone_number)
+    )
+    if existing is not None:
+        # Says the number is taken rather than pretending to register it.
+        # This is not an enumeration leak worth hiding: the caller has just
+        # proved they control this number, so they are entitled to know
+        # whether it already has an account.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This number already has an account. Sign in instead.",
+        )
+
+    approved = settings.SELF_REGISTRATION_AUTO_APPROVE
+    user = User(
+        phone_number=phone_number,
+        full_name=body.full_name,
+        hashed_military_id=hash_military_id(body.military_id),
+        # Never used on this path — Firebase proves the phone, the military ID
+        # is the second factor — but the column is NOT NULL, and a shared
+        # constant here would be a real credential if password login were ever
+        # switched on.
+        hashed_password=hash_password(secrets.token_hex(32)),
+        status=UserStatus.ACTIVE if approved else UserStatus.PENDING,
+        role=UserRole.SOLDIER,
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+
+    db.add(AuditLog(
+        actor_id=user.id,
+        actor_role=user.role,
+        action=AuditAction.LOGIN_SUCCESS if approved else AuditAction.LOGIN_FAILED,
+        ip_address=ip,
+        user_agent=user_agent,
+        success=approved,
+        error_code=None if approved else "registration_pending_approval",
+    ))
+    await db.commit()
+
+    logger.info(
+        "self_registration",
+        user_id=str(user.id),
+        approved=approved,
+    )
+
+    if not approved:
+        return RegisterOut(approved=False)
+
+    return RegisterOut(
+        approved=True,
+        session=await _issue_login(
+            db, user, body.device_fingerprint, ip, user_agent
+        ),
+    )
 
 
 async def _issue_login(

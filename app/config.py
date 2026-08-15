@@ -156,6 +156,22 @@ class Settings(BaseSettings):
     DEV_AUTH_BYPASS: bool = False
     DEV_OTP_CODE: str = "000000"
 
+    # ── Self-registration ─────────────────────────────────────────────────────
+    # Whether a phone number that verifies with Firebase may register itself.
+    # With it off, accounts have to be created out of band and the app is only
+    # usable by people someone put there deliberately.
+    SELF_REGISTRATION_ENABLED: bool = True
+
+    # Whether a self-registered account may use the system immediately, or
+    # waits for an admin.
+    #
+    # This is the whole admission policy in one flag. Auto-approval means
+    # anyone who controls a phone number is inside — which is right for a
+    # consumer messenger and is a decision worth making on purpose for a
+    # military one, where the military ID a registrant types is something they
+    # chose rather than something anyone verified.
+    SELF_REGISTRATION_AUTO_APPROVE: bool = True
+
     # Managed Redis (Render, Upstash, Redis Cloud) hands out a single connection
     # string, often rediss:// with credentials embedded. When set it wins over
     # the discrete host/port/password fields above.

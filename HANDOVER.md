@@ -239,6 +239,45 @@ Render: `ENV=staging` **first**, then `DEV_AUTH_BYPASS=true`. Login becomes: any
 phone → any military ID → code `000000`. Setting the bypass while
 `ENV=production` makes the service refuse to start — by design.
 
+**5.0 Real phone numbers do not work yet — and it is configuration, not code.**
+
+Only Firebase *test* numbers sign in today. Two reasons, both in
+`frontend/android/app/google-services.json`:
+
+1. It is registered for package `com.example.ironlink`. The app's actual
+   `applicationId` is `com.ironlink.app` (see `android/app/build.gradle.kts`).
+2. It contains zero `oauth_client` entries, so no signing fingerprint is
+   registered. Firebase cannot attest the app, and real-number verification is
+   refused. Test numbers skip attestation entirely, which is exactly why they
+   are the only ones that work.
+
+Fix, in the Firebase console for project `ironlink-1fd4c`:
+
+- Project Settings → Your apps → Add app → Android, package `com.ironlink.app`
+- Add the debug signing fingerprints:
+  - SHA-1: `A0:FC:23:AC:84:C5:72:B8:F8:1C:E1:A2:87:95:D8:B2:0F:C2:4B:C7`
+  - SHA-256: `DF:F4:D6:99:5E:B5:BF:15:29:BD:DD:0C:65:5A:E1:6B:DB:41:67:43:9C:09:2A:DC:E7:5E:C5:30:6F:F6:4D:F2`
+- Download the new `google-services.json` over the existing one
+- Enable the Play Integrity API for the project
+
+Release builds will need their own SHA once release signing exists — there is
+still a TODO for it in `android/app/build.gradle.kts`, so release APKs are
+signed with the debug key today.
+
+The code half is done: `POST /auth/register-firebase` lets a verified number
+create its own account, so no phone number ever needs adding by hand again.
+The military ID is *set* at registration and remains the second factor at
+every later sign-in. Admission policy is two flags —
+`SELF_REGISTRATION_ENABLED` and `SELF_REGISTRATION_AUTO_APPROVE`; with
+auto-approval off, an account registers as `PENDING` and is told so plainly
+rather than being handed a token that does not work.
+
+**Worth deciding deliberately:** auto-approval means anyone who controls a
+phone number is inside, and the military ID they type is one they chose rather
+than one anyone verified. That is right for a consumer messenger; for this
+product it is a policy call, which is why it is a flag and not a hard-coded
+default.
+
 **5.2 End-to-end encryption — implemented for secret chats, RESOLVED with one
 caveat.**
 The server-side mock is gone. Encryption is now real Signal Protocol (X3DH +

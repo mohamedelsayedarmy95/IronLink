@@ -21,6 +21,13 @@ class UserStatus(str, Enum):
     SUSPENDED = "suspended"
     DEACTIVATED = "deactivated"
 
+    #: Registered with a verified phone number, but not yet admitted.
+    #:
+    #: Distinct from SUSPENDED, which is a decision taken about someone who
+    #: was already in. PENDING is the absence of a decision, and only this
+    #: state can be approved into ACTIVE.
+    PENDING = "pending"
+
 
 class UserRole(str, Enum):
     SOLDIER = "soldier"

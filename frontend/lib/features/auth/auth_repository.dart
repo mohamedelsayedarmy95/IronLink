@@ -164,6 +164,40 @@ class AuthRepository {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
+  /// Registers a new account from a verified phone number.
+  ///
+  /// The number is not sent: the server reads it from the token, so a client
+  /// cannot register a number it does not control. The military ID is *set*
+  /// here and becomes the second factor for every later sign-in.
+  ///
+  /// Returns null when the account was created but needs an administrator's
+  /// approval before it can be used.
+  Future<AuthUser?> register({
+    required String idToken,
+    required String fullName,
+    required String militaryId,
+    required String deviceFingerprint,
+  }) async {
+    final res = await _client.dio.post<Map<String, dynamic>>(
+      '/auth/register-firebase',
+      data: {
+        'id_token': idToken,
+        'full_name': fullName,
+        'military_id': militaryId,
+        'device_fingerprint': deviceFingerprint,
+      },
+    );
+    final data = res.data!;
+    if (data['approved'] != true) return null;
+
+    final session = data['session'] as Map<String, dynamic>;
+    await _client.saveTokens(
+      access: session['access_token'] as String,
+      refresh: session['refresh_token'] as String,
+    );
+    return AuthUser.fromJson(session['user'] as Map<String, dynamic>);
+  }
+
   /// Classifies a backend-request failure for the auth screen to localize.
   /// [detail] carries through the server's raw detail string, if any, since
   /// that text comes from the API (already whatever language it replies in)
