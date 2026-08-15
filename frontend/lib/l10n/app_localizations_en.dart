@@ -1173,4 +1173,52 @@ class LEn extends L {
 
   @override
   String get voiceNoteTooShort => 'Hold to record';
+
+  @override
+  String get groupNoMessages => 'No messages yet';
+
+  @override
+  String get groupMessageUnreadable => 'Message could not be decrypted';
+
+  @override
+  String get groupNoLongerMember => 'You are no longer a member of this group';
+
+  @override
+  String get groupAnnouncementOnly => 'Only admins can post in this group';
+
+  @override
+  String get groupEncryptionNotice =>
+      'Messages in this group are end-to-end encrypted. The server routes them and cannot read them.';
+
+  @override
+  String get groupRotationNotice =>
+      'When someone joins or leaves, everyone\'s keys change — so a person who leaves cannot read what is said afterwards.';
+
+  @override
+  String groupMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+      zero: 'No members',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get groupChat => 'Group chat';
+
+  @override
+  String get leaveGroup => 'Leave group';
+
+  @override
+  String get leaveGroupConfirm =>
+      'You will stop receiving messages from this group, and will not be able to read what is said after you leave.';
+
+  @override
+  String get groupLeft => 'You left the group';
+
+  @override
+  String get ownerMustTransfer => 'Hand over ownership before leaving';
 }

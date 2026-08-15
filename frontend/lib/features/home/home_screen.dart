@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api_client.dart';
+import '../../core/crypto/group_signal.dart';
 import '../../core/crypto/key_repository.dart';
 import '../../core/crypto/signal.dart';
 import '../../core/push_service.dart';
@@ -37,11 +38,23 @@ class HomeScreen extends StatelessWidget {
     // Provided here rather than in main.dart because the service is scoped to
     // a signed-in user: its key material belongs to this account, and the
     // store refuses to hand another account's identity to it.
-    return RepositoryProvider(
-      create: (ctx) => SignalService(
-        user.id,
-        keys: KeyRepository(ctx.read<ApiClient>()),
-      ),
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider(
+          create: (ctx) => SignalService(
+            user.id,
+            keys: KeyRepository(ctx.read<ApiClient>()),
+          ),
+        ),
+        // Shares the pairwise service, because sender keys are distributed
+        // over its one-to-one sessions.
+        RepositoryProvider(
+          create: (ctx) => GroupSignalService(
+            userId: user.id,
+            pairwise: ctx.read<SignalService>(),
+          ),
+        ),
+      ],
       child: _HomeView(user: user),
     );
   }
@@ -225,7 +238,10 @@ class _HomeScreenState extends State<_HomeView> {
                     ws: context.read<WsService>(),
                     myId: widget.user.id,
                   ),
-                1 => GroupsScreen(repo: context.read<GroupsRepository>()),
+                1 => GroupsScreen(
+                    repo: context.read<GroupsRepository>(),
+                    myId: widget.user.id,
+                  ),
                 2 => Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,

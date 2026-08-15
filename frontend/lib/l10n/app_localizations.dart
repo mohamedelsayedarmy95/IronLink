@@ -2178,6 +2178,78 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'اضغط مطوّلاً للتسجيل'**
   String get voiceNoteTooShort;
+
+  /// No description provided for @groupNoMessages.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد رسائل بعد'**
+  String get groupNoMessages;
+
+  /// No description provided for @groupMessageUnreadable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فك تشفير الرسالة'**
+  String get groupMessageUnreadable;
+
+  /// No description provided for @groupNoLongerMember.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تعد عضوًا في هذه المجموعة'**
+  String get groupNoLongerMember;
+
+  /// No description provided for @groupAnnouncementOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'النشر في هذه المجموعة للمسؤولين فقط'**
+  String get groupAnnouncementOnly;
+
+  /// No description provided for @groupEncryptionNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسائل هذه المجموعة مشفّرة من طرف إلى طرف. الخادم يوجّهها ولا يستطيع قراءتها.'**
+  String get groupEncryptionNotice;
+
+  /// No description provided for @groupRotationNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'عند انضمام أو خروج أي شخص تتغيّر مفاتيح الجميع، فلا يستطيع من يخرج قراءة ما يُقال بعد ذلك.'**
+  String get groupRotationNotice;
+
+  /// No description provided for @groupMembersCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =0{لا أعضاء} =1{عضو واحد} =2{عضوان} few{{count} أعضاء} other{{count} عضوًا}}'**
+  String groupMembersCount(int count);
+
+  /// No description provided for @groupChat.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثة المجموعة'**
+  String get groupChat;
+
+  /// No description provided for @leaveGroup.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغادرة المجموعة'**
+  String get leaveGroup;
+
+  /// No description provided for @leaveGroupConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'لن تصلك رسائل هذه المجموعة بعد الآن، ولن تستطيع قراءة ما يُقال بعد مغادرتك.'**
+  String get leaveGroupConfirm;
+
+  /// No description provided for @groupLeft.
+  ///
+  /// In ar, this message translates to:
+  /// **'غادرت المجموعة'**
+  String get groupLeft;
+
+  /// No description provided for @ownerMustTransfer.
+  ///
+  /// In ar, this message translates to:
+  /// **'سلّم ملكية المجموعة قبل المغادرة'**
+  String get ownerMustTransfer;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

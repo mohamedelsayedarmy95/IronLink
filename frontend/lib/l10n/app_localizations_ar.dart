@@ -1157,4 +1157,54 @@ class LAr extends L {
 
   @override
   String get voiceNoteTooShort => 'اضغط مطوّلاً للتسجيل';
+
+  @override
+  String get groupNoMessages => 'لا توجد رسائل بعد';
+
+  @override
+  String get groupMessageUnreadable => 'تعذّر فك تشفير الرسالة';
+
+  @override
+  String get groupNoLongerMember => 'لم تعد عضوًا في هذه المجموعة';
+
+  @override
+  String get groupAnnouncementOnly => 'النشر في هذه المجموعة للمسؤولين فقط';
+
+  @override
+  String get groupEncryptionNotice =>
+      'رسائل هذه المجموعة مشفّرة من طرف إلى طرف. الخادم يوجّهها ولا يستطيع قراءتها.';
+
+  @override
+  String get groupRotationNotice =>
+      'عند انضمام أو خروج أي شخص تتغيّر مفاتيح الجميع، فلا يستطيع من يخرج قراءة ما يُقال بعد ذلك.';
+
+  @override
+  String groupMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عضوًا',
+      few: '$count أعضاء',
+      two: 'عضوان',
+      one: 'عضو واحد',
+      zero: 'لا أعضاء',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get groupChat => 'محادثة المجموعة';
+
+  @override
+  String get leaveGroup => 'مغادرة المجموعة';
+
+  @override
+  String get leaveGroupConfirm =>
+      'لن تصلك رسائل هذه المجموعة بعد الآن، ولن تستطيع قراءة ما يُقال بعد مغادرتك.';
+
+  @override
+  String get groupLeft => 'غادرت المجموعة';
+
+  @override
+  String get ownerMustTransfer => 'سلّم ملكية المجموعة قبل المغادرة';
 }

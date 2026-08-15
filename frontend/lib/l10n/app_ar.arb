@@ -555,5 +555,24 @@
   "play": "تشغيل",
   "pause": "إيقاف مؤقت",
   "recordVoiceNote": "اضغط مطوّلاً لتسجيل رسالة صوتية",
-  "voiceNoteTooShort": "اضغط مطوّلاً للتسجيل"
+  "voiceNoteTooShort": "اضغط مطوّلاً للتسجيل",
+  "groupNoMessages": "لا توجد رسائل بعد",
+  "groupMessageUnreadable": "تعذّر فك تشفير الرسالة",
+  "groupNoLongerMember": "لم تعد عضوًا في هذه المجموعة",
+  "groupAnnouncementOnly": "النشر في هذه المجموعة للمسؤولين فقط",
+  "groupEncryptionNotice": "رسائل هذه المجموعة مشفّرة من طرف إلى طرف. الخادم يوجّهها ولا يستطيع قراءتها.",
+  "groupRotationNotice": "عند انضمام أو خروج أي شخص تتغيّر مفاتيح الجميع، فلا يستطيع من يخرج قراءة ما يُقال بعد ذلك.",
+  "groupMembersCount": "{count, plural, =0{لا أعضاء} =1{عضو واحد} =2{عضوان} few{{count} أعضاء} other{{count} عضوًا}}",
+  "@groupMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupChat": "محادثة المجموعة",
+  "leaveGroup": "مغادرة المجموعة",
+  "leaveGroupConfirm": "لن تصلك رسائل هذه المجموعة بعد الآن، ولن تستطيع قراءة ما يُقال بعد مغادرتك.",
+  "groupLeft": "غادرت المجموعة",
+  "ownerMustTransfer": "سلّم ملكية المجموعة قبل المغادرة"
 }

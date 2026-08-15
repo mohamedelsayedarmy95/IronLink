@@ -296,10 +296,27 @@ Two consequences worth knowing:
   one place a downgrade could hide, so it requires the exact envelope shape,
   a known version, and a known message type.
 
-**Still not encrypted: group messages.** Pairwise sessions do not cover a
-group; that needs sender keys. There is no group message UI yet either, so
-nothing currently misrepresents itself — but that is the gap to close before
-groups ship.
+**Group messages are encrypted too, with sender keys.** A group message is
+encrypted once with a key belonging to the sender that every member holds a
+copy of — encrypting once per member would cost O(members) per message.
+
+The consequence, and the thing group encryption usually gets wrong: a member
+who leaves still holds that key, so removing them from the member list does
+not remove their access. Only rotation ends it.
+
+Rotation here is structural rather than remembered. `Group.members_epoch`
+bumps on every membership change, and the epoch is part of the sender key's
+*name* (`SenderKeyName` scope is `groupId@epoch`), so a changed epoch is
+necessarily a different key — there is no code path where the epoch moves and
+the old key is still used, because one cannot be written.
+
+Distribution messages ride the existing pairwise sessions, one ciphertext per
+recipient, which is what stops the server substituting its own key.
+
+The honest limit: a removed member can still read what was sent *before* they
+left. Nothing retracts a message someone already received, and
+`group_signal_test.dart` says so explicitly rather than leaving a better
+impression.
 
 **5.3 The summary endpoint sends conversation text to Hugging Face.**
 The client posts message bodies because the server holds no plaintext. In a
@@ -354,7 +371,8 @@ not put real user data on it.
 [x] Real E2EE for secret chats (Signal Protocol)       P0
 [x] Encrypt attachment bytes (AES-256-GCM)             P0
 [x] Make encryption the default, not opt-in            P1
-[ ] Group messages: sender keys (pairwise won't do)    P1
+[x] Group messages: sender keys + epoch rotation       P1
+[ ] Group attachments and voice notes (text only now)  P1
 [x] Voice notes: real upload, real waveform, encrypted P0
 [ ] Opt-in gate on AI summary                          P0
 [ ] Release keystore + signing config                  P1

@@ -11,12 +11,14 @@ import 'entry/screens/group_entry_screen.dart';
 import 'entry/screens/group_entry_settings_screen.dart';
 import 'entry/screens/pending_requests_screen.dart';
 import 'groups_repository.dart';
+import 'screens/group_chat_screen.dart';
 
 /// My-groups list; tapping a group shows its members with rank icons.
 class GroupsScreen extends StatefulWidget {
-  const GroupsScreen({super.key, required this.repo});
+  const GroupsScreen({super.key, required this.repo, required this.myId});
 
   final GroupsRepository repo;
+  final String myId;
 
   @override
   State<GroupsScreen> createState() => _GroupsScreenState();
@@ -63,12 +65,13 @@ class _GroupsScreenState extends State<GroupsScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, i) => _GroupCard(
               group: groups[i],
-              // A member sees who else is in the group; anyone without a role
-              // is looking at a group they have not joined, so the entry
-              // screen is the useful destination.
+              // A member goes to the conversation, which is what a group is
+              // for; anyone without a role is looking at a group they have
+              // not joined, so the entry screen is the useful destination.
               onTap: () => groups[i].myRole == null
                   ? _openEntry(context, groups[i])
-                  : _showMembers(context, groups[i]),
+                  : _openChat(context, groups[i]),
+              onShowMembers: () => _showMembers(context, groups[i]),
               onReviewRequests: _canReview(groups[i])
                   ? () => _openRequests(context, groups[i])
                   : null,
@@ -89,6 +92,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
   /// would only produce a 403 they can do nothing about.
   static bool _canReview(GroupInfo group) =>
       const {'moderator', 'admin', 'owner'}.contains(group.myRole);
+
+  void _openChat(BuildContext context, GroupInfo group) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GroupChatScreen(group: group, myId: widget.myId),
+      ),
+    );
+  }
 
   static bool _canConfigure(GroupInfo group) =>
       const {'admin', 'owner'}.contains(group.myRole);
@@ -196,12 +207,17 @@ class _GroupCard extends StatelessWidget {
   const _GroupCard({
     required this.group,
     required this.onTap,
+    this.onShowMembers,
     this.onReviewRequests,
     this.onOpenSettings,
   });
 
   final GroupInfo group;
   final VoidCallback onTap;
+
+  /// Opening the group now goes to the conversation, so the member list
+  /// needs its own way in.
+  final VoidCallback? onShowMembers;
 
   /// Null for members, who cannot review entry requests.
   final VoidCallback? onReviewRequests;
@@ -268,6 +284,16 @@ class _GroupCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onShowMembers != null && group.myRole != null)
+                IconButton(
+                  tooltip: L.of(context).groupMembersCount(group.memberCount),
+                  icon: const Icon(IronIcons.groups,
+                      size: IronIcons.sizeInline),
+                  color: IronColors.textLo,
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: onShowMembers,
+                ),
               if (onOpenSettings != null)
                 IconButton(
                   tooltip: L.of(context).entrySettingsTitle,
@@ -289,7 +315,9 @@ class _GroupCard extends StatelessWidget {
                       const BoxConstraints(minWidth: 48, minHeight: 48),
                   onPressed: onReviewRequests,
                 ),
-              if (onOpenSettings == null && onReviewRequests == null)
+              if (onOpenSettings == null &&
+                  onReviewRequests == null &&
+                  onShowMembers == null)
                 const Icon(IronIcons.forward, color: IronColors.textLo),
             ],
           ),

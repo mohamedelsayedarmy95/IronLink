@@ -90,6 +90,38 @@ class WsService {
         'client_ref': clientRef,
       });
 
+  /// A group message. One ciphertext for the whole group — the server fans
+  /// the same bytes out to every member.
+  void sendGroupText({
+    required String group,
+    required String content,
+    required String clientRef,
+  }) =>
+      send({
+        'type': 'group_text',
+        'group': group,
+        'content': content,
+        'client_ref': clientRef,
+      });
+
+  /// A sender-key distribution message, pairwise encrypted for one member.
+  ///
+  /// Separate from sendText so it can never be mistaken for something the
+  /// sender said: it is key material and is filtered out of history.
+  void sendSenderKey({
+    required String group,
+    required String to,
+    required String content,
+    required String clientRef,
+  }) =>
+      send({
+        'type': 'skdm',
+        'group': group,
+        'to': to,
+        'content': content,
+        'client_ref': clientRef,
+      });
+
   void sendTyping({required String to, required bool typing}) =>
       send({'type': typing ? 'typing_start' : 'typing_stop', 'to': to});
 

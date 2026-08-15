@@ -10,6 +10,7 @@ class GroupInfo {
     required this.isAnnouncement,
     required this.memberCount,
     this.myRole,
+    this.membersEpoch = 1,
   });
 
   final String id;
@@ -19,6 +20,12 @@ class GroupInfo {
   final int memberCount;
   final String? myRole;
 
+  /// Membership version. When this moves, every sender must mint a new
+  /// sender key — otherwise whoever just left keeps reading.
+  final int membersEpoch;
+
+  bool get canPost => !isAnnouncement || myRole == 'admin' || myRole == 'owner';
+
   factory GroupInfo.fromJson(Map<String, dynamic> json) => GroupInfo(
         id: json['id'] as String,
         name: json['name'] as String,
@@ -26,6 +33,7 @@ class GroupInfo {
         isAnnouncement: (json['is_announcement_group'] as bool?) ?? false,
         memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
         myRole: json['my_role'] as String?,
+        membersEpoch: (json['members_epoch'] as num?)?.toInt() ?? 1,
       );
 }
 
@@ -82,4 +90,88 @@ class GroupsRepository {
         GroupMemberInfo.fromJson(j as Map<String, dynamic>)
     ];
   }
+
+  /// One group's current state, chiefly so the epoch can be re-checked
+  /// before sending. Membership can change while a chat screen is open.
+  Future<GroupInfo?> group(String groupId) async {
+    final groups = await myGroups();
+    for (final g in groups) {
+      if (g.id == groupId) return g;
+    }
+    // Not in the list means no longer a member.
+    return null;
+  }
+
+  Future<List<GroupChatMessage>> history(String groupId,
+      {required String myId, int limit = 50}) async {
+    final res = await _api.dio.get<List<dynamic>>(
+      '/groups/$groupId/messages',
+      queryParameters: {'limit': limit},
+      options: await _auth(),
+    );
+    return [
+      for (final j in res.data ?? [])
+        GroupChatMessage.fromJson(j as Map<String, dynamic>, myId: myId)
+    ];
+  }
+
+  Future<void> leave(String groupId) async {
+    await _api.dio.delete<void>(
+      '/groups/$groupId/members/me',
+      options: await _auth(),
+    );
+  }
+
+  Future<void> removeMember(String groupId, String userId) async {
+    await _api.dio.delete<void>(
+      '/groups/$groupId/members/$userId',
+      options: await _auth(),
+    );
+  }
+}
+
+/// A message in a group, as it arrives from the server.
+///
+/// Its content is a sender-key ciphertext until the group service opens it.
+class GroupChatMessage {
+  GroupChatMessage({
+    required this.id,
+    required this.senderId,
+    required this.content,
+    required this.createdAt,
+    required this.isMine,
+    this.kind = 'text',
+    this.deleted = false,
+    this.pending = false,
+    this.encrypted = false,
+    this.senderName,
+  });
+
+  final String id;
+  final String senderId;
+  String? content;
+  final DateTime createdAt;
+  final bool isMine;
+  final String kind;
+  final bool deleted;
+  bool pending;
+
+  /// Whether this message actually arrived encrypted and was verified.
+  bool encrypted;
+
+  /// Filled in from the member list. Groups show who is speaking, which a
+  /// one-to-one chat does not need.
+  String? senderName;
+
+  factory GroupChatMessage.fromJson(Map<String, dynamic> json,
+          {required String myId}) =>
+      GroupChatMessage(
+        id: json['id'] as String,
+        senderId: json['sender_id'] as String,
+        content: json['content_ciphertext'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+        isMine: json['sender_id'] == myId,
+        kind: json['message_type'] as String? ?? 'text',
+        deleted: (json['deleted_for_everyone'] as bool?) ?? false,
+      );
 }

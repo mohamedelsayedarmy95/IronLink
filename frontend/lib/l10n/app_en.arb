@@ -555,5 +555,24 @@
   "play": "Play",
   "pause": "Pause",
   "recordVoiceNote": "Hold to record a voice note",
-  "voiceNoteTooShort": "Hold to record"
+  "voiceNoteTooShort": "Hold to record",
+  "groupNoMessages": "No messages yet",
+  "groupMessageUnreadable": "Message could not be decrypted",
+  "groupNoLongerMember": "You are no longer a member of this group",
+  "groupAnnouncementOnly": "Only admins can post in this group",
+  "groupEncryptionNotice": "Messages in this group are end-to-end encrypted. The server routes them and cannot read them.",
+  "groupRotationNotice": "When someone joins or leaves, everyone's keys change — so a person who leaves cannot read what is said afterwards.",
+  "groupMembersCount": "{count, plural, =0{No members} =1{1 member} other{{count} members}}",
+  "@groupMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupChat": "Group chat",
+  "leaveGroup": "Leave group",
+  "leaveGroupConfirm": "You will stop receiving messages from this group, and will not be able to read what is said after you leave.",
+  "groupLeft": "You left the group",
+  "ownerMustTransfer": "Hand over ownership before leaving"
 }
