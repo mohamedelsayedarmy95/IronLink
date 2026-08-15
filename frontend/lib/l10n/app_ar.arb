@@ -549,5 +549,7 @@
   "secretChatAttachmentWarning": "المرفقات ليست مشفّرة من طرف إلى طرف بعد — التشفير يشمل التعليقات فقط.",
   "attachmentLoadFailed": "تعذّر تحميل المرفق",
   "attachmentTampered": "هذا المرفق تم التلاعب به ولم يُفتح",
-  "attachmentEncrypted": "مرفق مشفّر"
+  "attachmentEncrypted": "مرفق مشفّر",
+  "chatNotEncryptedNotice": "رسائل هذه المحادثة ليست مشفّرة من طرف إلى طرف. هي محميّة أثناء النقل، لكن الخادم يستطيع قراءتها.",
+  "messageNotEncrypted": "غير مشفّرة من طرف إلى طرف"
 }

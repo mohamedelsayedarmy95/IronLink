@@ -139,6 +139,81 @@ void main() {
     });
   });
 
+  group('remembering whether a message was encrypted', () {
+    test('the flag survives a round trip', () async {
+      await store.upsertAll('peer-1', [
+        ChatMessage(
+          id: 'e1',
+          senderId: 'them',
+          content: 'protected',
+          createdAt: DateTime(2026, 1, 1),
+          isMine: false,
+          encrypted: true,
+        ),
+        msg('p1', 'in the clear'),
+      ]);
+
+      final conversation = await store.conversation('peer-1');
+      final byId = {for (final m in conversation) m.id: m};
+
+      // The bubble marks unencrypted messages, and the ciphertext is long
+      // gone by the time a cached row is read back — so if this were not
+      // stored, every restored message would be mislabelled.
+      expect(byId['e1']!.encrypted, isTrue);
+      expect(byId['p1']!.encrypted, isFalse);
+    });
+
+    test('rows from before the column existed are not claimed as encrypted',
+        () async {
+      // v1/v2 rows genuinely were sent in the clear. Defaulting them to
+      // "encrypted" would be a false assurance about real messages.
+      final path = '${await databaseFactory.getDatabasesPath()}'
+          '/ironlink_messages.db';
+      await databaseFactory.deleteDatabase(path);
+
+      final old = await databaseFactory.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 2,
+          onCreate: (db, _) async {
+            await db.execute('''
+              CREATE TABLE messages (
+                id TEXT PRIMARY KEY,
+                peer_id TEXT NOT NULL,
+                peer_name TEXT,
+                sender_id TEXT NOT NULL,
+                content TEXT,
+                kind TEXT NOT NULL DEFAULT 'text',
+                created_at INTEGER NOT NULL,
+                is_mine INTEGER NOT NULL,
+                deleted INTEGER NOT NULL DEFAULT 0
+              )
+            ''');
+          },
+        ),
+      );
+      await old.insert('messages', {
+        'id': 'legacy',
+        'peer_id': 'peer-1',
+        'sender_id': 'them',
+        'content': 'sent before encryption',
+        'kind': 'text',
+        'created_at': DateTime(2026, 1, 1).millisecondsSinceEpoch,
+        'is_mine': 0,
+        'deleted': 0,
+      });
+      await old.close();
+
+      final upgraded = await MessageStore.open();
+      addTearDown(upgraded.close);
+
+      expect(
+        (await upgraded.conversation('peer-1')).single.encrypted,
+        isFalse,
+      );
+    });
+  });
+
   group('naming the conversation a hit came from', () {
     test('a hit carries the peer name', () async {
       await store.upsertAll('peer-1', [msg('1', 'the briefing is at noon')],

@@ -18,6 +18,7 @@ class ChatMessage {
     this.pending = false,
     this.mediaKey,
     this.attachmentKey,
+    this.encrypted = false,
   });
 
   final String id;
@@ -35,6 +36,16 @@ class ChatMessage {
   /// to the local cache would put the key next to nothing worth protecting,
   /// and secret chats are not cached at all.
   AttachmentKey? attachmentKey;
+
+  /// Whether this message actually arrived end-to-end encrypted and was
+  /// verified.
+  ///
+  /// Not "was this chat encrypted" but "was this message" — during the
+  /// transition to encryption-by-default a conversation can hold both, and
+  /// the bubble marks the ones that were not protected. Defaults to false so
+  /// that anything which forgets to set it is treated as unprotected rather
+  /// than claiming a guarantee it never had.
+  final bool encrypted;
   MessageTick tick;
   bool deleted;
   bool pending; // optimistic — awaiting server ack

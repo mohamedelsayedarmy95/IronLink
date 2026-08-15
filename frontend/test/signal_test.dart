@@ -212,6 +212,52 @@ void main() {
     });
   });
 
+  group('telling an encrypted message from a legacy plaintext one', () {
+    // This check decides whether a message is treated as encrypted during
+    // the transition to encryption-by-default. If it were loose, plaintext
+    // would be accepted as though it had been verified — the exact downgrade
+    // the rest of this design refuses.
+
+    test('a real envelope is recognised', () async {
+      final alice = await device('alice');
+      await device('bob');
+
+      expect(SignalService.isEnvelope(await alice.encrypt('hi', 'bob')),
+          isTrue);
+    });
+
+    test('ordinary text is not an envelope', () {
+      for (final text in [
+        'hello',
+        '',
+        'not json {',
+        '{"v":1}',
+        '[]',
+        'null',
+      ]) {
+        expect(SignalService.isEnvelope(text), isFalse, reason: text);
+      }
+      expect(SignalService.isEnvelope(null), isFalse);
+    });
+
+    test('a message that merely looks like JSON is not an envelope', () {
+      // Someone can legitimately send this as chat text.
+      expect(
+        SignalService.isEnvelope('{"v": 1, "t": 3, "b": "hello"}'),
+        isTrue,
+        reason: 'shape matches, so it is treated as an envelope and will '
+            'simply fail to decrypt — which is the safe direction',
+      );
+      expect(SignalService.isEnvelope('{"message": "meeting at 6"}'), isFalse);
+    });
+
+    test('an unknown version or type is not treated as an envelope', () {
+      expect(SignalService.isEnvelope('{"v":2,"t":3,"b":"AA=="}'), isFalse);
+      expect(SignalService.isEnvelope('{"v":1,"t":99,"b":"AA=="}'), isFalse);
+      expect(SignalService.isEnvelope('{"v":1,"t":3}'), isFalse);
+    });
+  });
+
   group('failing closed', () {
     test('plaintext on the wire is refused, not displayed', () async {
       final alice = await device('alice');

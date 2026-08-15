@@ -35,7 +35,7 @@ class AttachmentReady {
 Future<AttachmentReady?> showAttachFlow(
   BuildContext context, {
   required MediaService media,
-  required bool isSecret,
+  required bool encrypted,
 }) async {
   // Obtain WsService from providers to listen for OCR alerts
   final ws = context.read<WsService>();
@@ -111,7 +111,7 @@ Future<AttachmentReady?> showAttachFlow(
         builder: (_) => _ImagePreviewScreen(
           file: File(picked.path),
           media: media,
-          isSecret: isSecret,
+          encrypted: encrypted,
         ),
       ),
     );
@@ -161,12 +161,12 @@ class _ImagePreviewScreen extends StatefulWidget {
   const _ImagePreviewScreen({
     required this.file,
     required this.media,
-    required this.isSecret,
+    required this.encrypted,
   });
 
   final File file;
   final MediaService media;
-  final bool isSecret;
+  final bool encrypted;
 
   @override
   State<_ImagePreviewScreen> createState() => _ImagePreviewScreenState();
@@ -188,7 +188,7 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
       final caption =
           _caption.text.trim().isEmpty ? null : _caption.text.trim();
 
-      if (widget.isSecret) {
+      if (widget.encrypted) {
         // Encrypted before it leaves the device, so what reaches storage is
         // opaque. The server is told so explicitly — otherwise it would
         // re-compress the "image" and destroy it.

@@ -277,9 +277,29 @@ GCM authenticates, so an attachment altered in storage is refused rather than
 displayed — see `attachment_crypto_test.dart`, which covers a flipped byte, a
 truncated file, and the wrong key.
 
-**Still open: encryption is opt-in per chat.** Ordinary chats are transport-
-encrypted only. Making it the default is a product decision, not a technical
-one — the machinery is now in place for it.
+**Encryption is now the default for every direct chat.** It was previously
+gated behind an `isSecret` flag that was `false` at every call site, so none
+of it was reachable. `isSecret` now means only "keep nothing on this device";
+encryption is independent of it and on either way.
+
+Two consequences worth knowing:
+
+- **The local cache is the message history.** A ratchet deletes keys as it
+  advances — that deletion *is* forward secrecy — so the server's stored
+  ciphertext is not decryptable after the fact, and own sent messages never
+  were (they are encrypted to the peer). `ChatBloc` loads from the cache
+  first and only decrypts server history for messages it has not already
+  seen, which is how offline delivery still works.
+- **Mixed history.** Messages sent before this change are plaintext. They are
+  displayed, but the bubble marks them with an open padlock. The check that
+  decides this (`SignalService.isEnvelope`) is strict on purpose: it is the
+  one place a downgrade could hide, so it requires the exact envelope shape,
+  a known version, and a known message type.
+
+**Still not encrypted: group messages.** Pairwise sessions do not cover a
+group; that needs sender keys. There is no group message UI yet either, so
+nothing currently misrepresents itself — but that is the gap to close before
+groups ship.
 
 **5.3 The summary endpoint sends conversation text to Hugging Face.**
 The client posts message bodies because the server holds no plaintext. In a
@@ -333,7 +353,8 @@ not put real user data on it.
 [ ] Real authentication (Firebase Phone Auth)          P0
 [x] Real E2EE for secret chats (Signal Protocol)       P0
 [x] Encrypt attachment bytes (AES-256-GCM)             P0
-[ ] Make encryption the default, not opt-in            P1
+[x] Make encryption the default, not opt-in            P1
+[ ] Group messages: sender keys (pairwise won't do)    P1
 [ ] Voice notes: recorder never uploads (fakes a key)  P0
 [ ] Opt-in gate on AI summary                          P0
 [ ] Release keystore + signing config                  P1

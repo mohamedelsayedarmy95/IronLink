@@ -177,6 +177,31 @@ class SignalService {
 
   static const _envelopeVersion = 1;
 
+  /// Whether [content] is one of our envelopes.
+  ///
+  /// Used to tell an encrypted message from a legacy plaintext one during the
+  /// transition to encryption-by-default. Deliberately strict: it requires
+  /// the exact shape, a known version, and a known message type, so ordinary
+  /// text that happens to be JSON is not mistaken for an envelope.
+  ///
+  /// This check decides whether a message is *treated* as encrypted, never
+  /// whether it is *displayed*. A message that fails it is still shown, but
+  /// visibly marked as unencrypted — otherwise this would be the very
+  /// downgrade path the rest of this class refuses to open.
+  static bool isEnvelope(String? content) {
+    if (content == null || !content.startsWith('{')) return false;
+    try {
+      final parsed = jsonDecode(content);
+      return parsed is Map<String, dynamic> &&
+          parsed['v'] == _envelopeVersion &&
+          parsed['b'] is String &&
+          (parsed['t'] == CiphertextMessage.prekeyType ||
+              parsed['t'] == CiphertextMessage.whisperType);
+    } catch (_) {
+      return false;
+    }
+  }
+
   String _wrap(CiphertextMessage message) => jsonEncode({
         'v': _envelopeVersion,
         't': message.getType(),

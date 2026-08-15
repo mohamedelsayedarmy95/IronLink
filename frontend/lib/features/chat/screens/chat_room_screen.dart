@@ -36,7 +36,10 @@ class ChatRoomScreen extends StatelessWidget {
     required this.peerId,
     required this.peerName,
     required this.peerOnline,
-    required this.isSecret,
+    // Encrypted unless a caller deliberately says otherwise. A protection
+    // that has to be switched on is one most people never get.
+    this.isSecret = false,
+    this.encrypted = true,
   });
 
   final ChatRepository repo;
@@ -45,7 +48,12 @@ class ChatRoomScreen extends StatelessWidget {
   final String peerId;
   final String peerName;
   final bool peerOnline;
+
+  /// Additionally keeps nothing on the device. Encryption is independent of
+  /// this and is on either way.
   final bool isSecret;
+
+  final bool encrypted;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +67,7 @@ class ChatRoomScreen extends StatelessWidget {
         peerId: peerId,
         peerName: peerName,
         isSecret: isSecret,
+        encrypted: encrypted,
         baseUrl: baseUrl,
         api: context.read<ApiClient>(),
         store: context.read<MessageStore>(),
@@ -68,6 +77,7 @@ class ChatRoomScreen extends StatelessWidget {
       )..add(const ChatOpened()),
       child: _ChatRoomView(
         isSecret: isSecret,
+        encrypted: encrypted,
         peerId: peerId,
         peerName: peerName,
         peerOnline: peerOnline,
@@ -79,12 +89,14 @@ class ChatRoomScreen extends StatelessWidget {
 class _ChatRoomView extends StatefulWidget {
   const _ChatRoomView({
     required this.isSecret,
+    required this.encrypted,
     required this.peerId,
     required this.peerName,
     required this.peerOnline,
   });
 
   final bool isSecret;
+  final bool encrypted;
   final String peerId;
   final String peerName;
   final bool peerOnline;
@@ -277,10 +289,10 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
           // the history unencrypted while still claiming to be secret, so
           // the mode is fixed when the chat is opened.
           IconButton(
-            tooltip: widget.isSecret ? t.secretChatOn : t.secretChatOff,
+            tooltip: widget.encrypted ? t.secretChatOn : t.secretChatOff,
             icon: Icon(
-              widget.isSecret ? IronIcons.lock : IronIcons.unlock,
-              color: widget.isSecret
+              widget.encrypted ? IronIcons.lock : IronIcons.unlock,
+              color: widget.encrypted
                   ? IronColors.accentText
                   : IronColors.textTertiary,
             ),
@@ -289,13 +301,13 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
               builder: (ctx) => AlertDialog(
                 backgroundColor: IronColors.navySurface,
                 title: Text(
-                  widget.isSecret ? t.secretChatOn : t.secretChatOff,
+                  widget.encrypted ? t.secretChatOn : t.secretChatOff,
                   style: const TextStyle(color: IronColors.textHi),
                 ),
                 content: Text(
-                  widget.isSecret
-                      ? '${t.secretChatNotice}\n\n${t.secretChatAttachmentWarning}'
-                      : t.secretChatNotice,
+                  widget.encrypted
+                      ? t.secretChatNotice
+                      : t.chatNotEncryptedNotice,
                   style: const TextStyle(color: IronColors.textTertiary),
                 ),
                 actions: [
@@ -447,7 +459,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                       _BlockedBanner(onUnblock: _toggleBlock)
                     else
                       _InputBar(
-                        isSecret: widget.isSecret,
+                        encrypted: widget.encrypted,
                         controller: _input,
                         onChanged: (text) => context
                             .read<ChatBloc>()
@@ -667,6 +679,24 @@ class _MessageBubble extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Marks a message that did not arrive encrypted. Only the
+                  // exception is labelled — badging every protected message
+                  // trains people to ignore the badge, which is precisely
+                  // when the missing one stops being noticed.
+                  if (!message.encrypted && !message.deleted) ...[
+                    Tooltip(
+                      message: t.messageNotEncrypted,
+                      child: Icon(
+                        IronIcons.unlock,
+                        size: 11,
+                        semanticLabel: t.messageNotEncrypted,
+                        color: mine
+                            ? IronColors.navyDeep.withValues(alpha: 0.6)
+                            : IronColors.textLo,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Text(
                     _time(message.createdAt),
                     style: TextStyle(
@@ -866,7 +896,7 @@ class _InputBar extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     required this.onSend,
-    required this.isSecret,
+    required this.encrypted,
   });
 
   final TextEditingController controller;
@@ -874,7 +904,7 @@ class _InputBar extends StatelessWidget {
   final VoidCallback onSend;
 
   /// Decides whether an attachment is encrypted before upload.
-  final bool isSecret;
+  final bool encrypted;
 
   @override
   Widget build(BuildContext context) {
@@ -897,7 +927,7 @@ class _InputBar extends StatelessWidget {
                 final result = await showAttachFlow(
                   context,
                   media: media,
-                  isSecret: isSecret,
+                  encrypted: encrypted,
                 );
                 if (result != null) {
                   bloc.add(MediaSent(

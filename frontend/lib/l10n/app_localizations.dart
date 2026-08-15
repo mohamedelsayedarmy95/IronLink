@@ -2142,6 +2142,18 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'مرفق مشفّر'**
   String get attachmentEncrypted;
+
+  /// No description provided for @chatNotEncryptedNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسائل هذه المحادثة ليست مشفّرة من طرف إلى طرف. هي محميّة أثناء النقل، لكن الخادم يستطيع قراءتها.'**
+  String get chatNotEncryptedNotice;
+
+  /// No description provided for @messageNotEncrypted.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير مشفّرة من طرف إلى طرف'**
+  String get messageNotEncrypted;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

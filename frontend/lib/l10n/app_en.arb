@@ -549,5 +549,7 @@
   "secretChatAttachmentWarning": "Attachments are not yet encrypted end-to-end — only their captions are.",
   "attachmentLoadFailed": "Attachment could not be loaded",
   "attachmentTampered": "This attachment was altered and was not opened",
-  "attachmentEncrypted": "Encrypted attachment"
+  "attachmentEncrypted": "Encrypted attachment",
+  "chatNotEncryptedNotice": "Messages in this chat are not end-to-end encrypted. They are protected in transit, but the server can read them.",
+  "messageNotEncrypted": "Not end-to-end encrypted"
 }

@@ -1154,4 +1154,11 @@ class LEn extends L {
 
   @override
   String get attachmentEncrypted => 'Encrypted attachment';
+
+  @override
+  String get chatNotEncryptedNotice =>
+      'Messages in this chat are not end-to-end encrypted. They are protected in transit, but the server can read them.';
+
+  @override
+  String get messageNotEncrypted => 'Not end-to-end encrypted';
 }

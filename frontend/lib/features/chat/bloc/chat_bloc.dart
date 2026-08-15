@@ -279,6 +279,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     required this.peerId,
     this.peerName,
     bool isSecret = false,
+    bool encrypted = true,
     required String baseUrl,
     required ApiClient api,
     MessageStore? store,
@@ -290,6 +291,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         _signalService = signalService ??
             SignalService(myId, keys: KeyRepository(api)),
         _isSecret = isSecret,
+        // A secret chat is encrypted by definition; the flag only ever adds
+        // to the protection, never removes it.
+        _encrypted = encrypted || isSecret,
         _baseUrl = baseUrl,
         super(const ChatRoomState()) {
     on<ChatOpened>(_onOpened);
@@ -325,6 +329,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   /// conversation it came from without a network call.
   final String? peerName;
 
+  /// Whether messages are end-to-end encrypted. On by default for every
+  /// direct chat — encryption that has to be switched on is encryption most
+  /// people never get.
+  final bool _encrypted;
+
+  /// The stricter mode: additionally never written to the local cache, so
+  /// nothing survives on the device. Costs search and offline history, which
+  /// is why it is not the default rather than encryption being opt-in.
   final bool _isSecret;
   final SignalService _signalService;
 
@@ -362,9 +374,71 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   Timer? _typingDebounce;
   int _refCounter = 0;
 
-  Future<void> _onOpened(ChatOpened e, Emitter<ChatRoomState> emit) async {
+  /// Decrypts a message that came from server history rather than live.
+  ///
+  /// Most already-delivered messages are NOT recoverable from the server: the
+  /// ratchet advances as messages are processed, and a key that has been used
+  /// is deleted — that deletion is what forward secrecy means. Messages that
+  /// queued while this device was offline are still unprocessed and do
+  /// decrypt here, which is how offline delivery works at all.
+  ///
+  /// Own sent messages never decrypt from the server, because they were
+  /// encrypted to the peer and no sender-side copy exists. They are read from
+  /// the local cache instead, which is why that cache is the real history.
+  Future<ChatMessage> _decryptHistoric(ChatMessage m) async {
+    if (!_encrypted || !SignalService.isEnvelope(m.content)) {
+      // Predates encryption, or a peer on an older build. Shown, but the
+      // bubble marks it as unprotected.
+      return m;
+    }
+    if (m.isMine) {
+      m.content = null;
+      return m;
+    }
     try {
-      final history = await _repo.history(peerId, myId: myId);
+      m.content = await _signalService.decrypt(m.content!, peerId);
+      return ChatMessage(
+        id: m.id,
+        senderId: m.senderId,
+        content: m.content,
+        createdAt: m.createdAt,
+        isMine: m.isMine,
+        kind: m.kind,
+        tick: m.tick,
+        deleted: m.deleted,
+        mediaKey: m.mediaKey,
+        encrypted: true,
+      );
+    } catch (_) {
+      // Already consumed, or not for this device. Not an error worth
+      // shouting about — it is the expected cost of forward secrecy.
+      m.content = null;
+      return m;
+    }
+  }
+
+  Future<void> _onOpened(ChatOpened e, Emitter<ChatRoomState> emit) async {
+    // The local cache first: it holds already-decrypted plaintext, is the
+    // only place own sent messages survive, and works with no network.
+    final cached = await _store?.conversation(peerId) ?? const <ChatMessage>[];
+    if (cached.isNotEmpty) {
+      emit(state.copyWith(messages: cached, loading: false));
+    }
+
+    try {
+      final remote = await _repo.history(peerId, myId: myId);
+      final known = {for (final m in cached) m.id};
+
+      final merged = [...cached];
+      for (final m in remote) {
+        // Anything already cached was decrypted when it arrived; decrypting
+        // it again would fail and would count as a replay.
+        if (known.contains(m.id)) continue;
+        merged.add(await _decryptHistoric(m));
+      }
+      merged.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+      final history = merged;
       emit(state.copyWith(messages: history, loading: false));
       _cache(history);
       // Everything from the peer that we just displayed is now read
@@ -378,6 +452,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         add(ChatFetchSummaryStarted());
       }
     } catch (err) {
+      // Cached messages stay on screen: being offline should not empty a
+      // conversation the device can already display.
       emit(state.copyWith(loading: false, error: err.toString()));
     }
   }
@@ -386,7 +462,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     final ref = 'ref_${++_refCounter}';
     String contentToSend = e.content;
 
-    if (_isSecret) {
+    if (_encrypted) {
       try {
         // Opens the session on first use. Encryption failures are NOT
         // swallowed: sending plaintext from a screen the user believes is
@@ -406,14 +482,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       }
     }
 
-    // Optimistic bubble — replaced by the server ack
+    // Optimistic bubble — replaced by the server ack.
+    //
+    // Shows e.content, not contentToSend: once encryption is on, the latter
+    // is the ciphertext envelope, and the sender would watch their own
+    // message appear as a blob of JSON.
     final optimistic = ChatMessage(
       id: ref,
       senderId: myId,
-      content: contentToSend,
+      content: e.content,
       createdAt: DateTime.now(),
       isMine: true,
       pending: true,
+      encrypted: _encrypted,
     );
     _ws.sendText(to: peerId, content: contentToSend, clientRef: ref);
     // Send typing_stop via HTTP when sending a message
@@ -432,7 +513,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     // plaintext caption anyway, so the caption left the device in the clear.
     String? wireContent = e.caption;
 
-    if (_isSecret) {
+    if (_encrypted) {
       // The pointer, the caption, the real MIME type and the attachment's
       // decryption key all travel together inside one envelope. The key in
       // particular must never reach the server: with it, the stored object
@@ -471,6 +552,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       isMine: true,
       kind: e.kind,
       pending: true,
+      encrypted: _encrypted,
+      mediaKey: e.mediaKey,
+      attachmentKey: e.attachmentKey,
     );
     _ws.sendMedia(
       to: peerId,
@@ -523,6 +607,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         final updated = [
           for (final m in state.messages)
             if (m.id == ref)
+              // Carries the media fields and the encrypted flag across:
+              // rebuilding from scratch here used to drop them, which blanked
+              // the sender's own attachment the moment the ack arrived.
               ChatMessage(
                 id: f['message_id'] as String,
                 senderId: myId,
@@ -530,6 +617,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
                 createdAt: DateTime.parse(f['created_at'] as String),
                 isMine: true,
                 kind: m.kind,
+                mediaKey: m.mediaKey,
+                attachmentKey: m.attachmentKey,
+                encrypted: m.encrypted,
               )
             else
               m
@@ -547,22 +637,33 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         if (f['from'] != peerId) return; // other conversation
         String? content = f['content'] as String?;
 
-        if (_isSecret) {
-          try {
-            content = await _signalService.decrypt(content ?? '', peerId);
-          } on DuplicateMessageException {
-            // The ratchet already processed this one. Dropping it is the
-            // point — showing it twice is what a replay is trying to achieve.
-            return;
-          } catch (err) {
-            debugPrint('[signal] decrypt failed: $err');
-            // The previous code kept the undecryptable content and displayed
-            // it. Marking the message as unreadable is the honest outcome:
-            // rendering ciphertext, or worse an attacker's plaintext, as a
-            // normal bubble misrepresents what was verified.
-            content = null;
-            emit(state.copyWith(secureError: SecureChatError.decryptFailed));
+        // Encrypted unless it demonstrably is not. See _isEnvelope: a message
+        // that never went through the ratchet is shown, but marked, rather
+        // than silently rendered as though it had been verified.
+        var wasEncrypted = false;
+
+        if (_encrypted) {
+          if (SignalService.isEnvelope(content)) {
+            try {
+              content = await _signalService.decrypt(content!, peerId);
+              wasEncrypted = true;
+            } on DuplicateMessageException {
+              // The ratchet already processed this one. Dropping it is the
+              // point — showing it twice is what a replay wants.
+              return;
+            } catch (err) {
+              debugPrint('[signal] decrypt failed: $err');
+              // Never fall back to the raw bytes: rendering ciphertext, or
+              // an attacker's plaintext, as a normal bubble misrepresents
+              // what was actually verified.
+              content = null;
+              emit(state.copyWith(secureError: SecureChatError.decryptFailed));
+            }
           }
+          // Not an envelope: either a message from before this device had a
+          // session, or a peer on an older build. Shown with an explicit
+          // "not encrypted" marker on the bubble, so a stripped message can
+          // never pass as a protected one.
         }
 
         final kind = f['kind'] as String? ?? 'text';
@@ -572,7 +673,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         // A secret media message carries its pointer and key inside the
         // envelope rather than in wire fields, so they have to be unpacked
         // after decryption before the message means anything.
-        if (_isSecret && kind != 'text' && content != null) {
+        if (wasEncrypted && kind != 'text' && content != null) {
           try {
             final payload = jsonDecode(content) as Map<String, dynamic>;
             mediaKey = payload['media_key'] as String?;
@@ -597,6 +698,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
           isMine: false,
           mediaKey: mediaKey,
           attachmentKey: attachmentKey,
+          encrypted: wasEncrypted,
           kind: kind,
         );
         emit(state.copyWith(

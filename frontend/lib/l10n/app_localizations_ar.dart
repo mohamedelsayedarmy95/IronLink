@@ -1138,4 +1138,11 @@ class LAr extends L {
 
   @override
   String get attachmentEncrypted => 'مرفق مشفّر';
+
+  @override
+  String get chatNotEncryptedNotice =>
+      'رسائل هذه المحادثة ليست مشفّرة من طرف إلى طرف. هي محميّة أثناء النقل، لكن الخادم يستطيع قراءتها.';
+
+  @override
+  String get messageNotEncrypted => 'غير مشفّرة من طرف إلى طرف';
 }

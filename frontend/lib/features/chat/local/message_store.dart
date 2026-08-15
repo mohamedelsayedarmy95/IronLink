@@ -36,7 +36,7 @@ class MessageStore {
   final Database _db;
 
   static const _fileName = 'ironlink_messages.db';
-  static const _version = 2;
+  static const _version = 3;
 
   static Future<MessageStore> open() async {
     final path = '${await getDatabasesPath()}/$_fileName';
@@ -57,7 +57,12 @@ class MessageStore {
             kind TEXT NOT NULL DEFAULT 'text',
             created_at INTEGER NOT NULL,
             is_mine INTEGER NOT NULL,
-            deleted INTEGER NOT NULL DEFAULT 0
+            deleted INTEGER NOT NULL DEFAULT 0,
+            -- Whether the message actually arrived end-to-end encrypted.
+            -- Persisted because the bubble marks the ones that did not, and
+            -- recomputing it after the fact is impossible: the ciphertext is
+            -- long gone by the time a cached message is read back.
+            encrypted INTEGER NOT NULL DEFAULT 0
           )
         ''');
         // Conversation reads are always "newest first for one peer", so the
@@ -77,6 +82,15 @@ class MessageStore {
         // column is nullable rather than NOT NULL with a placeholder.
         if (from < 2) {
           await db.execute('ALTER TABLE messages ADD COLUMN peer_name TEXT');
+        }
+        if (from < 3) {
+          // Defaults to 0. Rows cached before encryption became the default
+          // genuinely were not encrypted, so claiming otherwise would be a
+          // false assurance about messages that were sent in the clear.
+          await db.execute(
+            'ALTER TABLE messages ADD COLUMN encrypted INTEGER NOT NULL '
+            'DEFAULT 0',
+          );
         }
       },
     );
@@ -113,6 +127,7 @@ class MessageStore {
           'created_at': m.createdAt.millisecondsSinceEpoch,
           'is_mine': m.isMine ? 1 : 0,
           'deleted': m.deleted ? 1 : 0,
+          'encrypted': m.encrypted ? 1 : 0,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -193,6 +208,7 @@ class MessageStore {
         isMine: (r['is_mine'] as int) == 1,
         kind: r['kind'] as String? ?? 'text',
         deleted: (r['deleted'] as int) == 1,
+        encrypted: (r['encrypted'] as int? ?? 0) == 1,
       );
 
   /// Escapes LIKE wildcards so searching for "50%" looks for that literal
