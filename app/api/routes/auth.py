@@ -12,6 +12,8 @@ from app.api.deps import get_current_user
 from app.api.schemas import (
     FirebaseRegisterIn,
     FirebaseVerifyIn,
+    RefreshIn,
+    RefreshOut,
     RegisterOut,
     RequestOtpIn,
     RequestOtpOut,
@@ -387,14 +389,18 @@ async def _issue_login(
         and user.device_fingerprint != device_fingerprint
     )
     user.device_fingerprint = device_fingerprint
-
-    # Rotate token_version — invalidates ALL previously issued tokens
-    user.token_version += 1
     user.last_seen_at = datetime.now(timezone.utc)
 
-    access_token = create_access_token(user.id, user.token_version, user.role)
-    refresh_token = generate_refresh_token()
+    # token_version is deliberately NOT bumped here.
+    #
+    # It used to be, which invalidated every other device's token on each
+    # sign-in — so adding a tablet silently signed you out on your phone.
+    # That contradicted this file's own remote-kick design, where "other
+    # devices of the same user are untouched". Per-device revocation is now
+    # the session's job (see get_current_user); token_version stays as the
+    # account-wide lever for a compromise.
 
+    refresh_token = generate_refresh_token()
     session = UserSession(
         user_id=user.id,
         refresh_token_hash=hash_refresh_token(refresh_token),
@@ -404,6 +410,13 @@ async def _issue_login(
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
     db.add(session)
+    # Flushed before minting: the token carries the session id, so the row
+    # has to exist first.
+    await db.flush()
+
+    access_token = create_access_token(
+        user.id, user.token_version, user.role, session.id
+    )
 
     db.add(AuditLog(
         actor_id=user.id,
@@ -442,6 +455,101 @@ async def _issue_login(
 # after first use or 30 seconds. Strictly more secure than the original request.
 
 WS_TICKET_TTL_SECONDS = 30
+
+
+@router.post("/refresh", response_model=RefreshOut)
+async def refresh_access_token(
+    body: RefreshIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> RefreshOut:
+    """Exchange a refresh token for a new access token.
+
+    This endpoint did not exist. Access tokens live an hour, so without it
+    every user was signed out after sixty minutes and had to redo SMS
+    verification — the refresh token was generated, hashed, stored on both
+    sides, and then never used by anything.
+
+    The refresh token is rotated on each use rather than reused. That makes a
+    stolen one usable at most once, and it makes the theft detectable: if a
+    token that has already been exchanged is presented again, either the
+    thief or the legitimate device is replaying it, and there is no way to
+    tell which. The session is revoked, which signs that device out and
+    forces a fresh login. Being signed out is a smaller harm than an attacker
+    holding a renewable session.
+    """
+    ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")[:512]
+
+    invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Session expired. Sign in again.",
+    )
+
+    now = datetime.now(timezone.utc)
+    token_hash = hash_refresh_token(body.refresh_token)
+
+    session = await db.scalar(
+        select(UserSession).where(UserSession.refresh_token_hash == token_hash)
+    )
+
+    if session is None:
+        # Not the live token. If it is the one this session just replaced,
+        # somebody is replaying an already-exchanged token — either a thief
+        # or the real device, and there is no way to tell which. The session
+        # is revoked, which costs one re-login and denies an attacker a
+        # renewable foothold.
+        replayed = await db.scalar(
+            select(UserSession).where(
+                UserSession.previous_refresh_token_hash == token_hash,
+                UserSession.revoked_at.is_(None),
+            )
+        )
+        if replayed is not None:
+            replayed.revoked_at = now
+            db.add(AuditLog(
+                actor_id=replayed.user_id,
+                action=AuditAction.SESSION_REVOKED,
+                resource_type="user_session",
+                resource_id=str(replayed.id),
+                ip_address=ip,
+                user_agent=user_agent,
+                success=False,
+                error_code="refresh_token_reuse",
+            ))
+            await db.commit()
+            logger.warning(
+                "refresh_token_reuse", session_id=str(replayed.id)
+            )
+        raise invalid
+
+    expires_at = session.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if session.revoked_at is not None or expires_at <= now:
+        raise invalid
+
+    user = await db.scalar(select(User).where(User.id == session.user_id))
+    if user is None or user.status != UserStatus.ACTIVE:
+        raise invalid
+
+    new_refresh = generate_refresh_token()
+    session.previous_refresh_token_hash = session.refresh_token_hash
+    session.refresh_token_hash = hash_refresh_token(new_refresh)
+    session.last_active_at = now
+    # Sliding expiry: a device in daily use should not be signed out on the
+    # seventh day for no reason.
+    session.expires_at = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    user.last_seen_at = now
+    await db.commit()
+
+    return RefreshOut(
+        access_token=create_access_token(
+            user.id, user.token_version, user.role, session.id
+        ),
+        refresh_token=new_refresh,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
 
 
 @router.get("/me", response_model=UserOut)

@@ -44,6 +44,17 @@ class UserSession(Base):
         comment="SHA-256 of the refresh token — never store plaintext",
     )
 
+    #: The hash this one replaced, kept solely to notice a replay.
+    #:
+    #: Rotation alone makes a stolen refresh token usable at most once, but it
+    #: cannot tell theft from an ordinary retry: once the hash is overwritten,
+    #: the old token simply matches nothing. Keeping the previous hash turns
+    #: that silence into a signal — a token that was already exchanged is
+    #: being presented again, by someone.
+    previous_refresh_token_hash: Mapped[str | None] = mapped_column(
+        Text, nullable=True, index=True
+    )
+
     # ── Device & network context ───────────────────────────────────────────────
     ip_address: Mapped[str] = mapped_column(String(45), nullable=False)  # IPv6-safe
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)

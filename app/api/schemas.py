@@ -99,6 +99,23 @@ class VerifyOut(BaseModel):
     user: UserOut
 
 
+class RefreshIn(BaseModel):
+    refresh_token: str = Field(..., min_length=20, max_length=512)
+
+
+class RefreshOut(BaseModel):
+    """A fresh access token, and the refresh token that replaces the one used.
+
+    The refresh token is rotated on every exchange, so the caller must store
+    the new one — the old is dead the moment this returns.
+    """
+
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
 class RegisterOut(BaseModel):
     """Either a session, or a plain statement that approval is pending.
 
