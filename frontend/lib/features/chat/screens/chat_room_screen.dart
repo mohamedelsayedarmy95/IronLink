@@ -13,8 +13,10 @@ import '../../../core/ws_service.dart';
 import '../../../core/widgets/ticker.dart';
 import '../../../l10n/app_localizations.dart';
 import '../bloc/chat_bloc.dart';
+import '../ai_consent_repository.dart';
 import '../chat_repository.dart';
 import '../local/message_store.dart';
+import '../widgets/ai_consent_sheet.dart';
 import '../widgets/attach_flow.dart';
 import '../widgets/encrypted_image.dart';
 import '../widgets/smart_replies.dart';
@@ -118,6 +120,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   void initState() {
     super.initState();
     _loadBlockState();
+    _loadAiConsent();
   }
 
   @override
@@ -128,6 +131,43 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   }
 
   ModerationRepository get _moderation => context.read<ModerationRepository>();
+
+  /// Assumed absent until the server says otherwise, so nothing is offered
+  /// that would send content before consent is known.
+  AiConsentState _aiConsent = AiConsentState.unknown;
+
+  Future<void> _loadAiConsent() async {
+    try {
+      final state = await context
+          .read<AiConsentRepository>()
+          .read(peerId: widget.peerId);
+      if (!mounted) return;
+      setState(() => _aiConsent = state);
+    } catch (_) {
+      // Left as "not consented". A failed check must never be read as
+      // permission to transmit.
+    }
+  }
+
+  Future<void> _openAiConsent() async {
+    final updated = await showAiConsentSheet(
+      context,
+      repository: context.read<AiConsentRepository>(),
+      current: _aiConsent,
+      peerId: widget.peerId,
+      conversationName: widget.peerName,
+    );
+    if (updated == null || !mounted) return;
+    setState(() => _aiConsent = updated);
+  }
+
+  void _summarise() {
+    if (!_aiConsent.canUseAi) {
+      _toast(L.of(context).aiConsentRequired);
+      return;
+    }
+    context.read<ChatBloc>().add(ChatFetchSummaryStarted());
+  }
 
   Future<void> _loadBlockState() async {
     try {
@@ -324,7 +364,11 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
             icon: const Icon(IronIcons.more, color: IronColors.textHi),
             color: IronColors.navySurface,
             onSelected: (value) {
-              if (value == 'block') {
+              if (value == 'ai') {
+                _openAiConsent();
+              } else if (value == 'summarise') {
+                _summarise();
+              } else if (value == 'block') {
                 _toggleBlock();
               } else if (value == 'report') {
                 // Reporting the person rather than one message: no id and no
@@ -333,6 +377,35 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
               }
             },
             itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'ai',
+                child: Row(
+                  children: [
+                    const Icon(IronIcons.info,
+                        size: IronIcons.sizeCompact,
+                        color: IronColors.textTertiary),
+                    const SizedBox(width: 10),
+                    Text(t.aiFeatures,
+                        style: const TextStyle(color: IronColors.textHi)),
+                  ],
+                ),
+              ),
+              // Only offered once everyone has agreed. Showing it otherwise
+              // would be an action that always fails.
+              if (_aiConsent.canUseAi)
+                PopupMenuItem(
+                  value: 'summarise',
+                  child: Row(
+                    children: [
+                      const Icon(IronIcons.keywordSearch,
+                          size: IronIcons.sizeCompact,
+                          color: IronColors.textTertiary),
+                      const SizedBox(width: 10),
+                      Text(t.aiSummarise,
+                          style: const TextStyle(color: IronColors.textHi)),
+                    ],
+                  ),
+                ),
               PopupMenuItem(
                 value: 'report',
                 child: Row(

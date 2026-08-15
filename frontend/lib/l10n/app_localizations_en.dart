@@ -1225,4 +1225,50 @@ class LEn extends L {
   @override
   String get verificationTimedOut =>
       'The verification service did not respond. Your connection is fine — this usually means the app is not set up for phone sign-in yet.';
+
+  @override
+  String get aiConsentTitle => 'AI features in this conversation';
+
+  @override
+  String get aiConsentWhatHappens =>
+      'To summarise, translate or suggest replies, this app decrypts the messages and sends them to an AI provider outside IronLink. They leave your device and are read by a third party.';
+
+  @override
+  String get aiConsentEncryptionNote =>
+      'Every other message in this app is end-to-end encrypted and unreadable by our server. These features are the one exception, which is why they are off unless you ask for them.';
+
+  @override
+  String get aiConsentToggle => 'Allow AI features here';
+
+  @override
+  String aiConsentToggleHint(String name) {
+    return 'Applies only to your conversation with $name.';
+  }
+
+  @override
+  String aiConsentWaitingOn(String names) {
+    return 'Waiting for $names to agree. Until then nothing is sent.';
+  }
+
+  @override
+  String get aiConsentWaitingGeneric =>
+      'Waiting for the other participants to agree. Until then nothing is sent.';
+
+  @override
+  String get aiConsentEveryoneAgreed =>
+      'Everyone has agreed. AI features are available here.';
+
+  @override
+  String get aiConsentWithdrawNote =>
+      'You can withdraw at any time. That stops anything further being sent, but cannot recall what was already sent.';
+
+  @override
+  String get aiConsentRequired =>
+      'Everyone in this conversation has to agree before AI features can be used.';
+
+  @override
+  String get aiFeatures => 'AI features';
+
+  @override
+  String get aiSummarise => 'Summarise conversation';
 }

@@ -2256,6 +2256,78 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'خدمة التحقق لم تستجب. اتصالك سليم — غالبًا التطبيق لسه غير مُهيّأ لتسجيل الدخول بالهاتف.'**
   String get verificationTimedOut;
+
+  /// No description provided for @aiConsentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مميزات الذكاء الاصطناعي في هذه المحادثة'**
+  String get aiConsentTitle;
+
+  /// No description provided for @aiConsentWhatHappens.
+  ///
+  /// In ar, this message translates to:
+  /// **'للتلخيص أو الترجمة أو اقتراح الردود، يفك التطبيق تشفير الرسائل ويرسلها إلى مزوّد ذكاء اصطناعي خارج IronLink. أي أنها تغادر جهازك ويقرأها طرف ثالث.'**
+  String get aiConsentWhatHappens;
+
+  /// No description provided for @aiConsentEncryptionNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل رسالة أخرى في التطبيق مشفّرة من طرف إلى طرف ولا يستطيع خادمنا قراءتها. هذه المميزات هي الاستثناء الوحيد، ولهذا فهي مغلقة ما لم تطلبها.'**
+  String get aiConsentEncryptionNote;
+
+  /// No description provided for @aiConsentToggle.
+  ///
+  /// In ar, this message translates to:
+  /// **'السماح بمميزات الذكاء الاصطناعي هنا'**
+  String get aiConsentToggle;
+
+  /// No description provided for @aiConsentToggleHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ينطبق على محادثتك مع {name} فقط.'**
+  String aiConsentToggleHint(String name);
+
+  /// No description provided for @aiConsentWaitingOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'في انتظار موافقة {names}. حتى ذلك الحين لا يُرسل أي شيء.'**
+  String aiConsentWaitingOn(String names);
+
+  /// No description provided for @aiConsentWaitingGeneric.
+  ///
+  /// In ar, this message translates to:
+  /// **'في انتظار موافقة بقية المشاركين. حتى ذلك الحين لا يُرسل أي شيء.'**
+  String get aiConsentWaitingGeneric;
+
+  /// No description provided for @aiConsentEveryoneAgreed.
+  ///
+  /// In ar, this message translates to:
+  /// **'وافق الجميع. المميزات متاحة في هذه المحادثة.'**
+  String get aiConsentEveryoneAgreed;
+
+  /// No description provided for @aiConsentWithdrawNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك سحب الموافقة في أي وقت. هذا يوقف إرسال أي شيء بعدها، لكنه لا يستعيد ما أُرسل بالفعل.'**
+  String get aiConsentWithdrawNote;
+
+  /// No description provided for @aiConsentRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب أن يوافق كل من في المحادثة قبل استخدام مميزات الذكاء الاصطناعي.'**
+  String get aiConsentRequired;
+
+  /// No description provided for @aiFeatures.
+  ///
+  /// In ar, this message translates to:
+  /// **'مميزات الذكاء الاصطناعي'**
+  String get aiFeatures;
+
+  /// No description provided for @aiSummarise.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلخيص المحادثة'**
+  String get aiSummarise;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

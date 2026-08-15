@@ -575,5 +575,31 @@
   "leaveGroupConfirm": "You will stop receiving messages from this group, and will not be able to read what is said after you leave.",
   "groupLeft": "You left the group",
   "ownerMustTransfer": "Hand over ownership before leaving",
-  "verificationTimedOut": "The verification service did not respond. Your connection is fine — this usually means the app is not set up for phone sign-in yet."
+  "verificationTimedOut": "The verification service did not respond. Your connection is fine — this usually means the app is not set up for phone sign-in yet.",
+  "aiConsentTitle": "AI features in this conversation",
+  "aiConsentWhatHappens": "To summarise, translate or suggest replies, this app decrypts the messages and sends them to an AI provider outside IronLink. They leave your device and are read by a third party.",
+  "aiConsentEncryptionNote": "Every other message in this app is end-to-end encrypted and unreadable by our server. These features are the one exception, which is why they are off unless you ask for them.",
+  "aiConsentToggle": "Allow AI features here",
+  "aiConsentToggleHint": "Applies only to your conversation with {name}.",
+  "@aiConsentToggleHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConsentWaitingOn": "Waiting for {names} to agree. Until then nothing is sent.",
+  "@aiConsentWaitingOn": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConsentWaitingGeneric": "Waiting for the other participants to agree. Until then nothing is sent.",
+  "aiConsentEveryoneAgreed": "Everyone has agreed. AI features are available here.",
+  "aiConsentWithdrawNote": "You can withdraw at any time. That stops anything further being sent, but cannot recall what was already sent.",
+  "aiConsentRequired": "Everyone in this conversation has to agree before AI features can be used.",
+  "aiFeatures": "AI features",
+  "aiSummarise": "Summarise conversation"
 }

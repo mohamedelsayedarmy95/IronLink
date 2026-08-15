@@ -156,6 +156,15 @@ class Settings(BaseSettings):
     DEV_AUTH_BYPASS: bool = False
     DEV_OTP_CODE: str = "000000"
 
+    # ── AI features ───────────────────────────────────────────────────────────
+    # A single switch to take the AI endpoints out entirely.
+    #
+    # These are the only place message plaintext leaves the device and reaches
+    # a third party (Hugging Face). Consent gates them per conversation, but a
+    # deployment that would rather not offer the choice at all sets this to
+    # false and the endpoints refuse regardless of who agreed.
+    AI_FEATURES_ENABLED: bool = True
+
     # ── Self-registration ─────────────────────────────────────────────────────
     # Whether a phone number that verifies with Firebase may register itself.
     # With it off, accounts have to be created out of band and the app is only

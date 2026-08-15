@@ -1211,4 +1211,50 @@ class LAr extends L {
   @override
   String get verificationTimedOut =>
       'خدمة التحقق لم تستجب. اتصالك سليم — غالبًا التطبيق لسه غير مُهيّأ لتسجيل الدخول بالهاتف.';
+
+  @override
+  String get aiConsentTitle => 'مميزات الذكاء الاصطناعي في هذه المحادثة';
+
+  @override
+  String get aiConsentWhatHappens =>
+      'للتلخيص أو الترجمة أو اقتراح الردود، يفك التطبيق تشفير الرسائل ويرسلها إلى مزوّد ذكاء اصطناعي خارج IronLink. أي أنها تغادر جهازك ويقرأها طرف ثالث.';
+
+  @override
+  String get aiConsentEncryptionNote =>
+      'كل رسالة أخرى في التطبيق مشفّرة من طرف إلى طرف ولا يستطيع خادمنا قراءتها. هذه المميزات هي الاستثناء الوحيد، ولهذا فهي مغلقة ما لم تطلبها.';
+
+  @override
+  String get aiConsentToggle => 'السماح بمميزات الذكاء الاصطناعي هنا';
+
+  @override
+  String aiConsentToggleHint(String name) {
+    return 'ينطبق على محادثتك مع $name فقط.';
+  }
+
+  @override
+  String aiConsentWaitingOn(String names) {
+    return 'في انتظار موافقة $names. حتى ذلك الحين لا يُرسل أي شيء.';
+  }
+
+  @override
+  String get aiConsentWaitingGeneric =>
+      'في انتظار موافقة بقية المشاركين. حتى ذلك الحين لا يُرسل أي شيء.';
+
+  @override
+  String get aiConsentEveryoneAgreed =>
+      'وافق الجميع. المميزات متاحة في هذه المحادثة.';
+
+  @override
+  String get aiConsentWithdrawNote =>
+      'يمكنك سحب الموافقة في أي وقت. هذا يوقف إرسال أي شيء بعدها، لكنه لا يستعيد ما أُرسل بالفعل.';
+
+  @override
+  String get aiConsentRequired =>
+      'يجب أن يوافق كل من في المحادثة قبل استخدام مميزات الذكاء الاصطناعي.';
+
+  @override
+  String get aiFeatures => 'مميزات الذكاء الاصطناعي';
+
+  @override
+  String get aiSummarise => 'تلخيص المحادثة';
 }

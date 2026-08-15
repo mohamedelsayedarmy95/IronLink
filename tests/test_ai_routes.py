@@ -32,11 +32,27 @@ def test_ai_route_registered(path: str) -> None:
 # ── Request / response field contract ──────────────────────────────────────────
 
 CONTRACT = [
-    # (path, request fields, response fields) — mirrors chat_bloc.dart exactly
+    # (path, request fields, response fields) — mirrors chat_bloc.dart exactly.
+    #
+    # peer_id/group_id were added when these endpoints were put behind
+    # consent: without knowing which conversation the text came from, the
+    # server cannot tell whose agreement applies, so there is nothing to
+    # enforce. The client sends them — see test_ai_consent.py.
+    #
+    # The summary endpoint takes its peer_id from the URL, so its body is
+    # unchanged.
     ("/api/v1/chats/{peer_id}/summary", {"messages"}, {"summary"}),
-    ("/api/v1/ai/smart-replies", {"context", "num_replies"}, {"replies"}),
-    ("/api/v1/ai/translate", {"text", "target_lang"}, {"translation"}),
-    ("/api/v1/ai/moderate", {"text"}, {"scores"}),
+    (
+        "/api/v1/ai/smart-replies",
+        {"context", "num_replies", "peer_id", "group_id"},
+        {"replies"},
+    ),
+    (
+        "/api/v1/ai/translate",
+        {"text", "target_lang", "peer_id", "group_id"},
+        {"translation"},
+    ),
+    ("/api/v1/ai/moderate", {"text", "peer_id", "group_id"}, {"scores"}),
 ]
 
 

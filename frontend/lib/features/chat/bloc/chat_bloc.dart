@@ -453,12 +453,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       for (final m in history.where((m) => !m.isMine && m.tick != MessageTick.read)) {
         _ws.sendRead(m.id);
       }
-      // Optionally fetch summary if there are many messages
-      // For now, we can trigger summary fetch if unread count > 20
-      final unreadCount = history.where((m) => !m.isMine && m.tick != MessageTick.read).length;
-      if (unreadCount > 20) {
-        add(ChatFetchSummaryStarted());
-      }
+      // Summarising used to fire automatically here whenever more than 20
+      // messages were unread — which sent the conversation to a third party
+      // on merely opening a chat, with nobody having asked for it and nobody
+      // told. It is now something the user requests, and only after everyone
+      // in the conversation has agreed.
     } catch (err) {
       // Cached messages stay on screen: being offline should not empty a
       // conversation the device can already display.
@@ -844,6 +843,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         body: jsonEncode({
           'context': context,
           'num_replies': 3,
+          // Tells the server which conversation this text came from, so it
+          // can check that everyone in it agreed. Without it there is
+          // nothing to enforce.
+          'peer_id': peerId,
         }),
       );
       if (response.statusCode == 200) {
@@ -882,6 +885,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         body: jsonEncode({
           'text': event.text,
           'target_lang': event.targetLang,
+          'peer_id': peerId,
         }),
       );
       if (response.statusCode == 200) {
@@ -936,6 +940,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         headers: await _authHeaders(),
         body: jsonEncode({
           'text': event.text,
+          'peer_id': peerId,
         }),
       );
       if (response.statusCode == 200) {

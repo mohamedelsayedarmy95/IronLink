@@ -13,6 +13,7 @@ import 'core/ws_service.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/screens/splash_screen.dart';
+import 'features/chat/ai_consent_repository.dart';
 import 'features/chat/chat_repository.dart';
 import 'features/chat/local/message_store.dart';
 import 'features/contacts/contact_sync_service.dart';
@@ -77,6 +78,8 @@ class MilAcademyApp extends StatelessWidget {
                 ContactSyncService(ctx.read<ContactsRepository>())),
         RepositoryProvider(
             create: (ctx) => ModerationRepository(ctx.read<ApiClient>())),
+        RepositoryProvider(
+            create: (ctx) => AiConsentRepository(ctx.read<ApiClient>())),
         RepositoryProvider(
             create: (ctx) => PushService(ctx.read<ApiClient>())),
       ],

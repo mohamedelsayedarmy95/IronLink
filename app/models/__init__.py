@@ -39,6 +39,7 @@ from .contact import (
     DiscoverabilityLevel,
     UserPhoneIndex,
 )
+from .ai_consent import AiConsent, AiScopeType
 from .device_key import OneTimePreKey, UserKeyBundle
 from .moderation import (
     ContentReport,
@@ -86,6 +87,8 @@ __all__ = [
     "ContactSyncState",
     "DiscoverabilityLevel",
     "PHONE_HASH_LENGTH",
+    "AiConsent",
+    "AiScopeType",
     "UserBlock",
     "ContentReport",
     "ReportReason",
