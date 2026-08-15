@@ -1161,4 +1161,16 @@ class LEn extends L {
 
   @override
   String get messageNotEncrypted => 'Not end-to-end encrypted';
+
+  @override
+  String get play => 'Play';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get recordVoiceNote => 'Hold to record a voice note';
+
+  @override
+  String get voiceNoteTooShort => 'Hold to record';
 }

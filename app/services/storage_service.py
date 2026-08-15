@@ -17,6 +17,8 @@ ALLOWED_MIME_TYPES: dict[str, str] = {
     "video/mp4": ".mp4",
     "audio/ogg": ".ogg",
     "audio/mpeg": ".mp3",
+    # What the voice recorder produces: AAC in an MP4 container.
+    "audio/mp4": ".m4a",
     "application/pdf": ".pdf",
     # Only legitimate for an end-to-end encrypted body, where the real type is
     # inside the envelope and the server is meant to learn nothing beyond the

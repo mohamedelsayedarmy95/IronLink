@@ -618,10 +618,16 @@ class _MessageBubble extends StatelessWidget {
                 )
               else
                 if (message.kind == 'voice') ...[
+                  // Reads typed fields instead of re-parsing the content as
+                  // JSON three times. The metadata now arrives inside the
+                  // encrypted envelope, so it sits on the message itself.
                   VoicePlayer(
-                    mediaKey: (jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['mediaKey'] as String? ?? '',
-                    duration: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['duration'] as num?)?.toDouble() ?? 0,
-                    waveform: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['waveform'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? [],
+                    media: context.read<MediaService>(),
+                    mediaKey: message.mediaKey ?? '',
+                    duration: message.duration ?? 0,
+                    waveform: message.waveform ?? const [],
+                    attachmentKey: message.attachmentKey,
+                    tint: mine ? IronColors.navyDeep : IronColors.gold,
                   )
                 ] else if (message.attachmentKey != null &&
                     message.mediaKey != null) ...[
@@ -954,15 +960,17 @@ class _InputBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             VoiceRecorder(
-              onSend: (mediaKey, duration, waveform) => bloc.add(MediaSent(
+              media: context.read<MediaService>(),
+              encrypted: encrypted,
+              onSend: (note) => bloc.add(MediaSent(
                 kind: 'voice',
-                mediaKey: mediaKey,
-                mimeType: 'audio/opus',
-                caption: jsonEncode({
-                  'mediaKey': mediaKey,
-                  'duration': duration,
-                  'waveform': waveform,
-                }),
+                mediaKey: note.mediaKey,
+                // The container the recorder actually produces. It used to
+                // claim audio/opus while writing AAC.
+                mimeType: 'audio/mp4',
+                attachmentKey: note.attachmentKey,
+                duration: note.duration,
+                waveform: note.waveform,
               )),
               onCancel: () {},
             ),

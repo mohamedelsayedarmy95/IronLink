@@ -355,7 +355,7 @@ not put real user data on it.
 [x] Encrypt attachment bytes (AES-256-GCM)             P0
 [x] Make encryption the default, not opt-in            P1
 [ ] Group messages: sender keys (pairwise won't do)    P1
-[ ] Voice notes: recorder never uploads (fakes a key)  P0
+[x] Voice notes: real upload, real waveform, encrypted P0
 [ ] Opt-in gate on AI summary                          P0
 [ ] Release keystore + signing config                  P1
 [ ] iOS: GoogleService-Info.plist + APNs key           P1

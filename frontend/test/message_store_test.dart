@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironlink/core/crypto/attachment_crypto.dart';
 import 'package:ironlink/features/chat/chat_repository.dart';
 import 'package:ironlink/features/chat/local/message_store.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -136,6 +137,72 @@ void main() {
           peerName: 'Sgt. Nabil');
       expect((await upgraded.search('written after')).single.peerName,
           'Sgt. Nabil');
+    });
+  });
+
+  group('media survives a restart', () {
+    test('a voice note keeps its pointer, key, duration and waveform',
+        () async {
+      final key = AttachmentCrypto().newKey(mimeType: 'audio/mp4', sizeBytes: 9);
+      await store.upsertAll('peer-1', [
+        ChatMessage(
+          id: 'v1',
+          senderId: 'them',
+          content: null,
+          createdAt: DateTime(2026, 1, 1),
+          isMine: false,
+          kind: 'voice',
+          encrypted: true,
+          mediaKey: 'obj-123',
+          attachmentKey: key,
+          duration: 7.5,
+          waveform: const [0.1, 0.9, 0.4],
+        ),
+      ]);
+
+      // The cache is the history now — the server's ciphertext cannot be
+      // decrypted after the fact — so a cached voice note that loses these
+      // is simply broken.
+      final restored = (await store.conversation('peer-1')).single;
+      expect(restored.mediaKey, 'obj-123');
+      expect(restored.duration, 7.5);
+      expect(restored.waveform, const [0.1, 0.9, 0.4]);
+      expect(restored.attachmentKey, isNotNull);
+      expect(restored.attachmentKey!.key, key.key);
+      expect(restored.attachmentKey!.nonce, key.nonce);
+      expect(restored.attachmentKey!.mimeType, 'audio/mp4');
+    });
+
+    test('a text message stores no media metadata', () async {
+      await store.upsertAll('peer-1', [msg('t1', 'just words')]);
+
+      final restored = (await store.conversation('peer-1')).single;
+      expect(restored.mediaKey, isNull);
+      expect(restored.attachmentKey, isNull);
+      expect(restored.duration, isNull);
+    });
+
+    test('a deleted media message loses its pointer and key', () async {
+      final key = AttachmentCrypto().newKey(mimeType: 'image/jpeg', sizeBytes: 1);
+      await store.upsertAll('peer-1', [
+        ChatMessage(
+          id: 'd1',
+          senderId: 'them',
+          content: 'gone',
+          createdAt: DateTime(2026, 1, 1),
+          isMine: false,
+          kind: 'image',
+          deleted: true,
+          mediaKey: 'obj-9',
+          attachmentKey: key,
+        ),
+      ]);
+
+      // "Delete for everyone" must not leave a working key to the attachment
+      // sitting in the cache.
+      final restored = (await store.conversation('peer-1')).single;
+      expect(restored.mediaKey, isNull);
+      expect(restored.attachmentKey, isNull);
     });
   });
 

@@ -41,6 +41,8 @@ class MediaSent extends ChatEvent {
     required this.mimeType,
     this.caption,
     this.attachmentKey,
+    this.duration,
+    this.waveform,
   });
 
   final String kind;
@@ -51,6 +53,12 @@ class MediaSent extends ChatEvent {
   /// Present when the body was encrypted before upload. Carried inside the
   /// Signal envelope, never as a field on the wire.
   final AttachmentKey? attachmentKey;
+
+  /// Voice notes only: length in seconds and the bars to draw. Both are
+  /// metadata about the recording, so they travel inside the envelope rather
+  /// than as wire fields the server could read.
+  final double? duration;
+  final List<double>? waveform;
 
   @override
   List<Object?> get props => [kind, mediaKey];
@@ -527,6 +535,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         'caption': e.caption,
         'mime': e.mimeType,
         if (e.attachmentKey != null) 'att': e.attachmentKey!.toJson(),
+        if (e.duration != null) 'dur': e.duration,
+        if (e.waveform != null) 'wave': e.waveform,
       });
       try {
         wireContent = await _signalService.encrypt(payload, peerId);
@@ -669,6 +679,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         final kind = f['kind'] as String? ?? 'text';
         String? mediaKey = f['media_key'] as String?;
         AttachmentKey? attachmentKey;
+        double? duration;
+        List<double>? waveform;
 
         // A secret media message carries its pointer and key inside the
         // envelope rather than in wire fields, so they have to be unpacked
@@ -683,6 +695,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
               attachmentKey =
                   AttachmentKey.fromJson(att as Map<String, dynamic>);
             }
+            duration = (payload['dur'] as num?)?.toDouble();
+            waveform = [
+              for (final v in (payload['wave'] as List<dynamic>? ?? const []))
+                (v as num).toDouble()
+            ];
           } catch (err) {
             debugPrint('[signal] media envelope malformed: $err');
             content = null;
@@ -699,6 +716,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
           mediaKey: mediaKey,
           attachmentKey: attachmentKey,
           encrypted: wasEncrypted,
+          duration: duration,
+          waveform: waveform,
           kind: kind,
         );
         emit(state.copyWith(

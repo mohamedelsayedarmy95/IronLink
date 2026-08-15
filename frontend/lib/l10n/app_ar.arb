@@ -551,5 +551,9 @@
   "attachmentTampered": "هذا المرفق تم التلاعب به ولم يُفتح",
   "attachmentEncrypted": "مرفق مشفّر",
   "chatNotEncryptedNotice": "رسائل هذه المحادثة ليست مشفّرة من طرف إلى طرف. هي محميّة أثناء النقل، لكن الخادم يستطيع قراءتها.",
-  "messageNotEncrypted": "غير مشفّرة من طرف إلى طرف"
+  "messageNotEncrypted": "غير مشفّرة من طرف إلى طرف",
+  "play": "تشغيل",
+  "pause": "إيقاف مؤقت",
+  "recordVoiceNote": "اضغط مطوّلاً لتسجيل رسالة صوتية",
+  "voiceNoteTooShort": "اضغط مطوّلاً للتسجيل"
 }

@@ -551,5 +551,9 @@
   "attachmentTampered": "This attachment was altered and was not opened",
   "attachmentEncrypted": "Encrypted attachment",
   "chatNotEncryptedNotice": "Messages in this chat are not end-to-end encrypted. They are protected in transit, but the server can read them.",
-  "messageNotEncrypted": "Not end-to-end encrypted"
+  "messageNotEncrypted": "Not end-to-end encrypted",
+  "play": "Play",
+  "pause": "Pause",
+  "recordVoiceNote": "Hold to record a voice note",
+  "voiceNoteTooShort": "Hold to record"
 }

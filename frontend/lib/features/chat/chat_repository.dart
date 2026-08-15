@@ -19,6 +19,8 @@ class ChatMessage {
     this.mediaKey,
     this.attachmentKey,
     this.encrypted = false,
+    this.duration,
+    this.waveform,
   });
 
   final String id;
@@ -32,9 +34,13 @@ class ChatMessage {
   /// encrypted envelope rather than as a field on the wire.
   String? mediaKey;
 
-  /// Set when the stored body is encrypted. Held in memory only — writing it
-  /// to the local cache would put the key next to nothing worth protecting,
-  /// and secret chats are not cached at all.
+  /// Set when the stored body is encrypted.
+  ///
+  /// Persisted with the cached message. That is not a weakening: the cache
+  /// already holds the decrypted message text, so withholding the key would
+  /// protect nothing while making attachments unreadable after a restart —
+  /// the ratchet cannot re-derive them. Secret chats are never cached at all,
+  /// which is the case where keeping nothing on the device is the point.
   AttachmentKey? attachmentKey;
 
   /// Whether this message actually arrived end-to-end encrypted and was
@@ -46,6 +52,10 @@ class ChatMessage {
   /// that anything which forgets to set it is treated as unprotected rather
   /// than claiming a guarantee it never had.
   final bool encrypted;
+
+  /// Voice notes only: length in seconds, and the bars to draw under it.
+  final double? duration;
+  final List<double>? waveform;
   MessageTick tick;
   bool deleted;
   bool pending; // optimistic — awaiting server ack

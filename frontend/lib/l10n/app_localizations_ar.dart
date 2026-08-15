@@ -1145,4 +1145,16 @@ class LAr extends L {
 
   @override
   String get messageNotEncrypted => 'غير مشفّرة من طرف إلى طرف';
+
+  @override
+  String get play => 'تشغيل';
+
+  @override
+  String get pause => 'إيقاف مؤقت';
+
+  @override
+  String get recordVoiceNote => 'اضغط مطوّلاً لتسجيل رسالة صوتية';
+
+  @override
+  String get voiceNoteTooShort => 'اضغط مطوّلاً للتسجيل';
 }

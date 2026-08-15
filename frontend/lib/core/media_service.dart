@@ -73,6 +73,20 @@ class MediaService {
     return (upload: result, key: material);
   }
 
+  /// Downloads an unencrypted attachment's bytes.
+  ///
+  /// Goes through the presigned URL rather than an API route: there is no
+  /// endpoint that streams object bodies, and adding one would push every
+  /// byte of every attachment through the API instance.
+  Future<Uint8List> download(String mediaKey) async {
+    final url = await viewUrl(mediaKey);
+    final res = await Dio().get<List<int>>(
+      url,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(res.data ?? const []);
+  }
+
   /// Downloads an encrypted attachment and returns its plaintext bytes.
   ///
   /// Throws [AttachmentTampered] if the authentication tag does not verify,

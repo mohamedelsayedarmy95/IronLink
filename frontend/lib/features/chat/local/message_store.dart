@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../../../core/crypto/attachment_crypto.dart';
 import '../chat_repository.dart';
 
 /// On-device cache of decrypted messages.
@@ -36,7 +39,7 @@ class MessageStore {
   final Database _db;
 
   static const _fileName = 'ironlink_messages.db';
-  static const _version = 3;
+  static const _version = 4;
 
   static Future<MessageStore> open() async {
     final path = '${await getDatabasesPath()}/$_fileName';
@@ -62,7 +65,14 @@ class MessageStore {
             -- Persisted because the bubble marks the ones that did not, and
             -- recomputing it after the fact is impossible: the ciphertext is
             -- long gone by the time a cached message is read back.
-            encrypted INTEGER NOT NULL DEFAULT 0
+            encrypted INTEGER NOT NULL DEFAULT 0,
+            -- Media messages need their pointer and their key to survive a
+            -- restart. Now that this cache IS the history — the server's
+            -- ciphertext cannot be decrypted after the fact — a cached
+            -- attachment without them is simply broken.
+            media_key TEXT,
+            -- JSON: the attachment key, plus duration and waveform for voice.
+            media_meta TEXT
           )
         ''');
         // Conversation reads are always "newest first for one peer", so the
@@ -91,6 +101,10 @@ class MessageStore {
             'ALTER TABLE messages ADD COLUMN encrypted INTEGER NOT NULL '
             'DEFAULT 0',
           );
+        }
+        if (from < 4) {
+          await db.execute('ALTER TABLE messages ADD COLUMN media_key TEXT');
+          await db.execute('ALTER TABLE messages ADD COLUMN media_meta TEXT');
         }
       },
     );
@@ -128,6 +142,8 @@ class MessageStore {
           'is_mine': m.isMine ? 1 : 0,
           'deleted': m.deleted ? 1 : 0,
           'encrypted': m.encrypted ? 1 : 0,
+          'media_key': m.deleted ? null : m.mediaKey,
+          'media_meta': m.deleted ? null : _encodeMeta(m),
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -199,7 +215,54 @@ class MessageStore {
 
   Future<void> close() => _db.close();
 
-  static ChatMessage _toMessage(Map<String, Object?> r) => ChatMessage(
+  /// Media metadata, as one JSON blob rather than a column each.
+  ///
+  /// The attachment key is stored here deliberately. This cache already holds
+  /// decrypted message text, so withholding the key that opens an attachment
+  /// would not protect anything — it would only make attachments unreadable
+  /// after a restart, since the ratchet cannot re-derive them. Secret chats
+  /// are still never written at all, which is the case where that matters.
+  static String? _encodeMeta(ChatMessage m) {
+    final meta = <String, dynamic>{
+      if (m.attachmentKey != null) 'att': m.attachmentKey!.toJson(),
+      if (m.duration != null) 'dur': m.duration,
+      if (m.waveform != null && m.waveform!.isNotEmpty) 'wave': m.waveform,
+    };
+    return meta.isEmpty ? null : jsonEncode(meta);
+  }
+
+  static ({AttachmentKey? key, double? duration, List<double>? waveform})
+      _decodeMeta(Object? raw) {
+    if (raw is! String || raw.isEmpty) {
+      return (key: null, duration: null, waveform: null);
+    }
+    try {
+      final meta = jsonDecode(raw) as Map<String, dynamic>;
+      return (
+        key: meta['att'] == null
+            ? null
+            : AttachmentKey.fromJson(meta['att'] as Map<String, dynamic>),
+        duration: (meta['dur'] as num?)?.toDouble(),
+        waveform: meta['wave'] == null
+            ? null
+            : [for (final v in meta['wave'] as List) (v as num).toDouble()],
+      );
+    } catch (_) {
+      // A corrupt blob costs the attachment, not the message.
+      return (key: null, duration: null, waveform: null);
+    }
+  }
+
+  static ChatMessage _toMessage(Map<String, Object?> r) {
+    final meta = _decodeMeta(r['media_meta']);
+    return _build(r, meta);
+  }
+
+  static ChatMessage _build(
+    Map<String, Object?> r,
+    ({AttachmentKey? key, double? duration, List<double>? waveform}) meta,
+  ) =>
+      ChatMessage(
         id: r['id'] as String,
         senderId: r['sender_id'] as String,
         content: r['content'] as String?,
@@ -209,6 +272,10 @@ class MessageStore {
         kind: r['kind'] as String? ?? 'text',
         deleted: (r['deleted'] as int) == 1,
         encrypted: (r['encrypted'] as int? ?? 0) == 1,
+        mediaKey: r['media_key'] as String?,
+        attachmentKey: meta.key,
+        duration: meta.duration,
+        waveform: meta.waveform,
       );
 
   /// Escapes LIKE wildcards so searching for "50%" looks for that literal

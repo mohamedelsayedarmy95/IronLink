@@ -2154,6 +2154,30 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'غير مشفّرة من طرف إلى طرف'**
   String get messageNotEncrypted;
+
+  /// No description provided for @play.
+  ///
+  /// In ar, this message translates to:
+  /// **'تشغيل'**
+  String get play;
+
+  /// No description provided for @pause.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف مؤقت'**
+  String get pause;
+
+  /// No description provided for @recordVoiceNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط مطوّلاً لتسجيل رسالة صوتية'**
+  String get recordVoiceNote;
+
+  /// No description provided for @voiceNoteTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط مطوّلاً للتسجيل'**
+  String get voiceNoteTooShort;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
