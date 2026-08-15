@@ -30,6 +30,15 @@ from .community import (
     CommunityRole,
 )
 from .creator import CreatorDashboard, Payout, PayoutStatus, SubscriptionPlan
+from .contact import (
+    PHONE_HASH_LENGTH,
+    ContactHash,
+    ContactInvite,
+    ContactRelation,
+    ContactSyncState,
+    DiscoverabilityLevel,
+    UserPhoneIndex,
+)
 from .device_key import OneTimePreKey, UserKeyBundle
 from .verification_form import (
     MULTI_VALUE_FIELD_TYPES,
@@ -64,6 +73,13 @@ __all__ = [
     "GroupAuditAction",
     "GroupBan",
     "PlatformBan",
+    "UserPhoneIndex",
+    "ContactHash",
+    "ContactRelation",
+    "ContactInvite",
+    "ContactSyncState",
+    "DiscoverabilityLevel",
+    "PHONE_HASH_LENGTH",
     "Broadcast",
     "BroadcastAck",
     "AuditLog",

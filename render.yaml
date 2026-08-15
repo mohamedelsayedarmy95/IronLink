@@ -123,13 +123,15 @@ services:
         value: ironlink-attachments
 
       # ── Secrets: entered once in the Render UI, never stored in git ─────────
-      # Only DB_ENCRYPTION_KEY is needed for the service to start. The rest may
-      # be left blank now and filled in later: without S3 the media endpoints
-      # return 503 and everything else runs; without HF_API_TOKEN the AI
-      # features fall back to canned responses.
+      # DB_ENCRYPTION_KEY and CONTACT_HASH_SALT are both needed for the service
+      # to start. The rest may be left blank now and filled in later: without S3
+      # the media endpoints return 503 and everything else runs; without
+      # HF_API_TOKEN the AI features fall back to canned responses.
       - key: SECRET_KEY
         generateValue: true          # Render generates a strong random value
       - key: DB_ENCRYPTION_KEY
+        sync: false                  # REQUIRED — and see the warning below
+      - key: CONTACT_HASH_SALT
         sync: false                  # REQUIRED — and see the warning below
       - key: S3_ENDPOINT
         sync: false                  # optional — <ACCOUNT_ID>.r2.cloudflarestorage.com
@@ -141,6 +143,17 @@ services:
         sync: false                  # optional
       - key: FIREBASE_CREDENTIALS_JSON
         sync: false                  # optional
+
+# ── CONTACT_HASH_SALT warning ─────────────────────────────────────────────────
+# This salts the phone-number hashes used for contact discovery. It is
+# `sync: false` rather than `generateValue: true` for the same reason as the
+# key below: rotating it changes every hash, so previously indexed contacts
+# stop matching and discovery silently returns nothing — with no error to
+# notice. Set it once, store it in a password manager, and leave it alone.
+#
+# It has to stay out of the database as well: phone numbers are a small enough
+# space that an unsalted or salt-alongside-data dump can be reversed by
+# enumeration.
 
 # ── DB_ENCRYPTION_KEY warning ─────────────────────────────────────────────────
 # This key encrypts columns at rest (hashed_military_id, device_fingerprint).

@@ -245,6 +245,31 @@ class Settings(BaseSettings):
             raise ValueError("DB_ENCRYPTION_KEY must be at least 32 characters")
         return v
 
+    # Salt for the contact-discovery phone hashes. Global rather than
+    # per-user by necessity: matching requires the same number to hash
+    # identically no matter whose address book it came from, and a per-user
+    # salt would make that impossible.
+    #
+    # It therefore carries real weight — phone numbers are a small enough
+    # space to brute-force without it — so it is kept out of the database
+    # entirely and must never be rotated once contacts are indexed, or every
+    # stored hash stops matching and discovery silently returns nothing.
+    CONTACT_HASH_SALT: str = Field(
+        default="", description="Required — salts contact discovery hashes"
+    )
+
+    @field_validator("CONTACT_HASH_SALT", mode="before")
+    @classmethod
+    def _require_contact_salt(cls, v: str) -> str:
+        if not v:
+            raise ValueError(
+                "CONTACT_HASH_SALT must be set — unsalted phone hashes are "
+                "trivially reversible"
+            )
+        if len(v) < 32:
+            raise ValueError("CONTACT_HASH_SALT must be at least 32 characters")
+        return v
+
     # ── Rate limiting ──────────────────────────────────────────────────────────
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
     RATE_LIMIT_WS_PER_USER: int = 3        # max concurrent WS connections per user
