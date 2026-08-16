@@ -241,19 +241,22 @@ phone → any military ID → code `000000`. Setting the bypass while
 
 **5.0 Real phone numbers do not work yet — and it is configuration, not code.**
 
-Only Firebase *test* numbers sign in today. Two reasons, both in
-`frontend/android/app/google-services.json`:
+Only Firebase *test* numbers sign in today. One reason, in
+`frontend/android/app/google-services.json`: **no signing fingerprint is
+registered**. Both client entries have an empty `oauth_client` array, so
+Firebase cannot attest the app and refuses real-number verification. Test
+numbers skip attestation entirely, which is exactly why they are the only
+ones that work.
 
-1. It is registered for package `com.example.ironlink`. The app's actual
-   `applicationId` is `com.ironlink.app` (see `android/app/build.gradle.kts`).
-2. It contains zero `oauth_client` entries, so no signing fingerprint is
-   registered. Firebase cannot attest the app, and real-number verification is
-   refused. Test numbers skip attestation entirely, which is exactly why they
-   are the only ones that work.
+(An earlier revision of this file also blamed a package mismatch. That was
+wrong, from reading only the first client entry: the file registers both
+`com.example.ironlink` and the real `com.ironlink.app`. The stale
+`com.example.ironlink` registration is untidy and worth deleting, but it is
+not what breaks sign-in.)
 
 Fix, in the Firebase console for project `ironlink-1fd4c`:
 
-- Project Settings → Your apps → Add app → Android, package `com.ironlink.app`
+- Project Settings → Your apps → the `com.ironlink.app` entry
 - Add the debug signing fingerprints:
   - SHA-1: `A0:FC:23:AC:84:C5:72:B8:F8:1C:E1:A2:87:95:D8:B2:0F:C2:4B:C7`
   - SHA-256: `DF:F4:D6:99:5E:B5:BF:15:29:BD:DD:0C:65:5A:E1:6B:DB:41:67:43:9C:09:2A:DC:E7:5E:C5:30:6F:F6:4D:F2`
