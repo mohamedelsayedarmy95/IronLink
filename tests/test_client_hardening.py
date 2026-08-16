@@ -97,6 +97,85 @@ def test_android_12_extraction_rules_refuse_both_channels() -> None:
         assert rules.count(f'domain="{domain}"') == 2, domain
 
 
+# ── Leaving the device ───────────────────────────────────────────────────────
+
+def test_sign_out_erases_local_state_not_just_the_token() -> None:
+    """There was no sign-out at all — no UI, and nothing calling the wipe
+    methods whose own docstrings claimed to be called on one. Clearing the
+    token alone would leave the decrypted message history in SQLite for
+    whoever holds the phone next."""
+    _skip_without_frontend()
+
+    source = (FRONTEND / "lib/features/auth/sign_out_service.dart").read_text(
+        encoding="utf-8"
+    )
+    assert "_messages.clear" in source
+    assert "_signal?.reset()" in source
+    assert "deleteAll()" in source
+    assert "_api.clearTokens" in source
+
+
+def test_local_erasure_survives_a_failed_server_call() -> None:
+    """Being offline must not mean the data stays on the device."""
+    _skip_without_frontend()
+
+    source = (FRONTEND / "lib/features/auth/sign_out_service.dart").read_text(
+        encoding="utf-8"
+    )
+    # The revoke is awaited but its failure is swallowed, and the wipes
+    # follow unconditionally.
+    assert "await _revokeServerSession();" in source
+    revoke = source.split("Future<void> _revokeServerSession()")[1]
+    assert "catch" in revoke.split("Future<void>")[0]
+
+
+def test_sign_out_is_reachable_from_the_ui() -> None:
+    _skip_without_frontend()
+
+    home = (FRONTEND / "lib/features/home/home_screen.dart").read_text(
+        encoding="utf-8"
+    )
+    assert "SignOutService(" in home
+    assert "_confirmSignOut" in home
+
+
+def test_the_server_can_revoke_the_calling_session() -> None:
+    from app.main import app
+
+    paths = app.openapi()["paths"]
+    assert "/api/v1/auth/logout" in paths
+    assert "post" in paths["/api/v1/auth/logout"]
+
+
+# ── Signed pre-key rotation ──────────────────────────────────────────────────
+
+def test_the_signed_prekey_rotates() -> None:
+    """It was generated once at install and kept forever. Every session ever
+    opened with that device derives from it, so a key that never rotates
+    makes an eventual compromise retroactive without limit."""
+    _skip_without_frontend()
+
+    source = (FRONTEND / "lib/core/crypto/signal.dart").read_text(
+        encoding="utf-8"
+    )
+    assert "signedPreKeyMaxAge" in source
+    assert "_rotateSignedPreKeyIfStale" in source
+    # Called on the already-installed path, which is the only one that runs
+    # after the first launch.
+    installed = source.split("if (await _store.installedFor(userId))")[1]
+    assert "_rotateSignedPreKeyIfStale()" in installed.split("final identity")[0]
+
+
+def test_rotation_keeps_the_previous_key() -> None:
+    """A peer may have fetched the old bundle moments earlier."""
+    _skip_without_frontend()
+
+    source = (FRONTEND / "lib/core/crypto/signal.dart").read_text(
+        encoding="utf-8"
+    )
+    assert "existing.skip(1)" in source
+
+
 # ── Cleartext cannot be shipped ──────────────────────────────────────────────
 
 def test_the_release_network_config_permits_no_cleartext() -> None:

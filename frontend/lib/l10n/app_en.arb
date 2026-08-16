@@ -601,5 +601,7 @@
   "aiConsentWithdrawNote": "You can withdraw at any time. That stops anything further being sent, but cannot recall what was already sent.",
   "aiConsentRequired": "Everyone in this conversation has to agree before AI features can be used.",
   "aiFeatures": "AI features",
-  "aiSummarise": "Summarise conversation"
+  "aiSummarise": "Summarise conversation",
+  "signOut": "Sign out",
+  "signOutConfirm": "This device will be signed out and everything stored on it erased — your message history, your encryption keys and any drafts. Because messages are end-to-end encrypted, the server cannot restore that history afterwards."
 }

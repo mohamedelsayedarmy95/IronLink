@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +32,7 @@ import structlog
 from app.core.security import (
     constant_time_compare,
     create_access_token,
+    decode_access_token,
     generate_refresh_token,
     hash_military_id,
     hash_password,
@@ -550,6 +552,59 @@ async def refresh_access_token(
         refresh_token=new_refresh,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
+
+
+@router.post(
+    "/logout", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
+async def logout(
+    request: Request,
+    creds: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Sign out this device.
+
+    Revokes only the session the caller is holding, which is now meaningful:
+    the access token names its session, so this takes effect on the very next
+    request rather than whenever the token happened to expire.
+
+    Other devices are untouched — signing out of a phone should not sign you
+    out of a tablet. Use token_version for the account-wide case.
+
+    The client is responsible for erasing local state (message cache, Signal
+    keys); the server cannot reach it. See SignOutService on the client.
+    """
+    ip = request.client.host if request.client else "unknown"
+
+    payload = decode_access_token(creds.credentials) if creds else None
+    session_id = UUID(payload["sid"]) if payload and "sid" in payload else None
+    if session_id is None:
+        return
+
+    session = await db.scalar(
+        select(UserSession).where(
+            UserSession.id == session_id,
+            UserSession.user_id == user.id,
+            UserSession.revoked_at.is_(None),
+        )
+    )
+    if session is None:
+        # Already gone. Signing out twice is not an error worth reporting.
+        return
+
+    session.revoked_at = datetime.now(timezone.utc)
+    db.add(AuditLog(
+        actor_id=user.id,
+        actor_role=user.role,
+        action=AuditAction.SESSION_REVOKED,
+        resource_type="user_session",
+        resource_id=str(session.id),
+        ip_address=ip,
+        success=True,
+        metadata_={"reason": "user_signed_out"},
+    ))
+    await db.commit()
 
 
 @router.get("/me", response_model=UserOut)

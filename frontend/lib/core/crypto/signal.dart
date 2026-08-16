@@ -62,6 +62,13 @@ class SignalService {
   /// later senders with a weaker first message.
   static const preKeyLowWaterMark = 20;
 
+  /// How long a signed pre-key may stay in service.
+  ///
+  /// Two days, matching Signal. It bounds the damage from that key being
+  /// obtained: sessions opened before the rotation stay exposed, sessions
+  /// after it do not.
+  static const signedPreKeyMaxAge = Duration(days: 2);
+
   PersistentSignalStore get store => _store;
 
   SignalProtocolAddress _address(String remoteUserId) =>
@@ -82,6 +89,7 @@ class SignalService {
         await _publishExisting();
         return;
       }
+      await _rotateSignedPreKeyIfStale();
       await _replenishIfLow();
       return;
     }
@@ -142,6 +150,55 @@ class SignalService {
       oneTimePreKeys: preKeys.take(_preKeyBatch).toList(),
     );
     await _store.markPublished();
+  }
+
+  /// Replaces the signed pre-key once it is older than [signedPreKeyMaxAge].
+  ///
+  /// It was generated once at install, with id 1, and kept forever. A signed
+  /// pre-key is the long-lived half of session establishment: every session
+  /// opened with it derives from that one private key, so a device that never
+  /// rotates gives an attacker who eventually obtains it the ability to
+  /// decrypt every session ever started with that device. Rotation bounds
+  /// that window to the age of the key.
+  ///
+  /// The previous one is deliberately kept in the store rather than deleted.
+  /// Someone may have fetched the old bundle moments before this ran, and
+  /// their PreKeySignalMessage still names it; discarding it immediately
+  /// would make that first message undecryptable for no benefit.
+  Future<void> _rotateSignedPreKeyIfStale() async {
+    try {
+      final existing = await _store.loadSignedPreKeys();
+      if (existing.isEmpty) return;
+
+      existing.sort((a, b) => b.id.compareTo(a.id));
+      final newest = existing.first;
+      final age = DateTime.now().difference(
+        DateTime.fromMillisecondsSinceEpoch(newest.timestamp.toInt()),
+      );
+      if (age < signedPreKeyMaxAge) return;
+
+      final identity = await _store.getIdentityKeyPair();
+      final rotated = generateSignedPreKey(identity, newest.id + 1);
+      await _store.storeSignedPreKey(rotated.id, rotated);
+
+      await _keys.publishBundle(
+        registrationId: await _store.getLocalRegistrationId(),
+        identityKey: identity.getPublicKey(),
+        signedPreKey: rotated,
+        // None: the existing ones are still valid and unclaimed. Sending a
+        // fresh batch here would replace the server's set on every rotation.
+        oneTimePreKeys: const [],
+      );
+
+      // Two generations kept, so a bundle fetched just before the rotation
+      // still opens. Older ones are past any plausible in-flight window.
+      for (final old in existing.skip(1)) {
+        await _store.removeSignedPreKey(old.id);
+      }
+    } catch (e) {
+      // Not fatal: the current key still works. Retried next launch.
+      debugPrint('[signal] signed pre-key rotation skipped: $e');
+    }
   }
 
   Future<void> _replenishIfLow() async {

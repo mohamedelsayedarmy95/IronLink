@@ -320,6 +320,36 @@ void main() {
       expect(directory.publishCount, publishes);
     });
 
+    test('a fresh signed pre-key is not rotated on every launch', () async {
+      // Rotating each time would churn the published bundle and invalidate
+      // bundles peers had just fetched, for no gain.
+      final secrets = MemorySecretStore();
+      final first = await device('alice', secrets: secrets);
+      final before = (await first.store.loadSignedPreKeys()).single.id;
+
+      directory.publishingAs = 'alice';
+      final second = SignalService('alice', keys: directory, secrets: secrets);
+      await second.ensureInstalled();
+
+      expect((await second.store.loadSignedPreKeys()).single.id, before);
+    });
+
+    test('the previous signed pre-key survives a rotation', () async {
+      // Someone may have fetched the old bundle moments before rotating;
+      // their first message still names that key.
+      final secrets = MemorySecretStore();
+      final alice = await device('alice', secrets: secrets);
+
+      final identity = await alice.store.getIdentityKeyPair();
+      final rotated = generateSignedPreKey(identity, 2);
+      await alice.store.storeSignedPreKey(rotated.id, rotated);
+
+      final ids = (await alice.store.loadSignedPreKeys())
+          .map((r) => r.id)
+          .toSet();
+      expect(ids, containsAll(<int>{1, 2}));
+    });
+
     test('sign-out erases the key material', () async {
       final secrets = MemorySecretStore();
       final alice = await device('alice', secrets: secrets);

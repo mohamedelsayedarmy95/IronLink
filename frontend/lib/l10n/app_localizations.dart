@@ -2328,6 +2328,18 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'تلخيص المحادثة'**
   String get aiSummarise;
+
+  /// No description provided for @signOut.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الخروج'**
+  String get signOut;
+
+  /// No description provided for @signOutConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم تسجيل الخروج من هذا الجهاز ومسح كل ما هو مخزّن عليه — سجل رسائلك ومفاتيح التشفير وأي مسودات. ولأن الرسائل مشفّرة من طرف إلى طرف، لن يستطيع الخادم استعادة هذا السجل بعدها.'**
+  String get signOutConfirm;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

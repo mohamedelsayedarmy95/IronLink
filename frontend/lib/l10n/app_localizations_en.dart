@@ -1271,4 +1271,11 @@ class LEn extends L {
 
   @override
   String get aiSummarise => 'Summarise conversation';
+
+  @override
+  String get signOut => 'Sign out';
+
+  @override
+  String get signOutConfirm =>
+      'This device will be signed out and everything stored on it erased — your message history, your encryption keys and any drafts. Because messages are end-to-end encrypted, the server cannot restore that history afterwards.';
 }

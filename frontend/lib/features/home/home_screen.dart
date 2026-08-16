@@ -11,6 +11,8 @@ import '../../core/ws_service.dart';
 import '../../core/widgets/ticker.dart';
 import '../../l10n/app_localizations.dart';
 import '../auth/auth_repository.dart';
+import '../auth/screens/splash_screen.dart';
+import '../auth/sign_out_service.dart';
 import '../broadcast/broadcast_banner.dart';
 import '../chat/chat_repository.dart';
 import '../chat/local/message_store.dart';
@@ -105,6 +107,51 @@ class _HomeScreenState extends State<_HomeView> {
       // keys really are missing when one is opened.
       debugPrint('[signal] key publish deferred: $e');
     }
+  }
+
+  /// Signs out, after saying what that erases.
+  ///
+  /// Worth confirming rather than doing on a tap: under end-to-end
+  /// encryption the local cache IS the message history, so signing out is
+  /// destructive in a way it is not in most apps — the server cannot give
+  /// those messages back.
+  Future<void> _confirmSignOut() async {
+    final t = L.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: IronColors.navySurface,
+        title: Text(t.signOut,
+            style: const TextStyle(color: IronColors.textHi)),
+        content: Text(t.signOutConfirm,
+            style: const TextStyle(color: IronColors.textTertiary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.cancel,
+                style: const TextStyle(color: IronColors.textTertiary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.signOut,
+                style: const TextStyle(color: IronColors.errorRed)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await SignOutService(
+      api: context.read<ApiClient>(),
+      messages: context.read<MessageStore>(),
+      signal: context.read<SignalService>(),
+    ).signOut();
+
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SplashScreen()),
+      (_) => false,
+    );
   }
 
   /// Opens the conversation a search hit belongs to.
@@ -204,7 +251,11 @@ class _HomeScreenState extends State<_HomeView> {
             ),
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 16),
-            child: CircleAvatar(
+            child: GestureDetector(
+              // The avatar is where people look for their account, and until
+              // now there was nowhere at all to sign out from.
+              onTap: _confirmSignOut,
+              child: CircleAvatar(
               radius: 18,
               backgroundColor: IronColors.navySurface,
               backgroundImage: widget.user.avatarUrl != null
@@ -218,6 +269,7 @@ class _HomeScreenState extends State<_HomeView> {
                           fontWeight: FontWeight.w700),
                     )
                   : null,
+              ),
             ),
           ),
         ],
