@@ -7,7 +7,6 @@ import 'package:ironlink/core/crypto/group_signal.dart';
 import 'package:ironlink/core/crypto/secret_store.dart';
 import 'package:ironlink/core/crypto/sender_key_store.dart';
 import 'package:ironlink/core/crypto/signal.dart';
-import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 import 'signal_test_support.dart';
 

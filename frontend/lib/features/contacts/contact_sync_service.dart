@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../core/secure_storage.dart';
+
 import 'contacts_repository.dart';
 import 'phone_normalizer.dart';
 
@@ -13,7 +15,7 @@ import 'phone_normalizer.dart';
 /// happens here rather than server-side.
 class ContactSyncService {
   ContactSyncService(this._repository, {FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ?? ironSecureStorage;
 
   final ContactsRepository _repository;
   final FlutterSecureStorage _storage;

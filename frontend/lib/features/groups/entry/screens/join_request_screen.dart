@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../../../core/secure_storage.dart';
 
 import '../../../../core/failure.dart';
 import '../../../../core/icons.dart';
@@ -46,7 +47,7 @@ class JoinRequestScreen extends StatefulWidget {
 }
 
 class _JoinRequestScreenState extends State<JoinRequestScreen> {
-  static const _storage = FlutterSecureStorage();
+  static const _storage = ironSecureStorage;
   static const _draftTtl = Duration(days: 7);
 
   final Map<String, dynamic> _answers = {};

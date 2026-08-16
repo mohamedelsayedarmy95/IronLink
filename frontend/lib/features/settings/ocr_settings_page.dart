@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../core/secure_storage.dart';
 import 'package:ironlink/core/api_client.dart';
 import 'package:ironlink/core/failure.dart';
 import 'package:ironlink/core/theme.dart';
@@ -32,7 +33,7 @@ class OcrSettingsPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => OcrSettingsBloc(
         context.read<ApiClient>(),
-        const FlutterSecureStorage(),
+        ironSecureStorage,
       )..add(const LoadKeywords()),
       child: const _OcrSettingsView(),
     );

@@ -24,10 +24,27 @@
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
+    <!--
+      allowBackup is false deliberately, and it is not a default worth
+      inheriting: unset, Android treats it as true, and Auto Backup copies
+      /data/data to the user's Google Drive.
+
+      For this app that directory holds the decrypted message cache
+      (ironlink_messages.db, plaintext by necessity so search can work) and
+      the Signal identity and session keys. Backing those up would carry
+      exactly the material end-to-end encryption exists to keep off other
+      people's servers, and would do it silently.
+
+      dataExtractionRules covers the same ground for Android 12+, where cloud
+      backup and device-to-device transfer are configured separately.
+    -->
     <application
         android:label="IronLink"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"

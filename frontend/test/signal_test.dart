@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ironlink/core/crypto/key_repository.dart';
 import 'package:ironlink/core/crypto/secret_store.dart';
 import 'package:ironlink/core/crypto/signal.dart';
 import 'package:ironlink/core/crypto/signal_store.dart';

@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Cleartext HTTP is allowed ONLY for the local development backend, and only
-  for explicitly listed private addresses. Everything else (i.e. production)
-  stays TLS-only under the default config.
+  TLS only. There is no exception here, and there is nothing to remember to
+  remove before a release.
 
-  Before shipping a release build, delete the <domain-config> block below.
+  This file used to carry a <domain-config> permitting cleartext to a
+  developer's LAN address, the emulator loopback and localhost, with a comment
+  asking whoever shipped the release to delete it first. That is a control
+  that works right up until the once it does not, and the failure is silent:
+  a release build that quietly accepts plaintext HTTP to an attacker-chosen
+  host on those addresses.
+
+  The development exceptions now live in src/debug/res/xml/, which Gradle
+  merges into debug builds only. A release build cannot contain them, because
+  the file is not part of it.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false"/>
-
-    <domain-config cleartextTrafficPermitted="true">
-        <!-- Dev machine on the LAN (see README_Sprint4_DeviceTest.md) -->
-        <domain includeSubdomains="false">10.140.128.63</domain>
-        <!-- Android emulator loopback alias -->
-        <domain includeSubdomains="false">10.0.2.2</domain>
-        <domain includeSubdomains="false">localhost</domain>
-    </domain-config>
 </network-security-config>
