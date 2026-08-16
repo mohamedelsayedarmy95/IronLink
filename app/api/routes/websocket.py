@@ -149,6 +149,7 @@ async def _handle_frame(
                     media_object_key=frame.get("media_key"),
                     media_mime_type=frame.get("media_mime"),
                     destruct_after_seconds=frame.get("destruct_after"),
+                    client_ref=frame.get("client_ref"),
                 )
             except message_service.BlockedDelivery:
                 # Reported as an undeliverable message rather than as a block.
@@ -218,6 +219,7 @@ async def _handle_frame(
                     media_object_key=frame.get("media_key"),
                     media_mime_type=frame.get("media_mime"),
                     destruct_after_seconds=frame.get("destruct_after"),
+                    client_ref=frame.get("client_ref"),
                 )
             except group_message_service.NotAMember:
                 await websocket.send_json(

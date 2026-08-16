@@ -273,6 +273,56 @@ def test_the_group_ciphertext_is_identical_for_every_member() -> None:
     assert window.count("await publish(member_id, event)") == 1
 
 
+# ── Delivery is idempotent ───────────────────────────────────────────────────
+
+def test_a_resent_message_does_not_become_two() -> None:
+    """The client queues frames written while the socket is down and replays
+    them on reconnect. A client that lost the connection between the server
+    storing a message and the ack arriving cannot know which happened, so it
+    resends — correct of it, and the reason the server has to refuse the
+    duplicate."""
+    from app.services.group_message_service import save_group_message
+    from app.services.message_service import save_message
+
+    for fn in (save_message, save_group_message):
+        source = _source(fn)
+        assert "Message.client_ref == client_ref" in source, fn.__name__
+        assert "return existing" in source, fn.__name__
+
+
+def test_the_idempotency_check_runs_before_anything_is_written() -> None:
+    from app.services.message_service import save_message
+
+    source = _source(save_message)
+    assert source.index("return existing") < source.index("db.add(msg)")
+
+
+def test_the_key_is_unique_per_sender_not_globally() -> None:
+    """Two people can independently generate "ref_3"."""
+    from pathlib import Path
+
+    migration = Path(
+        "alembic/versions/0009_message_idempotency.py"
+    ).read_text(encoding="utf-8")
+    assert "['sender_id', 'client_ref']" in migration
+    # Partial: server-generated messages have no client_ref and must not all
+    # collide on NULL.
+    assert "client_ref IS NOT NULL" in migration
+
+
+def test_the_client_also_drops_a_redelivered_message() -> None:
+    """Belt and braces: a reconnect can redeliver a frame the socket already
+    carried, and a duplicate on screen is the symptom users would report."""
+    from pathlib import Path
+
+    for name in ("chat/bloc/chat_bloc.dart", "groups/bloc/group_chat_bloc.dart"):
+        path = Path("frontend/lib/features") / name
+        if not path.exists():
+            pytest.skip("frontend not present")
+        source = path.read_text(encoding="utf-8")
+        assert "state.messages.any((m) => m.id == incomingId)" in source, name
+
+
 # ── Route contract ───────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize(

@@ -643,6 +643,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
 
       case 'message':
         if (f['from'] != peerId) return; // other conversation
+
+        // Second line of defence behind the server's idempotency key. A
+        // reconnect can redeliver a frame the socket had already carried, and
+        // showing the same message twice is the visible symptom users would
+        // report. Cheap to check, and it costs nothing when it never happens.
+        final incomingId = f['message_id'] as String?;
+        if (incomingId != null &&
+            state.messages.any((m) => m.id == incomingId)) {
+          return;
+        }
         String? content = f['content'] as String?;
 
         // Encrypted unless it demonstrably is not. See _isEnvelope: a message

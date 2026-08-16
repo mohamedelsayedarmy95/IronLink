@@ -55,6 +55,7 @@ async def save_message(
     media_mime_type: str | None = None,
     destruct_after_seconds: int | None = None,
     enforce_blocks: bool = True,
+    client_ref: str | None = None,
 ) -> Message:
     # Enforced here rather than in the route, because this is the single
     # point every message passes through — REST and WebSocket both. A check
@@ -73,8 +74,24 @@ async def save_message(
     ):
         raise BlockedDelivery
 
+    # Idempotency. A client that loses the socket between the server storing a
+    # message and the ack arriving cannot know which happened, so it resends
+    # on reconnect — correct of it, and the reason the server has to be what
+    # refuses the duplicate. Returning the original means the resend gets the
+    # same ack, and the recipient is not shown the same thing twice.
+    if client_ref is not None:
+        existing = await db.scalar(
+            select(Message).where(
+                Message.sender_id == sender_id,
+                Message.client_ref == client_ref,
+            )
+        )
+        if existing is not None:
+            return existing
+
     now = datetime.now(timezone.utc)
     msg = Message(
+        client_ref=client_ref,
         sender_id=sender_id,
         recipient_id=recipient_id,
         group_id=group_id,

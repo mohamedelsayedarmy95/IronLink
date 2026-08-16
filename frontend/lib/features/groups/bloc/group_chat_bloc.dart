@@ -484,6 +484,15 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
         final from = f['from'] as String?;
         if (from == null) return;
 
+        // As in the direct chat: a reconnect can redeliver, and a group
+        // message fans out to everyone, so a duplicate is seen by the whole
+        // group rather than one person.
+        final incomingId = f['message_id'] as String?;
+        if (incomingId != null &&
+            state.messages.any((m) => m.id == incomingId)) {
+          return;
+        }
+
         String? content = f['content'] as String?;
         var encrypted = false;
 

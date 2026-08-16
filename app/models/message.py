@@ -14,6 +14,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -83,6 +84,21 @@ class Message(Base):
     message_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default=MessageType.TEXT
     )
+    #: The sender's own id for this message, used to make delivery idempotent.
+    #:
+    #: A client that loses the socket after the server stored a message but
+    #: before the ack arrived has no way to know which happened, so it resends
+    #: on reconnect — that is the correct behaviour for a client, and it is
+    #: why the server has to be the one that refuses to store it twice.
+    #: Without this the resend became a second message, and the recipient saw
+    #: the same thing said twice.
+    #:
+    #: Unique per sender rather than globally: two people can independently
+    #: generate "ref_3".
+    client_ref: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+
     content_ciphertext: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -166,6 +182,15 @@ class Message(Base):
     #   2. Fetch group messages with pagination                    → ix_msg_group_conv
     #   3. Cleanup worker: find expired self-destruct messages     → ix_msg_destruct
     __table_args__ = (
+        # One message per (sender, client_ref). Partial, because client_ref is
+        # optional: older clients and server-generated messages have none, and
+        # they must not all collide on NULL.
+        Index(
+            "uq_msg_sender_client_ref",
+            "sender_id", "client_ref",
+            unique=True,
+            postgresql_where=text("client_ref IS NOT NULL"),
+        ),
         Index(
             "ix_msg_dm_conv",
             "sender_id", "recipient_id", "created_at",

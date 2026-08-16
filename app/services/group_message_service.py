@@ -95,6 +95,7 @@ async def save_group_message(
     media_object_key: str | None = None,
     media_mime_type: str | None = None,
     destruct_after_seconds: int | None = None,
+    client_ref: str | None = None,
 ) -> Message:
     """Stores a group message after checking the sender may post.
 
@@ -103,6 +104,18 @@ async def save_group_message(
     would turn a personal boundary into a way to disrupt everyone else's
     conversation.
     """
+    # Same idempotency as the direct path: a reconnecting client resends, and
+    # the fan-out would otherwise repeat the message to every member.
+    if client_ref is not None:
+        existing = await db.scalar(
+            select(Message).where(
+                Message.sender_id == sender_id,
+                Message.client_ref == client_ref,
+            )
+        )
+        if existing is not None:
+            return existing
+
     member = await assert_member(db, group_id, sender_id)
 
     group = await db.scalar(select(Group).where(Group.id == group_id))
@@ -117,6 +130,7 @@ async def save_group_message(
     ttl = destruct_after_seconds or group.disappearing_messages_seconds
 
     msg = Message(
+        client_ref=client_ref,
         sender_id=sender_id,
         recipient_id=None,
         group_id=group_id,
