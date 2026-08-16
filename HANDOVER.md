@@ -239,7 +239,38 @@ Render: `ENV=staging` **first**, then `DEV_AUTH_BYPASS=true`. Login becomes: any
 phone → any military ID → code `000000`. Setting the bypass while
 `ENV=production` makes the service refuse to start — by design.
 
-**5.0 Real phone numbers do not work yet — and it is configuration, not code.**
+**5.0 Real phone numbers: configuration now done, one cap remains.**
+
+Resolved 2026-08-16 in the Firebase console for `ironlink-1fd4c`:
+
+- The build machine's debug SHA-1 and SHA-256 are registered against
+  `com.ironlink.app`. The pre-existing `5e:2b:21:e7:…` SHA-1 belongs to a
+  different machine and was left in place so that build keeps working.
+- Play Integrity API enabled at the Google Cloud project level. Phone Auth
+  depends on it and it had never been switched on.
+- A refreshed `google-services.json` is in `frontend/android/app/`. It now
+  carries two `certificate_hash` values for `com.ironlink.app`; the previous
+  copy had none, which is why real numbers could not be attested.
+
+**That file is gitignored** (`.gitignore` line 7), so it is not in the repo
+and a fresh clone will not have it. Download it from Project settings → Your
+apps → `com.ironlink.app`. A build with the stale or missing file fails
+real-number sign-in in exactly the way described below, silently.
+
+Still outstanding, and both will bite:
+
+- **Spark plan: 10 verification SMS per day.** Once exhausted, real-number
+  sign-in hangs with no error — indistinguishable from the bug that was just
+  fixed. The console reports no live counter, so the remaining budget cannot
+  be checked. Blaze removes the cap.
+- **SMS region policy is Allow → Egypt only.** Correct for testing here, and
+  a silent wall for anyone outside +20. Widen it before anyone else signs up.
+
+App Check is deliberately untouched: nothing is registered and nothing is
+enforced. Turning enforcement on before the app ships an App Check SDK would
+block every sign-in, including the test numbers.
+
+**Historical — what was wrong before the above:**
 
 Only Firebase *test* numbers sign in today. One reason, in
 `frontend/android/app/google-services.json`: **no signing fingerprint is
