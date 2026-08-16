@@ -142,6 +142,15 @@ class Settings(BaseSettings):
     OTP_TTL_SECONDS: int = 300   # 5 minutes
     OTP_MAX_ATTEMPTS: int = 5
 
+    # ── Smart Keyword Alert ───────────────────────────────────────────────────
+    # Off by default, and it should stay off. Encryption is the default for
+    # every chat, so the server holds no key and cannot read an attachment;
+    # keyword matching runs on-device, on plaintext that never leaves it.
+    # Enabling this only does anything for a deployment that also sends
+    # attachments in the clear, and it means the server reads them and stores
+    # the user's private keywords. See docs/SMART_KEYWORD_ALERT_AUDIT.md.
+    SERVER_SIDE_OCR_ENABLED: bool = False
+
     # ── Development authentication bypass ─────────────────────────────────────
     # There is no SMS provider wired up (see SmsGateway) and no self-registration
     # endpoint, so without this nobody can get past the login screen on a

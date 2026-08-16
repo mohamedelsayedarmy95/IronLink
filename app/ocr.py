@@ -86,9 +86,14 @@ def contains_keywords(text: str, keywords: Set[str]) -> bool:
     words = set(normalized.split())
     return bool(words & keywords)
 
-def load_user_keywords(user_id: str) -> Set[str]:
+async def load_user_keywords(user_id: str) -> Set[str]:
     """
     Load OCR keywords for a user from Redis.
     Returns an empty set if none or on error.
+
+    Async because the underlying store is the application's async Redis client
+    (app/redis.py). It was previously declared sync while its caller in
+    media.py used it as a plain value, which worked only because the call it
+    delegated to could never succeed.
     """
-    return get_user_keywords(user_id)
+    return await get_user_keywords(user_id)

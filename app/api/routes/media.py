@@ -23,7 +23,7 @@ from app.services.storage_service import (
     StorageService,
 )
 from app.ocr import extract_text, load_user_keywords, contains_keywords, normalize_text
-from app.redis import publish_ocr_alert, set_alert_flag
+from app.redis import claim_alert, publish_ocr_alert
 from app.services import push_service
 
 logger = logging.getLogger(__name__)
@@ -267,7 +267,7 @@ async def upload_complete(
     # Never for an encrypted body: running text extraction over a user's
     # attachments is exactly what end-to-end encryption promises does not
     # happen, and on ciphertext it would only produce noise anyway.
-    if background_tasks is not None and not encrypted:
+    if background_tasks is not None and not encrypted and settings.SERVER_SIDE_OCR_ENABLED:
         background_tasks.add_task(
             _process_ocr,
             file_bytes=assembled,
@@ -375,7 +375,7 @@ async def _process_ocr(
             return
 
         # Load user keywords
-        keywords = load_user_keywords(user_id)
+        keywords = await load_user_keywords(user_id)
         if not keywords:
             return
 
@@ -388,9 +388,12 @@ async def _process_ocr(
                 break
 
         if matched_kw:
-            # Publish alert (live WS ticker) and set flag
-            publish_ocr_alert(media_key, user_id, matched_kw)
-            set_alert_flag(media_key)
+            # Claim before notifying, not after. The old code set the flag
+            # unconditionally and no reader ever consulted it, so a retried or
+            # re-uploaded file alerted the user again for the same document.
+            if not await claim_alert(media_key):
+                return
+            await publish_ocr_alert(media_key, user_id, matched_kw)
             # FCM fallback for backgrounded/killed apps not on the live WS
             await push_service.send_ocr_push(user_id, media_key, matched_kw)
     except Exception as e:

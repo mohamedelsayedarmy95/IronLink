@@ -21,6 +21,15 @@ class FakePipeline:
         self._ops.clear()
         return results
 
+    # redis.asyncio pipelines are async context managers; defined explicitly
+    # because implicit dunder lookup bypasses __getattr__.
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_exc):
+        self._ops.clear()
+        return False
+
 
 class FakeRedis:
     """In-memory async Redis fake — strings + sets, enough for the app surface."""
@@ -28,12 +37,19 @@ class FakeRedis:
     def __init__(self) -> None:
         self.store: dict[str, str] = {}
         self.sets: dict[str, set[str]] = {}
+        #: (channel, payload) in publish order — lets a test assert what was
+        #: fanned out without standing up a subscriber.
+        self.published: list[tuple[str, str]] = []
 
-    def pipeline(self):
+    def pipeline(self, transaction: bool = False):
         return FakePipeline(self)
 
     # ── Strings ────────────────────────────────────────────────────────────────
-    async def set(self, key, value, ex=None):
+    async def set(self, key, value, ex=None, nx=False):
+        # Real Redis returns None when NX finds the key already set. Callers
+        # rely on that falsiness to detect "someone else claimed this first".
+        if nx and key in self.store:
+            return None
         self.store[key] = str(value)
         return True
 
@@ -82,5 +98,13 @@ class FakeRedis:
     async def scard(self, key):
         return len(self.sets.get(key, set()))
 
+    async def smembers(self, key):
+        return set(self.sets.get(key, set()))
+
     async def sismember(self, key, member):
         return str(member) in self.sets.get(key, set())
+
+    # ── Pub/Sub ────────────────────────────────────────────────────────────────
+    async def publish(self, channel, payload):
+        self.published.append((channel, payload))
+        return 1
