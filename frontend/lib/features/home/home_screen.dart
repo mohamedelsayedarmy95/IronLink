@@ -144,6 +144,7 @@ class _HomeScreenState extends State<_HomeView> {
     await SignOutService(
       api: context.read<ApiClient>(),
       messages: context.read<MessageStore>(),
+      socket: context.read<WsService>(),
       signal: context.read<SignalService>(),
     ).signOut();
 

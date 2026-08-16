@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import '../../core/api_client.dart';
 import '../../core/crypto/signal.dart';
 import '../../core/secure_storage.dart';
+import '../../core/ws_service.dart';
 import '../chat/local/message_store.dart';
 
 /// Signs out and erases what this device holds.
@@ -21,13 +22,20 @@ class SignOutService {
   SignOutService({
     required ApiClient api,
     required MessageStore messages,
+    WsService? socket,
     SignalService? signal,
   })  : _api = api,
         _messages = messages,
+        _socket = socket,
         _signal = signal;
 
   final ApiClient _api;
   final MessageStore _messages;
+
+  /// Closed first, and told to stop reconnecting: it retries on a backoff
+  /// now, so without this it would keep trying to re-establish a session
+  /// that has just been revoked.
+  final WsService? _socket;
 
   /// Null when signing out from a screen that never built it. Its stored
   /// material — including group sender keys — is cleared by the sweep below
@@ -40,6 +48,10 @@ class SignOutService {
   /// not mean the data stays. The server-side revoke is attempted first only
   /// because it needs the token that is about to be destroyed.
   Future<void> signOut() async {
+    // Before the revoke, so the socket is not racing a session that is about
+    // to stop existing.
+    await _attempt('socket', () async => _socket?.disconnect());
+
     await _revokeServerSession();
 
     // Ordered most-sensitive first, and each guarded on its own: one failure
