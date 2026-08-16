@@ -469,6 +469,10 @@ async def submit_request(
             role=GroupRole.MEMBER,
             joined_at=datetime.now(timezone.utc),
         ))
+        # Same reason as the approval path: without this no existing member
+        # mints a new sender key, so nobody distributes one to the arrival
+        # and they see an unreadable group.
+        await group_message_service.bump_epoch(db, group_id)
 
     cleaned: dict[str, Any] = {}
     if group.join_mode == GroupJoinMode.REQUEST_APPROVAL and group.verification_form_id:
@@ -618,6 +622,17 @@ async def _apply_decision(
                 role=GroupRole.MEMBER,
                 joined_at=datetime.now(timezone.utc),
             ))
+            # Every path that adds a member has to move the epoch, and this
+            # one is the product's main way in — yet it was the one that did
+            # not. Without it no existing member is told to mint a new sender
+            # key, so nobody distributes one to the arrival and they sit in
+            # the group unable to read a single message, with nothing
+            # anywhere reporting a problem.
+            #
+            # Bumped only when a membership is actually created: re-approving
+            # someone already inside changes nothing about who holds keys,
+            # and a needless rotation makes every member re-distribute.
+            await group_message_service.bump_epoch(db, req.group_id)
 
 
 @router.post("/{group_id}/entry-requests/{request_id}/approve", response_model=RequestOut)
@@ -707,10 +722,18 @@ async def _actionable_request(
     db: AsyncSession, group_id: UUID, request_id: UUID
 ) -> GroupJoinRequest:
     req = await db.scalar(
-        select(GroupJoinRequest).where(
+        select(GroupJoinRequest)
+        .where(
             GroupJoinRequest.id == request_id,
             GroupJoinRequest.group_id == group_id,
         )
+        # Locked for the transaction. Two moderators reviewing the same queue
+        # and acting at the same moment would otherwise both read it as
+        # pending and both approve: the unique index on (group_id, user_id)
+        # turns the second insert into an integrity error, so one of them
+        # gets a 500 for doing nothing wrong. With the lock the second waits
+        # and then sees the decided status, which is the 409 below.
+        .with_for_update()
     )
     if req is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "request not found")

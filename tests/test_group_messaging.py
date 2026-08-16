@@ -22,27 +22,86 @@ def _source(fn) -> str:
 
 # ── Every membership change must bump the epoch ──────────────────────────────
 
-@pytest.mark.parametrize(
-    "module,function",
-    [
-        ("app.api.routes.groups", "leave_group"),
-        ("app.api.routes.groups", "remove_member"),
-        ("app.api.routes.groups", "request_join"),
-        ("app.api.routes.groups", "decide_request"),
-        ("app.api.routes.group_entry", "ban_from_group"),
-    ],
-)
-def test_membership_change_bumps_the_epoch(module: str, function: str) -> None:
-    """Missing one of these is not cosmetic: it leaves a departed member able
-    to read everything said afterwards."""
+def test_every_place_that_adds_a_member_bumps_the_epoch() -> None:
+    """Derived rather than listed.
+
+    This used to enumerate the functions by name, and the enumeration was
+    wrong: it missed _apply_decision in group_entry, which is the controlled
+    entry system's approval path — the product's main way into a group. That
+    admitted people without moving the epoch, so no existing member was told
+    to mint a new sender key, nobody distributed one to the arrival, and the
+    new member sat in the group unable to read anything.
+
+    A list of names cannot catch the path nobody thought of, so this walks
+    the source instead.
+    """
+    import ast
+    from pathlib import Path
+
+    #: The one place a membership is created with nothing to rotate: the
+    #: creator is the group's only member, so there is no existing sender to
+    #: tell. Named explicitly so the exemption is a decision rather than a
+    #: gap in the check.
+    exempt = {"create_group"}
+
+    offenders = []
+    for path in Path("app").rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        if "GroupMember(" not in source:
+            continue
+
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            body = ast.get_source_segment(source, node) or ""
+            # Constructing the row, not referencing the class in a query.
+            if "GroupMember(" not in body:
+                continue
+            if node.name in exempt or "bump_epoch" in body:
+                continue
+            offenders.append(f"{path.as_posix()}::{node.name}")
+
+    assert not offenders, (
+        "these create a GroupMember without bumping members_epoch, so the "
+        "new member never receives a sender key:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_departures_bump_the_epoch() -> None:
+    """The other direction, and the one that carries the security property:
+    a removed member keeps reading until every sender rotates."""
     import importlib
 
-    mod = importlib.import_module(module)
-    fn = getattr(mod, function, None)
-    assert fn is not None, f"{module}.{function} no longer exists"
-    assert "bump_epoch" in _source(fn), (
-        f"{function} changes membership without bumping the epoch"
-    )
+    for module, function in [
+        ("app.api.routes.groups", "leave_group"),
+        ("app.api.routes.groups", "remove_member"),
+        ("app.api.routes.group_entry", "ban_from_group"),
+    ]:
+        fn = getattr(importlib.import_module(module), function, None)
+        assert fn is not None, f"{module}.{function} no longer exists"
+        assert "bump_epoch" in _source(fn), (
+            f"{function} removes a member without bumping the epoch"
+        )
+
+
+def test_approving_an_existing_member_does_not_bump() -> None:
+    """Re-approving someone already inside changes nothing about who holds
+    keys, and a needless rotation makes every member re-distribute."""
+    from app.api.routes.group_entry import _apply_decision
+
+    source = _source(_apply_decision)
+    guard = source.index("if already is None:")
+    assert source.index("bump_epoch") > guard
+
+
+def test_deciding_a_request_locks_it() -> None:
+    """Two moderators working the same queue would both read it as pending
+    and both approve; the unique index then turns the second insert into a
+    500 for someone who did nothing wrong."""
+    from app.api.routes.group_entry import _actionable_request
+
+    assert "with_for_update()" in _source(_actionable_request)
 
 
 def test_approving_a_request_bumps_but_rejecting_does_not() -> None:
