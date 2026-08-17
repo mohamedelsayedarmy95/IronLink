@@ -972,3 +972,75 @@ this device has no local copy of. Everything else comes from
 the whole frame handler rather than a single line, because the leak was a local
 variable built two lines above the call, and a narrower check would pass again
 the moment somebody renamed it.
+
+---
+
+## 16. Gate B — message loss and multi-device (added 2026-08-17)
+
+Four findings from `docs/REPOSITORY_AUDIT_v4.md`, closed together.
+
+### 16.1 The outbox is durable, and settles on acknowledgement
+
+`frontend/lib/core/outbox_store.dart`. It was a Dart list; the optimistic
+bubble is written to sqflite, so killing the app left the user looking at a
+message in their own history that had never been sent and never would be.
+
+Two changes matter as much as the durability:
+
+**Removal on acknowledgement, not on write.** Handing bytes to a sink is not
+delivery. A socket that dies between the write and the server's processing
+loses the frame with no error on either side — the exact case an outbox exists
+for. Safe only because the server deduplicates on `client_ref`
+(`alembic/versions/0009_message_idempotency.py`); without that this would turn
+every reconnect into a burst of duplicates.
+
+**Drops are announced.** A full queue used to discard its oldest silently,
+which left the message in the conversation still looking sent. There is now a
+`dropped` stream, and the bubble renders a failure marker.
+
+**This exposed a server gap.** Several permanent rejections carried no
+`client_ref` — a blocked recipient, a group the sender is not in, an unknown
+frame type. A refusal without a reference is indistinguishable from silence, so
+the client kept the frame and re-sent it on every reconnect until it ran out of
+attempts, then failed minutes late for no reason it could explain. All of them
+now go through one `_reject` helper that cannot omit the reference.
+
+### 16.2 Push tokens belong to a device
+
+`alembic/versions/0010_per_session_fcm_token.py`, additive. `users.fcm_token`
+is still written so a rollback finds it populated; that write goes away with
+the contract migration, not before.
+
+All three senders had their own copy of the bug and all three now fan out:
+direct messages, admin broadcasts, and document wake-ups. Revoked and expired
+sessions are excluded — otherwise remote sign-out was cosmetic, because the
+person holding the revoked phone kept seeing who was messaging whom.
+
+### 16.3 The frame protocol is versioned
+
+`PROTOCOL_VERSION` and `MIN_CLIENT_PROTOCOL` in `app/api/routes/websocket.py`,
+negotiated once at connect rather than stamped on every frame. A client below
+the minimum is closed with code **4426** before `accept`, and the client treats
+that code as terminal rather than reconnecting — an outdated install used to
+retry forever against a server that would never take it.
+
+**Open:** `WsStatus.outdated` exists but nothing renders it, because no screen
+renders connection status at all. The reliability half is done; the surfacing
+is a UI gap tracked with FL-02.
+
+### 16.4 Deletion reaches object storage
+
+**The test found a real defect.** `unsend_message` nulled `media_object_key`
+and never deleted the object — and nulling the key is what made it permanent,
+since nothing knew the object's name afterwards. One orphaned encrypted body
+per retraction, forever, unreachable by any cleanup.
+
+The body is encrypted, so this was never a plaintext exposure. It was worse in
+a quieter way: the product told the user the message was gone and one part of
+it was not, with nothing anywhere that would ever notice.
+
+The delete is attempted inline and the key cleared **only** once it succeeds. A
+failure does not fail the retraction — the message is already deleted for both
+parties — and the key is kept so `SelfDestructWorker.reap_orphans` finishes the
+job. `ironlink_orphaned_attachments` reports what is outstanding; a number that
+does not return to zero means somebody's deletion has not happened.

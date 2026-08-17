@@ -55,6 +55,22 @@ class UserSession(Base):
         Text, nullable=True, index=True
     )
 
+    #: Firebase token for this device.
+    #:
+    #: On the session rather than on the user because a token identifies an
+    #: installation. It lived on `users` as a single column, so the second
+    #: device to sign in overwrote the first one's and silently stopped it
+    #: receiving anything — a phone and a tablet had exactly one of them
+    #: working, decided by whichever launched the app last.
+    #:
+    #: Revoking a session therefore also stops its push, which is the correct
+    #: coupling: a device that has been kicked should not keep being told
+    #: about new messages.
+    fcm_token: Mapped[str | None] = mapped_column(
+        String(512), nullable=True,
+        comment="Firebase Cloud Messaging token for this device",
+    )
+
     # ── Device & network context ───────────────────────────────────────────────
     ip_address: Mapped[str] = mapped_column(String(45), nullable=False)  # IPv6-safe
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)

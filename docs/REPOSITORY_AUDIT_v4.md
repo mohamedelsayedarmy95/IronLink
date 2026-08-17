@@ -294,12 +294,35 @@ an outbox in name.
 **Impact:** High — silent message loss is the failure mode SLO 1 calls the worst
 one, because both parties believe it succeeded.
 
+> **RESOLVED 2026-08-17.** The queue is a sqflite table
+> (`frontend/lib/core/outbox_store.dart`). Two other changes matter as much as
+> the durability: an entry now leaves the queue **on acknowledgement rather
+> than on write**, because handing bytes to a sink is not delivery and a socket
+> that dies in between loses the frame with no error on either side; and a drop
+> is **announced** on a `dropped` stream that marks the bubble failed, rather
+> than being silent. Ack-based removal is only safe because the server
+> deduplicates on `client_ref`, which it already did.
+>
+> It also exposed a server-side gap: several permanent rejections carried no
+> `client_ref`, so a refused frame was indistinguishable from silence and would
+> re-send on every reconnect until it exhausted its retries. All of them now go
+> through one `_reject` helper that cannot omit the reference.
+
 ### REL-02 · One FCM token per user — **HIGH**
 
 **FACT.** `fcm_token` is a single column on `User`. A second device overwrites
 the first, so only the most recently registered device receives push. Known and
 recorded in `HANDOVER.md`. It also makes push delivery rate unmeasurable, which
 is why `docs/SLO.md` deliberately declines to set an objective for it.
+
+> **RESOLVED 2026-08-17.** The token moved to `user_sessions`
+> (`alembic/versions/0010_per_session_fcm_token.py`), additive — `users.fcm_token`
+> is still written so a rollback finds it populated, and the write goes away
+> with the contract migration. All three senders fanned out: direct messages,
+> admin broadcasts, and document wake-ups each had their own copy of the bug.
+> Revoked and expired sessions are excluded, so remote sign-out now also stops
+> that device's notifications — otherwise revocation was cosmetic, since the
+> person holding the phone kept seeing who was messaging whom.
 
 ### REL-03 · Idempotency exists — **verified**
 
@@ -523,11 +546,17 @@ Derived from v4.0 §2's priority hierarchy, not from feature appeal.
 1. ~~P0-1 content-free push (SEC-01)~~ ✅
 2. ~~Quick wins 1 and 2 (BE-01, SEC-02)~~ ✅
 
-**Gate B — stop the loss** (priority 4–7: data integrity, reliability)
-3. P0-2 durable outbox (REL-01)
-4. P0-4 per-session FCM tokens (REL-02)
-5. WS-01 versioned WebSocket events — required before any new frame type
-6. PRIV-02 deletion-propagation test, then the fix it reveals
+**Gate B — stop the loss** (priority 4–7: data integrity, reliability) — ✅ **DONE 2026-08-17**
+3. ~~P0-2 durable outbox (REL-01)~~ ✅
+4. ~~P0-4 per-session FCM tokens (REL-02)~~ ✅
+5. ~~WS-01 versioned WebSocket events~~ ✅
+6. ~~PRIV-02 deletion-propagation test, then the fix it reveals~~ ✅ — the test
+   found a real defect, described below
+
+> **One gap left open deliberately.** `WsStatus.outdated` exists and the client
+> stops reconnecting on it, but no screen renders connection status at all —
+> `WsStatus` has no consumer outside the transport. The reliability half is
+> done (the retry loop is gone); the surfacing is a UI gap, tracked with FL-02.
 
 **Gate C — establish the floor** (priority 8–9)
 7. Failure-injection and E2E journey tests
@@ -558,12 +587,12 @@ nothing, but nothing else matters if it fails.
 | SEC-04 | `/metrics` fail-closed, no identifying labels | `observability.py`, `test_observability.py` | **FACT** | — | Verified, no action |
 | SEC-05 | No sensitive data in any log call | 38 call sites read; `sms_gateway.py:24` | **FACT** | — | Verified, no action |
 | PRIV-01 | No data classification document | absence | **FACT** | Medium | Gate C |
-| PRIV-02 | Deletion may not reach object storage | no test exists | **UNVERIFIED** | High | Gate B |
-| REL-01 | Outbox is in-memory, silently lossy | `ws_service.dart:42,68,164` | **FACT** | High | P0-2 |
-| REL-02 | One FCM token per user | `app/models/user.py:64` | **FACT** | High | P0-4 |
+| PRIV-02 ✅ | Deletion did not reach object storage — **confirmed defect**, `unsend_message` nulled the key without deleting the object | `tests/test_deletion_propagation.py` | **FACT** (was UNVERIFIED) | High | Fixed |
+| REL-01 ✅ | Outbox is in-memory, silently lossy | `ws_service.dart:42,68,164` | **FACT** | High | P0-2 |
+| REL-02 ✅ | One FCM token per user | `app/models/user.py:64` | **FACT** | High | P0-4 |
 | REL-03 | Idempotency implemented | `0009_message_idempotency.py`, `message_service.py:80-90` | **FACT** | — | Verified, no action |
 | REL-04 | Ordering undocumented and untested | absence | **UNVERIFIED** | Medium | Gate B |
-| WS-01 | WebSocket events unversioned | `websocket.py` frame dispatch | **FACT** | Medium | Gate B |
+| WS-01 ✅ | WebSocket events unversioned | `websocket.py` frame dispatch | **FACT** | Medium | Gate B |
 | DB-01 | No down-migrations | `alembic/versions/` | **FACT** | Medium | Gate D |
 | BE-01 ✅ | Stale comment claims a deleted mock exists | `requirements.txt:31` vs `test_key_directory.py:64` | **FACT** | Low | Quick win 1 |
 | DEP-01 | `pypdf2` deprecated, parses untrusted files | test output | **FACT** | Medium | Quick win 3 |

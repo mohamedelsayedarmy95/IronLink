@@ -200,6 +200,13 @@ self_destruct_wiped = Counter(
     "Expired messages wiped since this process started.",
 )
 
+orphaned_attachments = Gauge(
+    "ironlink_orphaned_attachments",
+    "Attachment bodies whose message was deleted but whose object storage "
+    "delete has not yet succeeded. Non-zero means a user's deletion is "
+    "incomplete, which is a privacy failure rather than a storage one.",
+)
+
 self_destruct_failures = Counter(
     "ironlink_self_destruct_failures_total",
     "Sweeps that raised. A rising count means messages are outliving their "

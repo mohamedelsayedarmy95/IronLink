@@ -16,6 +16,7 @@ class ChatMessage {
     this.tick = MessageTick.sent,
     this.deleted = false,
     this.pending = false,
+    this.failed = false,
     this.mediaKey,
     this.attachmentKey,
     this.encrypted = false,
@@ -59,6 +60,15 @@ class ChatMessage {
   MessageTick tick;
   bool deleted;
   bool pending; // optimistic — awaiting server ack
+
+  /// The outbox gave up on this one.
+  ///
+  /// Set when the server refuses the frame, or when it survives too many
+  /// reconnects unacknowledged, or when it is trimmed from a full queue. It
+  /// exists because the alternative is what this product used to do: leave the
+  /// bubble sitting in the conversation looking sent, which is a lie the
+  /// sender has no way to detect.
+  bool failed;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json,
       {required String myId}) {

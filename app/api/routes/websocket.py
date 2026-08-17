@@ -62,15 +62,58 @@ async def _relay_loop(websocket: WebSocket, user_id: UUID, connection_id: str) -
         await pubsub.aclose()
 
 
+# ── Protocol version ─────────────────────────────────────────────────────────
+#
+# The frame protocol was unversioned. A client and a server that disagreed
+# about a frame's shape had no way to find out: the client sent something the
+# server did not understand, the server answered with "unsupported frame type"
+# or silently did the wrong thing, and the user saw a message that would not
+# send with no explanation available to anybody.
+#
+# Negotiated once at connect rather than stamped on every frame. Version
+# belongs to the conversation, not to each sentence in it, and a field repeated
+# on every message is bytes spent on every message to answer a question asked
+# once.
+#
+# Bump PROTOCOL_VERSION when a frame gains a field or a new type is added —
+# those are backward compatible, and an older client simply does not use them.
+# Raise MIN_CLIENT_PROTOCOL only when an old shape genuinely cannot be served
+# any more, because it locks out every install that has not updated.
+PROTOCOL_VERSION = 1
+MIN_CLIENT_PROTOCOL = 1
+
+#: Close code for a client too old to talk to this server.
+#:
+#: In the 4000-4999 application range. It exists as a distinct code so the
+#: client can tell "you must update" from an ordinary drop and stop
+#: reconnecting — otherwise an outdated install retries forever against a
+#: server that will never accept it, draining the battery and reporting
+#: nothing useful.
+WS_PROTOCOL_TOO_OLD = 4426
+
+
 @router.websocket("/ws/chat")
 async def chat_socket(
     websocket: WebSocket,
     ticket: str = Query(..., min_length=16, max_length=64),
+    # Absent means 1. Every client built before versioning existed omits it,
+    # and rejecting those would be a breaking change introduced by the very
+    # mechanism added to avoid breaking changes.
+    v: int = Query(PROTOCOL_VERSION, ge=1, le=1000),
 ) -> None:
     # One-time ticket auth (see auth.py — JWT never travels in the query string)
     user_id_raw = await redis_sessions.getdel(f"ws:ticket:{ticket}")
     if user_id_raw is None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    if v < MIN_CLIENT_PROTOCOL:
+        # Refused before `accept`, so the client gets the code without a
+        # session being registered against it.
+        await websocket.close(
+            code=WS_PROTOCOL_TOO_OLD,
+            reason=f"client protocol {v} below minimum {MIN_CLIENT_PROTOCOL}",
+        )
         return
 
     user_id = UUID(user_id_raw)
@@ -82,6 +125,14 @@ async def chat_socket(
     try:
         await websocket.send_json({
             "type": "welcome",
+            # Told rather than assumed. A client newer than the server can see
+            # it is talking to an older one and hold back the frames that
+            # server would not understand — which is the half of negotiation
+            # that a version number alone does not give you.
+            "protocol": {
+                "version": PROTOCOL_VERSION,
+                "min_supported": MIN_CLIENT_PROTOCOL,
+            },
             "connection_id": connection_id,
             "online_users": await manager.online_count(),
             "server_time": datetime.now(timezone.utc).isoformat(),
@@ -106,6 +157,27 @@ async def chat_socket(
         # path climbs forever and eventually reads as an outage that is
         # not happening.
         observability.websocket_connections.dec()
+
+
+
+async def _reject(websocket: WebSocket, frame: dict, detail: str) -> None:
+    """Refuses a frame, correlated to the send that caused it.
+
+    Every rejection here is permanent — a malformed target, a group the sender
+    is not in, a channel only admins may post to. The sender's outbox keeps a
+    frame until the server speaks for it, so a refusal with no `client_ref` is
+    indistinguishable from silence: the client re-sends on every reconnect
+    until it runs out of retries, then reports a failure minutes late and for
+    no reason it can explain.
+
+    Written as one helper rather than repeated at each site so the ref cannot
+    be forgotten at the next one.
+    """
+    await websocket.send_json({
+        "type": "error",
+        "client_ref": frame.get("client_ref"),
+        "detail": detail,
+    })
 
 
 async def _handle_frame(
@@ -141,7 +213,7 @@ async def _handle_frame(
     if frame_type in ("text", "image", "file"):
         to = _uuid_or_none(frame.get("to"))
         if to is None:
-            await websocket.send_json({"type": "error", "detail": "missing/invalid 'to'"})
+            await _reject(websocket, frame, "missing/invalid 'to'")
             return
 
         async with AsyncSessionLocal() as db:
@@ -163,10 +235,11 @@ async def _handle_frame(
                 # Saying "you are blocked" would tell the sender something the
                 # recipient chose not to disclose, and turns a quiet boundary
                 # into a confrontation.
-                await websocket.send_json({
-                    "type": "error",
-                    "detail": "This message could not be delivered.",
-                })
+                # Reported as an undeliverable message rather than as a
+                # block — see the note above.
+                await _reject(
+                    websocket, frame, "This message could not be delivered."
+                )
                 return
             # Offline recipient → FCM push with sender name + short preview.
             # Checked while the session is open so we read fcm_token in one trip.
@@ -175,16 +248,18 @@ async def _handle_frame(
                 outcome="push" if recipient_offline else "realtime"
             ).inc()
             if recipient_offline:
-                recipient = await db.scalar(select(User).where(User.id == to))
                 sender = await db.scalar(select(User).where(User.id == user_id))
-                if recipient is not None and recipient.fcm_token and sender is not None:
+                # Every device the recipient has a live session on, not the one
+                # column on `users` that the most recent sign-in overwrote.
+                tokens = await push_service.tokens_for_user(db, to)
+                for token in tokens if sender is not None else []:
                     # frame["content"] is deliberately not read here. It is the
                     # ciphertext envelope when encryption is on and the
                     # plaintext message when it is off, and neither belongs in
                     # a notification that renders on a locked screen through
                     # infrastructure we do not control.
                     await push_service.send_message_push(
-                        recipient.fcm_token,
+                        token,
                         sender_name=sender.full_name,
                         peer_id=str(user_id),
                     )
@@ -214,9 +289,7 @@ async def _handle_frame(
     if frame_type in ("group_text", "group_image", "group_file", "group_voice"):
         group_id = _uuid_or_none(frame.get("group"))
         if group_id is None:
-            await websocket.send_json(
-                {"type": "error", "detail": "missing/invalid 'group'"}
-            )
+            await _reject(websocket, frame, "missing/invalid 'group'")
             return
 
         async with AsyncSessionLocal() as db:
@@ -233,14 +306,10 @@ async def _handle_frame(
                     client_ref=frame.get("client_ref"),
                 )
             except group_message_service.NotAMember:
-                await websocket.send_json(
-                    {"type": "error", "detail": "not a member of that group"}
-                )
+                await _reject(websocket, frame, "not a member of that group")
                 return
             except group_message_service.PostingNotAllowed:
-                await websocket.send_json(
-                    {"type": "error", "detail": "only admins can post here"}
-                )
+                await _reject(websocket, frame, "only admins can post here")
                 return
 
             recipients = await group_message_service.member_ids(db, group_id)
@@ -281,9 +350,7 @@ async def _handle_frame(
         to = _uuid_or_none(frame.get("to"))
         group_id = _uuid_or_none(frame.get("group"))
         if to is None or group_id is None:
-            await websocket.send_json(
-                {"type": "error", "detail": "skdm needs 'to' and 'group'"}
-            )
+            await _reject(websocket, frame, "skdm needs 'to' and 'group'")
             return
 
         async with AsyncSessionLocal() as db:
@@ -293,9 +360,7 @@ async def _handle_frame(
                 # to push arbitrary payloads at any user.
                 await group_message_service.assert_member(db, group_id, to)
             except group_message_service.NotAMember:
-                await websocket.send_json(
-                    {"type": "error", "detail": "not a member of that group"}
-                )
+                await _reject(websocket, frame, "not a member of that group")
                 return
 
             msg = await message_service.save_message(
@@ -353,7 +418,7 @@ async def _handle_frame(
             try:
                 msg = await message_service.unsend_message(db, message_id, user_id)
             except UnsendDenied as e:
-                await websocket.send_json({"type": "error", "detail": str(e)})
+                await _reject(websocket, frame, str(e))
                 return
         event = {"type": "unsend", "message_id": str(message_id)}
         # Both parties (all devices of each) drop the message locally
@@ -362,10 +427,9 @@ async def _handle_frame(
         await publish(user_id, event)
         return
 
-    await websocket.send_json({
-        "type": "error",
-        "detail": f"unsupported frame type: {frame_type}",
-    })
+    # An unknown frame type is permanent by definition — this server will
+    # never learn it. Correlated so a client that queued it can stop.
+    await _reject(websocket, frame, f"unsupported frame type: {frame_type}")
 
 
 def _uuid_or_none(value: object) -> UUID | None:

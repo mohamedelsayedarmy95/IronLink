@@ -3,12 +3,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+import structlog
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import observability
 from app.models import Message, UserBlock
 from app.models.message import MessageStatus, MessageType
+
+logger = structlog.get_logger("messages")
 
 UNSEND_WINDOW = timedelta(minutes=5)
 
@@ -207,9 +210,40 @@ async def unsend_message(db: AsyncSession, message_id: UUID, sender_id: UUID) ->
         raise UnsendDenied("unsend window (5 minutes) has passed")
 
     msg.content_ciphertext = None
-    msg.media_object_key = None
     msg.media_mime_type = None
     msg.deleted_for_everyone = True
     msg.deleted_at = datetime.now(timezone.utc)
+
+    # The attachment body has to go too, and the pointer is only cleared once
+    # it has.
+    #
+    # This used to null `media_object_key` and stop there. The encrypted object
+    # stayed in the bucket, and nulling the key was what made it permanent —
+    # nothing knew its name any more, so no sweep could ever find it. A user
+    # who pressed "delete for everyone" left a body behind that would outlive
+    # their account, and the bucket grew by one orphan per retraction.
+    #
+    # The delete is attempted here so it is usually immediate, but a failure
+    # does not fail the retraction: the message is already marked deleted for
+    # both parties, and the key is deliberately left in place so the sweeper
+    # can finish the job. Object storage being briefly unreachable must not
+    # mean the user's deletion silently did not happen.
+    if msg.media_object_key:
+        from app.config import settings
+        from app.services.storage_service import StorageService
+
+        try:
+            StorageService().delete_object(
+                settings.S3_BUCKET_ATTACHMENTS, msg.media_object_key
+            )
+            msg.media_object_key = None
+        except Exception as exc:  # noqa: BLE001 — retried by the sweeper
+            observability.orphaned_attachments.inc()
+            logger.warning(
+                "unsend_object_delete_failed",
+                message_id=str(msg.id),
+                error=str(exc),
+            )
+
     await db.commit()
     return msg

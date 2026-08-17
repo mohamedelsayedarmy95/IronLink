@@ -8,9 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_session, get_current_user
 from app.core.database import get_db
-from app.models import Broadcast, BroadcastAck, User
+from app.models import Broadcast, BroadcastAck, User, UserSession
 
 router = APIRouter(prefix="/broadcasts", tags=["broadcasts"])
 
@@ -76,8 +76,21 @@ async def ack_broadcast(
 async def register_fcm_token(
     body: FcmTokenIn,
     user: User = Depends(get_current_user),
+    session: UserSession = Depends(get_current_session),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Called by the app on every launch and on FCM token rotation."""
+    """Called by the app on every launch and on FCM token rotation.
+
+    The token is recorded against the *session*, because it identifies an
+    installation rather than an account. It used to be one column on `users`,
+    so a phone and a tablet had exactly one of them receiving notifications,
+    decided by whichever launched the app last.
+
+    `users.fcm_token` is still written. This is the expand half of an
+    expand-migrate-contract: nothing reads it any more, but a rollback to the
+    previous release would, and it must not find the column stale. The write
+    goes away with the migration that drops the column.
+    """
+    session.fcm_token = body.token
     user.fcm_token = body.token
     await db.commit()

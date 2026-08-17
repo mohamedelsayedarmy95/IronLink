@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/api_client.dart';
+import 'core/outbox_store.dart';
 import 'core/media_service.dart';
 import 'core/push_service.dart';
 import 'core/theme.dart';
@@ -49,6 +50,12 @@ void main() async {
     store = const NullMessageStore();
   }
 
+  // The unsent-message queue. Opened here rather than lazily, because a
+  // failure to open it must not be discovered at the moment the user sends
+  // something — openOutboxStore falls back to memory, which is the behaviour
+  // this had before it was durable at all.
+  final outbox = await openOutboxStore();
+
   // Keyword rules and alerts. Opened here for the same reason as the message
   // cache — one place to handle the failure — but it degrades differently.
   // The message cache is disposable; a rule the user wrote cannot be rebuilt
@@ -82,6 +89,7 @@ void main() async {
 
   runApp(MilAcademyApp(
     store: store,
+    outbox: outbox,
     alerts: alerts,
     alertBloc: alertBloc,
     keywordAlerts: keywordAlerts,
@@ -94,10 +102,12 @@ class MilAcademyApp extends StatelessWidget {
     required this.store,
     required this.alerts,
     required this.alertBloc,
+    required this.outbox,
     this.keywordAlerts,
   });
 
   final MessageStore store;
+  final OutboxStore outbox;
   final AlertStore alerts;
   final AlertBloc alertBloc;
 
@@ -115,7 +125,7 @@ class MilAcademyApp extends StatelessWidget {
         RepositoryProvider(
             create: (ctx) => ChatRepository(ctx.read<ApiClient>())),
         RepositoryProvider(
-            create: (ctx) => WsService(ctx.read<ApiClient>())),
+            create: (ctx) => WsService(ctx.read<ApiClient>(), outbox: outbox)),
         RepositoryProvider(
             create: (ctx) => MediaService(ctx.read<ApiClient>())),
         RepositoryProvider(

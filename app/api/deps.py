@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,7 @@ _CREDENTIALS_ERROR = HTTPException(
 
 
 async def get_current_user(
+    request: Request,
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: AsyncSession = Depends(get_db),
 ) -> User:
@@ -66,4 +67,24 @@ async def get_current_user(
     if session is None:
         raise _CREDENTIALS_ERROR
 
+    # Stashed on the request so a route that needs the *device* rather than
+    # the account can reach it without decoding the token a second time.
+    # Request state rather than an attribute on the model: the model instance
+    # is attached to a database session, and hanging request-scoped data off it
+    # is how something eventually gets flushed that was never a column.
+    request.state.session = session
     return user
+
+
+async def get_current_session(
+    request: Request,
+    _: User = Depends(get_current_user),
+) -> UserSession:
+    """The session the caller is authenticated on — that is, this device.
+
+    Separate from `get_current_user` because most routes act on an account and
+    a few act on a device. Push registration is the second kind: a token
+    belongs to one installation, and storing it on the account is why a second
+    device silently stopped the first one receiving notifications.
+    """
+    return request.state.session

@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timezone
+from uuid import UUID
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.database import AsyncSessionLocal
-from app.models import User
+from app.models import User, UserSession
 
 logger = structlog.get_logger("push")
 
@@ -64,6 +67,49 @@ def _ensure_init() -> bool:
         logger.error("fcm_init_failed", error=str(exc))
         _available = False
     return _available
+
+
+
+async def tokens_for_user(db: AsyncSession, user_id: UUID) -> list[str]:
+    """Every device this user has a live session on.
+
+    A list, because a push token identifies an installation rather than an
+    account. This used to be one column on `users`, so the second device to
+    sign in overwrote the first one's token and silently stopped it receiving
+    anything.
+
+    Revoked and expired sessions are excluded, which is the correct coupling:
+    a device that was kicked should not go on being told about new messages,
+    and a session that expired is one nobody is holding.
+    """
+    rows = await db.scalars(
+        select(UserSession.fcm_token).where(
+            UserSession.user_id == user_id,
+            UserSession.fcm_token.is_not(None),
+            UserSession.revoked_at.is_(None),
+            UserSession.expires_at > datetime.now(timezone.utc),
+        )
+    )
+    # Deduplicated: reinstalling can leave two live sessions holding the same
+    # token, and sending twice shows the user two notifications for one
+    # message.
+    return list(dict.fromkeys(rows.all()))
+
+
+async def forget_token(db: AsyncSession, token: str) -> None:
+    """Clears a token Firebase has told us is dead.
+
+    Without this the list only ever grows: an uninstalled app leaves its
+    session behind, every message pays for a delivery attempt that cannot
+    succeed, and the failure count in the metrics is permanent noise that
+    masks a real one.
+    """
+    await db.execute(
+        update(UserSession)
+        .where(UserSession.fcm_token == token)
+        .values(fcm_token=None)
+    )
+    await db.commit()
 
 
 async def send_message_push(
@@ -159,25 +205,31 @@ async def send_ocr_push(user_id: str, file_id: str) -> None:
         return
 
     async with AsyncSessionLocal() as db:
-        stmt = select(User.fcm_token).where(User.id == user_id)
-        result = await db.execute(stmt)
-        token = result.scalar_one_or_none()
-    if not token:
-        logger.debug("ocr_push_skipped", reason="no fcm_token", user_id=user_id)
+        # Every device, not the one column the newest sign-in overwrote. The
+        # keyword rules live on each device separately, so a wake-up that
+        # reaches only one of them checks only that one device's watchlist.
+        tokens = await tokens_for_user(db, UUID(str(user_id)))
+    if not tokens:
+        logger.debug("ocr_push_skipped", reason="no device token", user_id=user_id)
         return
 
     from firebase_admin import messaging
 
-    msg = messaging.Message(
-        token=token,
-        # Data-only, with no notification block: a notification block would let
-        # the OS draw the payload on the lock screen before the app ever sees
-        # it, which is exactly the control §7.1 says the user must keep.
-        data={"type": "ocr_alert", "file_id": file_id},
-        android=messaging.AndroidConfig(priority="high"),
-    )
+    messages = [
+        messaging.Message(
+            token=token,
+            # Data-only, with no notification block: a notification block would
+            # let the OS draw the payload on the lock screen before the app
+            # ever sees it, which is exactly the control §7.1 says the user
+            # must keep.
+            data={"type": "ocr_alert", "file_id": file_id},
+            android=messaging.AndroidConfig(priority="high"),
+        )
+        for token in tokens
+    ]
     try:
-        await asyncio.to_thread(messaging.send, msg)
+        for msg in messages:
+            await asyncio.to_thread(messaging.send, msg)
     except Exception as exc:
         # The error, never the payload. A logged push body is a logged keyword.
         logger.error("ocr_push_failed", error=str(exc), user_id=user_id)

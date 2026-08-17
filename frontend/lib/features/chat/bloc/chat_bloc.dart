@@ -77,6 +77,15 @@ class MessageUnsent extends ChatEvent {
   List<Object?> get props => [messageId];
 }
 
+/// The transport gave up on a queued send — refused by the server, or out of
+/// retries, or trimmed from a full queue.
+class _SendGaveUp extends ChatEvent {
+  const _SendGaveUp(this.clientRef);
+  final String clientRef;
+  @override
+  List<Object?> get props => [clientRef];
+}
+
 class _FrameReceived extends ChatEvent {
   const _FrameReceived(this.frame);
   final Map<String, dynamic> frame;
@@ -323,8 +332,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     on<ChatModerateMessageStarted>(_onModerateMessageStarted);
     on<ChatModerateMessageSuccess>(_onModerateMessageSuccess);
     on<ChatModerateMessageFailure>(_onModerateMessageFailure);
+    on<_SendGaveUp>(_onSendGaveUp);
 
     _sub = _ws.frames.listen((f) => add(_FrameReceived(f)));
+    // A message the outbox gave up on has to stop looking sent. Nothing else
+    // will notice: the frame left the queue, so no ack is coming and no error
+    // is coming, and without this the bubble waits on its clock forever.
+    _droppedSub = _ws.dropped.listen((ref) => add(_SendGaveUp(ref)));
   }
 
   final ChatRepository _repo;
@@ -378,6 +392,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       };
 
   StreamSubscription? _sub;
+  StreamSubscription? _droppedSub;
   Timer? _typingDebounce;
   int _refCounter = 0;
 
@@ -605,6 +620,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       for (final m in updated)
         if (m.id == e.messageId) m
     ]);
+  }
+
+  void _onSendGaveUp(_SendGaveUp e, Emitter<ChatRoomState> emit) {
+    emit(state.copyWith(messages: [
+      for (final m in state.messages)
+        if (m.id == e.clientRef) (m..failed = true) else m,
+    ]));
   }
 
   Future<void> _onFrame(_FrameReceived e, Emitter<ChatRoomState> emit) async {
@@ -998,6 +1020,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   Future<void> close() {
     _typingDebounce?.cancel();
     _sub?.cancel();
+    _droppedSub?.cancel();
     return super.close();
   }
 }

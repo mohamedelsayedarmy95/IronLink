@@ -847,7 +847,11 @@ class _MessageBubble extends StatelessWidget {
                   ),
                   if (mine && !message.deleted) ...[
                     const SizedBox(width: 5),
-                    _Ticks(tick: message.tick, pending: message.pending),
+                    _Ticks(
+                      tick: message.tick,
+                      pending: message.pending,
+                      failed: message.failed,
+                    ),
                   ],
                 ],
               ),
@@ -938,14 +942,29 @@ class _MessageBubble extends StatelessWidget {
 
 // ── One grey ����� ��� ��� � ��� � � ✓ (sent) → two grey ����� ��� ��� � ��� � � ✓��������������✓ (delivered) → two GOLD ����� ��� ��� � ��� � � ✓��������������✓ (read).
 class _Ticks extends StatelessWidget {
-  const _Ticks({required this.tick, required this.pending});
+  const _Ticks({
+    required this.tick,
+    required this.pending,
+    required this.failed,
+  });
 
   final MessageTick tick;
   final bool pending;
+  final bool failed;
 
   @override
   Widget build(BuildContext context) {
     final onBubble = IronColors.navyDeep;
+    // Checked before `pending`, because a message the outbox gave up on is
+    // still pending and would otherwise keep showing the waiting clock
+    // forever — which is the exact impression this is here to correct.
+    if (failed) {
+      return const Icon(
+        Icons.error_outline,
+        size: IronIcons.sizeCompact,
+        color: IronColors.errorRed,
+      );
+    }
     if (pending) {
       return Icon(IronIcons.pending, size: IronIcons.sizeCompact, color: onBubble.withValues(alpha: 0.6));
     }
