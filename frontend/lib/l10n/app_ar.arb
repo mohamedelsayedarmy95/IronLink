@@ -700,5 +700,12 @@
         "type": "int"
       }
     }
-  }
+  },
+  "securityCenterLocalExplained": "لا يغادر أي مستند هذا الجهاز أثناء الفحص، والكلمات المفتاحية مخزَّنة هنا فقط.",
+  "securityCenterNoLocalEngine": "لا يوجد محرك قراءة على هذا الجهاز، لذا لا يمكن فحص الصور. لن يُرسَل أي شيء إلى السحابة تلقائيًا.",
+  "senderReportTitle": "حالة المستلمين",
+  "senderReportAlertRaised": "صدر تنبيه ذكي",
+  "senderReportNoAlert": "لا يوجد تنبيه",
+  "senderReportKeywordHidden": "الكلمة المفتاحية خاصة بالمستلم ولا تظهر لك",
+  "senderReportUnavailable": "لم يسمح المستلم بمشاركة هذه الحالة"
 }

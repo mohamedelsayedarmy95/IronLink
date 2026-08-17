@@ -669,5 +669,12 @@
   "documentTooLowResolution": "This image is too low-resolution to analyze reliably.",
   "documentUnsupported": "This kind of file cannot be checked.",
   "documentTooLarge": "This file is larger than the checking limit.",
-  "documentTruncated": "Long document - only the first {pages} pages were checked."
+  "documentTruncated": "Long document - only the first {pages} pages were checked.",
+  "securityCenterLocalExplained": "No document leaves this device to be checked, and your keywords are stored only here.",
+  "securityCenterNoLocalEngine": "There is no reading engine on this device, so images cannot be checked. Nothing will be sent to the cloud automatically.",
+  "senderReportTitle": "Recipient status",
+  "senderReportAlertRaised": "A Smart Alert was raised",
+  "senderReportNoAlert": "No alert",
+  "senderReportKeywordHidden": "The keyword is private to the recipient and is not shown to you",
+  "senderReportUnavailable": "The recipient has not shared this status"
 }

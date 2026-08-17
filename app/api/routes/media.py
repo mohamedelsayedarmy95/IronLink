@@ -393,9 +393,14 @@ async def _process_ocr(
             # re-uploaded file alerted the user again for the same document.
             if not await claim_alert(media_key):
                 return
+            # The keyword travels on our own socket to its owner's device and
+            # nowhere else. It deliberately does NOT travel in the push below:
+            # FCM is a third party, and a keyword in a push payload is a
+            # keyword in someone else's transit logs and on a lock screen.
             await publish_ocr_alert(media_key, user_id, matched_kw)
-            # FCM fallback for backgrounded/killed apps not on the live WS
-            await push_service.send_ocr_push(user_id, media_key, matched_kw)
+            # FCM fallback for backgrounded/killed apps not on the live WS.
+            # A wake-up only — the device works out what to show.
+            await push_service.send_ocr_push(user_id, media_key)
     except Exception as e:
         logger.error(f"OCR background task failed for file {media_key}: {e}")
     finally:

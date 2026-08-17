@@ -120,9 +120,29 @@ async def send_broadcast_push(
     return delivered
 
 
-async def send_ocr_push(user_id: str, file_id: str, keyword: str) -> None:
-    """Data-only OCR keyword-match alert — the background/killed-app fallback
-    for the live WebSocket ticker (see app.redis.publish_ocr_alert)."""
+async def send_ocr_push(user_id: str, file_id: str) -> None:
+    """Wake the app so it can check a document — nothing more.
+
+    THE KEYWORD USED TO TRAVEL IN HERE, AND MUST NOT
+
+    This previously sent ``data={"type": ..., "file_id": ..., "keyword": ...}``.
+    A user's private keyword is the single most sensitive thing this feature
+    touches: it states exactly what its owner is watching for. Putting it in a
+    push payload sent it to Google's delivery infrastructure, where it sat in
+    transit logs and — on Android — could be rendered on a lock screen by any
+    handler that decided to show it. §7.1 requires notification privacy and
+    P-1 requires the keyword be visible to nobody but its owner; that payload
+    broke both, silently, for every alert.
+
+    It carries no keyword now, and no matched text. The push is a wake-up: the
+    device already holds the rules and the decrypted document, so it can work
+    out what to show, and everything it shows is derived on-device.
+
+    The file identifier stays because the client needs to know which
+    attachment to look at, and it is an opaque storage key that reveals
+    nothing about the content — a recipient who cannot decrypt the object
+    learns nothing from its name.
+    """
     if not _ensure_init():
         return
 
@@ -138,10 +158,14 @@ async def send_ocr_push(user_id: str, file_id: str, keyword: str) -> None:
 
     msg = messaging.Message(
         token=token,
-        data={"type": "ocr_alert", "file_id": file_id, "keyword": keyword},
+        # Data-only, with no notification block: a notification block would let
+        # the OS draw the payload on the lock screen before the app ever sees
+        # it, which is exactly the control §7.1 says the user must keep.
+        data={"type": "ocr_alert", "file_id": file_id},
         android=messaging.AndroidConfig(priority="high"),
     )
     try:
         await asyncio.to_thread(messaging.send, msg)
     except Exception as exc:
+        # The error, never the payload. A logged push body is a logged keyword.
         logger.error("ocr_push_failed", error=str(exc), user_id=user_id)

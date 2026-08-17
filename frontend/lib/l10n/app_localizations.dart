@@ -2736,6 +2736,48 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'مستند طويل — فُحصت الصفحات الأولى فقط ({pages} صفحة).'**
   String documentTruncated(int pages);
+
+  /// No description provided for @securityCenterLocalExplained.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يغادر أي مستند هذا الجهاز أثناء الفحص، والكلمات المفتاحية مخزَّنة هنا فقط.'**
+  String get securityCenterLocalExplained;
+
+  /// No description provided for @securityCenterNoLocalEngine.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد محرك قراءة على هذا الجهاز، لذا لا يمكن فحص الصور. لن يُرسَل أي شيء إلى السحابة تلقائيًا.'**
+  String get securityCenterNoLocalEngine;
+
+  /// No description provided for @senderReportTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حالة المستلمين'**
+  String get senderReportTitle;
+
+  /// No description provided for @senderReportAlertRaised.
+  ///
+  /// In ar, this message translates to:
+  /// **'صدر تنبيه ذكي'**
+  String get senderReportAlertRaised;
+
+  /// No description provided for @senderReportNoAlert.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد تنبيه'**
+  String get senderReportNoAlert;
+
+  /// No description provided for @senderReportKeywordHidden.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكلمة المفتاحية خاصة بالمستلم ولا تظهر لك'**
+  String get senderReportKeywordHidden;
+
+  /// No description provided for @senderReportUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يسمح المستلم بمشاركة هذه الحالة'**
+  String get senderReportUnavailable;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

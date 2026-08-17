@@ -1486,4 +1486,28 @@ class LAr extends L {
   String documentTruncated(int pages) {
     return 'مستند طويل — فُحصت الصفحات الأولى فقط ($pages صفحة).';
   }
+
+  @override
+  String get securityCenterLocalExplained =>
+      'لا يغادر أي مستند هذا الجهاز أثناء الفحص، والكلمات المفتاحية مخزَّنة هنا فقط.';
+
+  @override
+  String get securityCenterNoLocalEngine =>
+      'لا يوجد محرك قراءة على هذا الجهاز، لذا لا يمكن فحص الصور. لن يُرسَل أي شيء إلى السحابة تلقائيًا.';
+
+  @override
+  String get senderReportTitle => 'حالة المستلمين';
+
+  @override
+  String get senderReportAlertRaised => 'صدر تنبيه ذكي';
+
+  @override
+  String get senderReportNoAlert => 'لا يوجد تنبيه';
+
+  @override
+  String get senderReportKeywordHidden =>
+      'الكلمة المفتاحية خاصة بالمستلم ولا تظهر لك';
+
+  @override
+  String get senderReportUnavailable => 'لم يسمح المستلم بمشاركة هذه الحالة';
 }

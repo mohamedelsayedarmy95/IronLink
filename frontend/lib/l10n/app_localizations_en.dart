@@ -1500,4 +1500,29 @@ class LEn extends L {
   String documentTruncated(int pages) {
     return 'Long document - only the first $pages pages were checked.';
   }
+
+  @override
+  String get securityCenterLocalExplained =>
+      'No document leaves this device to be checked, and your keywords are stored only here.';
+
+  @override
+  String get securityCenterNoLocalEngine =>
+      'There is no reading engine on this device, so images cannot be checked. Nothing will be sent to the cloud automatically.';
+
+  @override
+  String get senderReportTitle => 'Recipient status';
+
+  @override
+  String get senderReportAlertRaised => 'A Smart Alert was raised';
+
+  @override
+  String get senderReportNoAlert => 'No alert';
+
+  @override
+  String get senderReportKeywordHidden =>
+      'The keyword is private to the recipient and is not shown to you';
+
+  @override
+  String get senderReportUnavailable =>
+      'The recipient has not shared this status';
 }
