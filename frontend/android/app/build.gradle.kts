@@ -33,6 +33,16 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // R8 needs telling which of ML Kit's five script recognizers this
+            // app actually uses. Without these rules the release build fails
+            // outright at :app:minifyReleaseWithR8 with eight missing classes —
+            // which it did, unnoticed, because nothing here had ever built a
+            // release APK. See proguard-rules.pro for the reasoning.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
