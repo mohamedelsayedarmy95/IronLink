@@ -31,10 +31,16 @@ class AlertStore {
   static const _fileName = 'ironlink_alerts.db';
   static const _version = 1;
 
-  static Future<AlertStore> open() async {
-    final path = '${await getDatabasesPath()}/$_fileName';
+  /// Opens the store, optionally at an explicit [path].
+  ///
+  /// The parameter exists because two suites that both open the default path
+  /// share one file, and — since test files run concurrently — clobber each
+  /// other's rows. That surfaced as failures no single file could reproduce.
+  /// It is also what a future "export my alerts" would need.
+  static Future<AlertStore> open({String? path}) async {
+    final target = path ?? '${await getDatabasesPath()}/$_fileName';
     final db = await openDatabase(
-      path,
+      target,
       version: _version,
       onConfigure: (db) async {
         // An alert without its rule is unreadable — it can name a keyword only

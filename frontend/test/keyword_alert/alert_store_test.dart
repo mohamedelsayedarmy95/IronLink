@@ -16,6 +16,7 @@ void main() {
   });
 
   late AlertStore store;
+  late String storePath;
   final t0 = DateTime.utc(2026, 8, 16, 10);
 
   // A stand-in for the real normalizer, which arrives in Phase 2. Injected
@@ -78,7 +79,10 @@ void main() {
 
   setUp(() async {
     databaseFactory = databaseFactoryFfi;
-    store = await AlertStore.open();
+    // Its own file: test files run concurrently, and two suites sharing
+    // the default path clobber each other's rows.
+    storePath = '${await getDatabasesPath()}/test_alert_store.db';
+    store = await AlertStore.open(path: storePath);
     await store.clear();
   });
 
@@ -204,7 +208,7 @@ void main() {
       await store.record(alertFor(rule));
       await store.close();
 
-      store = await AlertStore.open();
+      store = await AlertStore.open(path: storePath);
       final outstanding = await store.outstanding(now: t0);
       expect(outstanding, hasLength(1));
       expect(outstanding.single.matchedText, 'contract');
@@ -217,7 +221,7 @@ void main() {
       await store.transition(alert.id, AlertStatus.acknowledged, now: t0);
       await store.close();
 
-      store = await AlertStore.open();
+      store = await AlertStore.open(path: storePath);
       expect((await store.byId(alert.id))!.status, AlertStatus.acknowledged);
       expect(await store.outstanding(now: t0), isEmpty);
     });
