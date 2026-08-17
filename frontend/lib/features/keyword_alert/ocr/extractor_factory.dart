@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'image_text_extractor.dart';
+import 'tesseract_text_extractor.dart';
 import 'pdf_text_extractor.dart';
 import 'text_extractor.dart';
 
@@ -49,12 +50,14 @@ class KeywordExtractors {
       return null;
     }
 
-    // No Arabic engine, and the reason is now exact: every Arabic OCR binding
-    // on pub calls jcenter() in its Gradle script, and Gradle removed that
-    // method. Twice proven by CI. See docs/SMART_KEYWORD_ALERT_AUDIT.md.
-    //
-    // The composite stays, with a null second engine, because it is where that
-    // engine plugs in. One argument, no rewrite.
-    return ImageTextExtractor(arabic: null);
+    // Arabic is the primary language of this product, so its engine is not an
+    // optional extra — but it is also not something to claim without checking.
+    // If the bundled model did not unpack, the composite falls back to ML Kit
+    // alone, Arabic images are not read, and the pipeline reports that honestly.
+    final arabicReady = await TesseractTextExtractor.isAvailable();
+
+    return ImageTextExtractor(
+      arabic: arabicReady ? const TesseractTextExtractor() : null,
+    );
   }
 }
