@@ -17,14 +17,26 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# A note on pinning, since the two kinds of dependency here are pinned
+# differently on purpose.
+#
+# Action majors float (@v7). A major is a stable input contract, and letting
+# patches arrive is how Node runtime deprecations get picked up instead of
+# accumulating — GitHub flagged Node 20 on the previous versions of these, and
+# nothing would have surfaced that except a run.
+#
+# The Flutter version does not float. A toolchain that moves on its own turns
+# an unrelated pull request red and sends its author hunting a bug they did not
+# write. Bump it deliberately, in both workflows at once.
+
 jobs:
   backend:
     name: Backend (pytest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'   # matches the Dockerfile base image
           cache: pip
@@ -48,13 +60,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
-          # Pinned rather than 'stable': a toolchain that moves on its own
-          # turns an unrelated pull request red and sends the author looking
-          # for a bug they did not write. Bump this deliberately.
           flutter-version: '3.47.0'
           channel: stable
           cache: true
