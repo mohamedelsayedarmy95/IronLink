@@ -1,0 +1,83 @@
+name: CI
+
+# Runs on every pull request, and on main after merge.
+#
+# The repository had no test workflow at all: 765 tests existed and none of
+# them ran anywhere except a developer's machine. That is the same failure mode
+# as the Smart Keyword Alert bugs this suite now guards against — code that
+# nobody had actually executed, believed to work because nothing said otherwise.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch cancels the first. Reviewing a run for a
+# commit that has already been replaced is wasted attention.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'   # matches the Dockerfile base image
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # No Redis or Postgres service here on purpose. The suite uses fakes
+      # (tests/fakes.py) rather than live infrastructure, which is what keeps
+      # it fast and what lets it assert on failure paths — an unreachable Redis
+      # is a case worth testing, and it is easier to fake than to arrange.
+      - name: Run tests
+        run: python -m pytest tests/ -q
+
+  frontend:
+    name: Frontend (analyze + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Pinned rather than 'stable': a toolchain that moves on its own
+          # turns an unrelated pull request red and sends the author looking
+          # for a bug they did not write. Bump this deliberately.
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Two passes with different bars, because the repository has pre-existing
+      # lint debt that is not this workflow's business to fail over.
+      #
+      # Repository-wide: infos are tolerated (43 of them today, all in code
+      # that predates this suite), while any *warning* or *error* fails. That
+      # is a real bar — it catches the class of mistake that matters without
+      # holding new work hostage to old style.
+      - name: Analyze (repository, warnings and errors fatal)
+        run: flutter analyze --no-fatal-infos
+
+      # And a strict pass over the code written against the Smart Keyword Alert
+      # specification, which is clean and must stay clean. If this ever starts
+      # failing, something new was added below the standard the rest of the
+      # feature holds.
+      - name: Analyze (keyword alert, strict)
+        run: flutter analyze lib/features/keyword_alert test/keyword_alert
+
+      - name: Run tests
+        run: flutter test

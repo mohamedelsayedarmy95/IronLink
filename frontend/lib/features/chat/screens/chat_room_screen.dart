@@ -26,7 +26,6 @@ import '../../../core/icons.dart';
 import '../../moderation/moderation_repository.dart';
 import '../../moderation/screens/blocked_users_screen.dart' show confirmBlock;
 import '../../moderation/widgets/report_sheet.dart';
-import '../../settings/ocr_settings_page.dart' show failureMessage;
 
 class ChatRoomScreen extends StatelessWidget {
   const ChatRoomScreen({
@@ -628,7 +627,6 @@ class _BlockedBanner extends StatelessWidget {
 
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
-    super.key,
     required this.message,
     required this.conversationId,
     required this.myId,

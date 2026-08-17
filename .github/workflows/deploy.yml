@@ -1,61 +1,98 @@
-name: Deploy to Fly.io
+name: Deploy
 
+# STATUS: partly vestigial. Read this before trusting it.
+#
+# This workflow has never run — it triggers only on push to main, and all work
+# so far has happened on branches. That is the only reason it has not been red:
+# as written before this commit it could not have completed a single step past
+# the dependency install.
+#
+# What was broken, and is fixed here:
+#
+#   * `pip install -r backend/requirements.txt` — that file does not exist.
+#     `backend/` holds one example env file; the manifest is at the repository
+#     root.
+#   * `docker build ... backend` — there is no Dockerfile in `backend/` either.
+#   * Flutter 3.16.0 — ships Dart 3.2, while pubspec.yaml requires >=3.4.0, so
+#     `flutter pub get` would have failed outright.
+#   * `actions/upload-artifact@v3` — retired by GitHub; runs using it now fail.
+#
+# What is NOT fixed here, because it is a decision rather than a defect:
+#
+#   The deploy target says Fly.io, but this project deploys on Render —
+#   `render.yaml` is in the repository, the APK below is built against
+#   `ironlink-api.onrender.com`, and no FLY_API_TOKEN secret exists. Render
+#   deploys from its own git integration, which would make this step redundant
+#   even if it were configured.
+#
+#   Rather than guess, the Fly steps are now skipped unless the token is
+#   actually present. Nothing changes if someone adds it; nothing fails if
+#   nobody does. Delete those steps once the intent is settled.
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
 
-      - name: Install dependencies
+      - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          pip install -r requirements.txt
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - name: Build backend image
+        run: docker build -t ironlink-backend:latest .
+
+      # ── Fly.io: skipped unless a token is configured ────────────────────────
+      - name: Set up flyctl
+        if: env.FLY_API_TOKEN != ''
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        if: env.FLY_API_TOKEN != ''
+        run: flyctl deploy --remote-only
+
+      - name: Note skipped deploy
+        if: env.FLY_API_TOKEN == ''
+        run: |
+          echo "::notice::Fly.io deploy skipped — no FLY_API_TOKEN secret."
+          echo "::notice::This project deploys on Render; see the header comment."
+
+      # ── Android build ───────────────────────────────────────────────────────
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0'
+          # Kept in step with .github/workflows/ci.yml. Two workflows building
+          # the same app on different toolchains is a bug waiting for the day
+          # they disagree.
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
 
       - name: Install Flutter dependencies
         run: flutter pub get
         working-directory: frontend
 
-      - name: Build Backend Docker Image
-        run: |
-          docker build -t ironlink-backend:latest backend
-
-      - name: Log in to Fly.io
-        uses: superfly/flyctl-actions/setup-flyctl@v1
-        with:
-          version: latest
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Build Flutter APK
-        # API_BASE_URL must include the /api/v1 prefix; WS_BASE_URL must not,
-        # since the WebSocket routes are mounted at the application root.
+      # API_BASE_URL must include the /api/v1 prefix; WS_BASE_URL must not,
+      # since the WebSocket routes are mounted at the application root.
+      - name: Build APK
         run: |
           flutter build apk --release \
             --dart-define=API_BASE_URL=https://ironlink-api.onrender.com/api/v1 \
             --dart-define=WS_BASE_URL=wss://ironlink-api.onrender.com
         working-directory: frontend
 
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

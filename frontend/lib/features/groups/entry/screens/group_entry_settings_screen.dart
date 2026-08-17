@@ -6,7 +6,6 @@ import '../../../../core/icons.dart';
 import '../../../../core/theme.dart';
 import '../../../../core/widgets/iron_button.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../settings/ocr_settings_page.dart' show failureMessage;
 import '../entry_repository.dart';
 import '../models/verification_form.dart';
 import 'audit_log_screen.dart';

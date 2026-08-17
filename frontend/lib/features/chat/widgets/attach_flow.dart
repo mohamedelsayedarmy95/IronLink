@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/crypto/attachment_crypto.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
-import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/icons.dart';
 
@@ -37,87 +35,78 @@ Future<AttachmentReady?> showAttachFlow(
   required MediaService media,
   required bool encrypted,
 }) async {
-  // Obtain WsService from providers to listen for OCR alerts
-  final ws = context.read<WsService>();
-  StreamSubscription? ocrSub;
-
-  ocrSub = ws.frames.listen((frame) {
-    if (frame['type'] == 'ocr_alert') {
-      final fileId = frame['file_id'] as String?;
-      final keyword = frame['keyword'] as String?;
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(L.of(context).ocrAlertFound(keyword ?? '')),
-            backgroundColor: IronColors.navySurface,
-          ),
-        );
-      }
-    }
-  });
-
-  try {
-    final source = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: IronColors.navySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _AttachOption(
-                icon: IronIcons.gallery,
-                label: L.of(context).attachGallery,
-                onTap: () => Navigator.pop(sheetContext, 'gallery'),
-              ),
-              _AttachOption(
-                icon: IronIcons.camera,
-                label: L.of(context).attachCamera,
-                onTap: () => Navigator.pop(sheetContext, 'camera'),
-              ),
-              _AttachOption(
-                icon: IronIcons.document,
-                label: L.of(context).attachDocument,
-                onTap: () => Navigator.pop(sheetContext, 'pdf'),
-              ),
-            ],
-          ),
+  // There was a WebSocket listener here that popped a snackbar naming a
+  // matched keyword while the user was choosing a file to send. Three things
+  // were wrong with it, so it is gone rather than repaired.
+  //
+  // It leaked into the wrong surface: this is the *sender's* attach sheet, and
+  // the sender never learns another person's keyword.
+  //
+  // It was subscribed inside a `try` whose `finally` cancelled it, while the
+  // return below handed back a Future without awaiting it — so the `finally`
+  // ran the instant the preview opened, and the subscription was dead for
+  // exactly the period it existed to cover. It had never worked.
+  //
+  // And alerts are raised on-device now, surfaced by the ticker and the alert
+  // centre, which are the two places that own them.
+  final source = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: IronColors.navySurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _AttachOption(
+              icon: IronIcons.gallery,
+              label: L.of(context).attachGallery,
+              onTap: () => Navigator.pop(sheetContext, 'gallery'),
+            ),
+            _AttachOption(
+              icon: IronIcons.camera,
+              label: L.of(context).attachCamera,
+              onTap: () => Navigator.pop(sheetContext, 'camera'),
+            ),
+            _AttachOption(
+              icon: IronIcons.document,
+              label: L.of(context).attachDocument,
+              onTap: () => Navigator.pop(sheetContext, 'pdf'),
+            ),
+          ],
         ),
       ),
-    );
-    if (source == null || !context.mounted) return null;
+    ),
+  );
+  if (source == null || !context.mounted) return null;
 
-    if (source == 'pdf') {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(L.of(context).attachPdfComingSoon),
-      ));
-      return null;
-    }
-
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
-      imageQuality: 92,
-    );
-    if (picked == null || !context.mounted) return null;
-
-    // Preview + caption before sending, as specified
-    return Navigator.of(context).push<AttachmentReady>(
-      MaterialPageRoute(
-        builder: (_) => _ImagePreviewScreen(
-          file: File(picked.path),
-          media: media,
-          encrypted: encrypted,
-        ),
-      ),
-    );
-  } finally {
-    ocrSub?.cancel();
+  if (source == 'pdf') {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(L.of(context).attachPdfComingSoon),
+    ));
+    return null;
   }
+
+  final picker = ImagePicker();
+  final picked = await picker.pickImage(
+    source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
+    imageQuality: 92,
+  );
+  if (picked == null || !context.mounted) return null;
+
+  // Preview + caption before sending, as specified
+  return await Navigator.of(context).push<AttachmentReady>(
+    MaterialPageRoute(
+      builder: (_) => _ImagePreviewScreen(
+        file: File(picked.path),
+        media: media,
+        encrypted: encrypted,
+      ),
+    ),
+  );
 }
 
 class _AttachOption extends StatelessWidget {

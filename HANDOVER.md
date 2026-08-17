@@ -1,9 +1,10 @@
 # IronLink — Project Status & Release Readiness
 
-**Last updated:** 2026-08-07
-**Branch:** `fix/boot-crashes-and-backend-merge` — 15 commits ahead of `main`, all pushed
+**Last updated:** 2026-08-17
+**Branch:** `fix/boot-crashes-and-backend-merge` — 25 commits ahead of `main`, all pushed, PR #1 open
 **Live API:** https://ironlink-api.onrender.com → `{"status":"ok","env":"production"}`
 **Android package:** `com.ironlink.app`
+**Tests:** 426 frontend, 339 backend, all passing. CI runs both on every PR.
 
 > Written so a fresh session can pick this up cold. Everything marked ✅ was
 > verified by running it, not by reading the code. Where something is unverified
@@ -14,22 +15,30 @@
 ## 1. Executive summary
 
 The backend is deployed and healthy. The Android app builds, installs, and runs
-on a physical device. **The product is not releasable**, and the gap is larger
-than it looks from the outside.
+on a physical device.
 
-Two facts matter more than anything else in this document:
+Since this document was last written in full, two of the three things it called
+blockers have been dealt with:
 
-1. **Nobody can log in.** There is no SMS provider and no self-registration
-   endpoint. A temporary dev bypass exists but is switched off in production.
-2. **The encryption is fake.** `encryption_service.py` returns the literal
-   strings `"mock_ciphertext"` and `"mock_plaintext"`. The UI presents IronLink
-   as end-to-end encrypted messaging. It is not.
+* **Encryption is real.** The `"mock_ciphertext"` stub is gone. Signal Protocol
+  (X3DH + Double Ratchet) for one-to-one, Sender Keys with a membership epoch
+  baked into the key name for groups, AES-256-GCM for attachments and voice.
+  Encryption is the default for every chat.
+* **Self-registration works.** Firebase Phone Auth, real numbers, no manually
+  provisioned test accounts. Session-bound JWTs with refresh rotation and
+  reuse detection.
+* **Smart Keyword Alert is built** — see §11 below, and the two documents in
+  `docs/`.
 
-Item 2 is the single most serious thing in this project. It is a claim the
-product makes to users and does not keep.
+What is still genuinely open is listed in §5 and §11. The largest single item
+is that **none of the recent work has been exercised on a physical device**:
+two native dependencies were added and have never been through an Android
+build.
 
-**Realistic distance to a releasable app:** 3–6 weeks, dominated by E2EE and
-real authentication.
+⚠️ **Sections 2 through 10 were written on 2026-08-07 and have not been
+re-audited line by line since.** They are broadly right about infrastructure
+and environment traps, and wrong wherever they describe encryption or
+authentication as missing. Trust §1 and §11 over them where they conflict.
 
 ---
 
@@ -561,3 +570,94 @@ d4e732d  fix: repair boot crashes, merge orphaned backend/app into app/
 
 Each message documents its own root cause and how it was verified.
 `git show <hash>` for detail.
+
+---
+
+## 11. Smart Keyword Alert — current state (2026-08-17)
+
+Built against `IronLink-Smart-Keyword-Alert-Master-Prompt-v4.1.0.md`, phases 0
+through 7. Two documents carry the detail:
+
+* [`docs/SMART_KEYWORD_ALERT_AUDIT.md`](docs/SMART_KEYWORD_ALERT_AUDIT.md) —
+  what was found at Phase 0 and why the architecture is what it is.
+* [`docs/SMART_KEYWORD_ALERT_REPORT.md`](docs/SMART_KEYWORD_ALERT_REPORT.md) —
+  the final report, with a status matrix naming a file and a test for every
+  capability.
+
+### The short version
+
+The feature had never worked. Four defects stacked in one module, each hidden
+because every call site swallowed its own exception: a synchronous Redis client
+pointed at a docker-compose hostname that cannot resolve on Render; awaited
+non-awaitables making all three keyword endpoints return 500; a publisher and
+subscriber on different Redis databases; and a normalizer that deleted every
+Arabic character.
+
+Because encryption is now the default, the server holds no key and cannot read
+an attachment — so the pipeline runs **on the device**, which is what the
+specification mandates anyway. Rules and alerts live in `ironlink_alerts.db`
+(sqflite, separate from the message cache), the server never receives a
+keyword, and the push payload that used to carry one to FCM no longer does.
+
+### Where the code is
+
+```
+frontend/lib/features/keyword_alert/
+  domain/          rules, alerts, the state machine, the sender-report boundary
+  text/            Arabic + Latin normalization, offsets preserved
+  matching/        the layered matcher and five-factor confidence scoring
+  ocr/             pre-flight, extractor interface, PDF text layer, ML Kit
+  local/           sqflite store, plus an in-memory one
+  bloc/ screens/ widgets/
+  keyword_alert_pipeline.dart    one document, end to end
+  keyword_alert_service.dart     the queue between the widget and the pipeline
+```
+
+### Open decisions — these need a human
+
+1. **ML Kit has no Arabic recognizer.** §3.6 of the specification is factually
+   wrong about this; the package declares `latin, chinese, devanagiri,
+   japanese, korean`. Arabic works in PDF text layers and plain text, and does
+   not work in photographs. Closing it needs Apple Vision on iOS and a
+   Tesseract `ara` binding on Android — the latter bundling tens of megabytes
+   of model data into the APK, which is a product decision.
+2. **Two new native dependencies** — `google_mlkit_text_recognition` and
+   `syncfusion_flutter_pdf`. Neither has been through a device build.
+3. **`deploy.yml` targets Fly.io** while this project deploys on Render. The
+   Fly steps are now skipped unless a `FLY_API_TOKEN` secret exists, so they
+   fail closed rather than red, but the intent should be settled and the dead
+   steps deleted.
+
+### Deliberately not done
+
+* Scanned (image-only) PDFs are not rasterized.
+* No performance or battery measurement — the numbers in §10.3 of the
+  specification are targets, not observations.
+* No telemetry sink or dashboards. The event types and guardrail thresholds
+  exist; nothing ships them anywhere.
+* Semantic matching, synonym expansion and Office formats are declared in the
+  feature-flag registry and not implemented. The flags exist so the inventory
+  is honest, not so the features look present.
+
+---
+
+## 12. Continuous integration (added 2026-08-17)
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`:
+
+| Job | What it runs |
+|---|---|
+| Backend | `pytest tests/` on Python 3.12 |
+| Frontend | `flutter analyze --no-fatal-infos`, a strict analyze over `keyword_alert`, then `flutter test` |
+
+Before this, 765 tests existed and ran nowhere but a developer's machine.
+
+**The analyzer bar is real.** The repository carries 40 pre-existing `info`
+lints, which are tolerated; every warning and error was cleared, so any new one
+fails the build. Do not weaken this to `--no-fatal-warnings` — clear the
+warning instead.
+
+Flutter is pinned to 3.47.0 in both workflows deliberately. A toolchain that
+moves on its own turns an unrelated pull request red and sends its author
+hunting a bug they did not write.
+

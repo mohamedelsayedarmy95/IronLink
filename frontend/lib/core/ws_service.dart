@@ -7,8 +7,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'api_client.dart';
 import 'env.dart';
-import '../features/notification/ticker_bloc.dart';
-import '../features/notification/ticker_event.dart';
 
 /// Whether the transport is usable, so the interface can say so.
 enum WsStatus { connected, connecting, offline }
@@ -98,9 +96,12 @@ class WsService {
       channel.stream.listen(
         (raw) {
           final frame = jsonDecode(raw as String) as Map<String, dynamic>;
-          if (frame['type'] == 'ocr_alert') {
-            TickerBloc().add(AddOcrAlert(frame));
-          }
+          // Every frame goes to one stream and nowhere else. This used to
+          // special-case 'ocr_alert' and push it into a singleton bloc, which
+          // meant one frame type bypassed the stream every other listener
+          // reads — and after the alert feature moved on-device, it pushed
+          // into a bloc nothing rendered. A transport should carry frames, not
+          // decide what they mean.
           _frames.add(frame);
         },
         onDone: _handleDisconnect,

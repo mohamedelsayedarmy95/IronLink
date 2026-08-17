@@ -7,7 +7,6 @@ import '../../../core/theme.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/iron_button.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../settings/ocr_settings_page.dart' show failureMessage;
 import '../contact_sync_service.dart';
 import '../contacts_repository.dart';
 import 'contacts_permission_screen.dart';

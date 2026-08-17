@@ -14,7 +14,6 @@ import '../../../../core/theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/iron_button.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../settings/ocr_settings_page.dart' show failureMessage;
 import '../entry_repository.dart';
 import '../models/verification_form.dart';
 import '../widgets/dynamic_form_field.dart';

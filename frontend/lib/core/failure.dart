@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// What went wrong, in terms a person can act on.
 ///
 /// Transport details (`DioException`, socket errors, the dev host address)
@@ -72,3 +74,24 @@ extension NetworkFailureClassifier on NetworkFailure {
     return NetworkFailure.unknown;
   }
 }
+
+/// The localized sentence for a failure.
+///
+/// It lived at the top of `features/settings/ocr_settings_page.dart` — an
+/// app-wide helper hiding in one feature's screen, imported by eleven others
+/// that had nothing to do with OCR settings. It belongs beside the enum it maps
+/// from, which is here.
+///
+/// The mapping is exhaustive with no default branch on purpose: adding a
+/// [NetworkFailure] should fail to compile until someone decides what to tell
+/// the user about it.
+String failureMessage(L t, NetworkFailure f) => switch (f) {
+      NetworkFailure.offline => t.failureOffline,
+      NetworkFailure.timeout => t.failureTimeout,
+      NetworkFailure.server => t.failureServer,
+      NetworkFailure.unauthorized => t.failureUnauthorized,
+      NetworkFailure.rejected => t.failureRejected,
+      NetworkFailure.insecure => t.failureInsecure,
+      NetworkFailure.unknown => t.failureUnknown,
+    };
+

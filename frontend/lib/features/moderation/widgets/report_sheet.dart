@@ -6,7 +6,6 @@ import '../../../core/icons.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/iron_button.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../settings/ocr_settings_page.dart' show failureMessage;
 import '../moderation_repository.dart';
 
 /// Outcome handed back to the caller, so the chat screen can react without

@@ -5,7 +5,6 @@ import '../../../core/icons.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../settings/ocr_settings_page.dart' show failureMessage;
 import '../moderation_repository.dart';
 
 /// The list of people this user has blocked, with one tap to undo.

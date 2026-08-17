@@ -403,8 +403,6 @@ void main() {
     test('a rotation the sender ignores is impossible to express', () async {
       // The epoch is part of the sender key's NAME, so encrypting at a new
       // epoch cannot reuse the old key even by mistake.
-      final alice = await device('alice');
-
       final one = GroupSenderKeys.name(
           groupId: 'g1', epoch: 1, senderId: 'alice');
       final two = GroupSenderKeys.name(

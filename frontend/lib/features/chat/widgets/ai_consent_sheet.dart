@@ -4,7 +4,6 @@ import '../../../core/failure.dart';
 import '../../../core/icons.dart';
 import '../../../core/theme.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../settings/ocr_settings_page.dart' show failureMessage;
 import '../ai_consent_repository.dart';
 
 /// Asks for — or withdraws — permission to send a conversation's text for AI
