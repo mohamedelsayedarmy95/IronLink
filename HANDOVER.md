@@ -627,10 +627,13 @@ frontend/lib/features/keyword_alert/
    `flutter_tesseract_ocr`. This is now the single largest unverified area in
    the project. The hOCR parsing and engine routing have 18 tests; the platform
    channels have none, because they cannot.
-3. **`deploy.yml` targets Fly.io** while this project deploys on Render. The
-   Fly steps are now skipped unless a `FLY_API_TOKEN` secret exists, so they
-   fail closed rather than red, but the intent should be settled and the dead
-   steps deleted.
+3. ~~`deploy.yml` targets Fly.io.~~ **Settled 2026-08-17: the file is gone.**
+   `fly.toml` has never existed anywhere in this repository's history, and
+   `flyctl deploy` requires one — so that step could not have worked even with
+   a token. It was template scaffolding nobody removed. Render deploys from its
+   own git integration (`render.yaml`, `autoDeploy: true`), so no workflow
+   should be deploying anything. Its two genuinely useful steps moved into
+   `ci.yml`.
 
 ### Deliberately not done
 
@@ -652,7 +655,22 @@ frontend/lib/features/keyword_alert/
 | Job | What it runs |
 |---|---|
 | Backend | `pytest tests/` on Python 3.12 |
+| Backend (image) | `docker build` of the same Dockerfile Render builds |
 | Frontend | `flutter analyze --no-fatal-infos`, a strict analyze over `keyword_alert`, then `flutter test` |
+| Android | `flutter build apk --release`, then confirms `ara.traineddata` is inside the APK |
+
+**Nothing deploys from CI.** Render watches the branch itself. `deploy.yml` was
+deleted rather than fixed: it targeted Fly.io, and `fly.toml` has never existed
+in this repository, so it could not have worked under any configuration.
+
+The Android job is the one that changes the risk picture. Three native plugins —
+ML Kit, Tesseract, Syncfusion PDF — had never been through an Android build,
+and unit tests cannot reach a platform channel. It builds `--release` rather
+than `--debug` on purpose: R8 shrinking is where ML Kit and Tesseract break, by
+stripping classes reached only reflectively, and a debug build would pass while
+saying nothing about what ships. It signs with the debug key because
+`android/app/build.gradle` still does — a real gap for shipping, no obstacle to
+verifying the build.
 
 Before this, 765 tests existed and ran nowhere but a developer's machine.
 
