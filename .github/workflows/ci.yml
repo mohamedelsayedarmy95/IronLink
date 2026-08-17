@@ -158,6 +158,21 @@ jobs:
             --dart-define=API_BASE_URL=https://ironlink-api.onrender.com/api/v1 \
             --dart-define=WS_BASE_URL=wss://ironlink-api.onrender.com
 
+      # Confirms the 1.37 MB Arabic model reached the package. A missing asset
+      # does not fail a build — it fails at runtime, on someone's phone, as
+      # "Arabic documents are never read". Which is precisely the silent failure
+      # this feature was rebuilt to eliminate.
+      - name: Verify the Arabic model is bundled
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          if unzip -l "$apk" | grep -q 'tessdata/ara.traineddata'; then
+            echo "::notice::ara.traineddata is present in the APK"
+          else
+            echo "::error::ara.traineddata is missing — Arabic image OCR would silently never work"
+            unzip -l "$apk" | grep -i tessdata || true
+            exit 1
+          fi
+
       # No artifact upload, deliberately. This APK has a placeholder Firebase
       # config baked into it: it would look like a working build and fail at
       # sign-in, and someone would lose an afternoon to that. This job answers
