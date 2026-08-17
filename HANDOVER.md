@@ -936,3 +936,39 @@ than the service.
 - Push delivery rate unmeasurable until `fcm_token` becomes per-session.
 - No dashboards. The metrics exist and are scrapeable; nothing renders them.
 - SLO targets are guesses until there is traffic to measure.
+
+---
+
+## 15. Push notifications carry no content (added 2026-08-17)
+
+Found by the v4.0 repository audit (`docs/REPOSITORY_AUDIT_v4.md`, SEC-01) and
+fixed the same day. It was the worst thing in the repository and it was
+invisible, because the call site read a field named `content` — which is
+exactly how you would build a preview in a product that is not encrypted.
+
+`websocket.py` passed `frame["content"]` to the FCM notification body. That
+field is the ciphertext envelope when encryption is on and the plaintext
+message when it is off. So one mode put a blob of JSON on the user's lock
+screen, and the other handed the message to Google.
+
+**Now:** `Notification(title=sender_name)`, no body, and the call site never
+reads the content field. The `preview` parameter was **removed** from
+`send_message_push` rather than passed something safe — a parameter that exists
+is a parameter the next caller can fill.
+
+**No generic body was substituted.** The server does not know the recipient's
+language, and a notification reading "New message" to someone whose phone is in
+Arabic is worse than one that just says who it is from.
+
+**Related, same commit:** the conversation list preview no longer comes from
+the server. It used to be `content_ciphertext[:20]` — twenty characters of a
+Signal envelope, which nobody can decrypt, drawn in the list as though it were
+text. The server may still return a message *kind* (`[image]`), which it knows
+from a column and which covers the one case the client cannot: a conversation
+this device has no local copy of. Everything else comes from
+`MessageStore.latestPerPeer()`.
+
+`tests/test_push_privacy.py` holds both lines. The push test asserts against
+the whole frame handler rather than a single line, because the leak was a local
+variable built two lines above the call, and a narrower check would pass again
+the moment somebody renamed it.

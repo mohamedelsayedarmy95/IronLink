@@ -28,9 +28,12 @@ cryptography==43.0.3
 # ── Signal Protocol for E2EE ───────────────────────────────────────────
 # Intentionally absent. signal-protocol==0.1.0 was pinned here and broke every
 # build — that version has never existed on PyPI (only 0.2.1 / 0.2.2), and
-# nothing in app/ imports it: app/services/encryption_service.py is still a
-# mock. Add a real pin here when that mock is replaced with a working
-# implementation, not before.
+# nothing in app/ imports it. The server-side app/services/encryption_service.py
+# that once faked encryption has been deleted, and
+# tests/test_key_directory.py::test_encryption_service_is_gone fails the build
+# if it comes back — the protocol lives on the device, in
+# frontend/lib/core/crypto/. Add a pin here only if the server ever needs to
+# speak Signal itself, which by design it should not.
 
 # ── Media processing ───────────────────────────────────────────────────
 Pillow==11.0.0

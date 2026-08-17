@@ -178,13 +178,14 @@ async def _handle_frame(
                 recipient = await db.scalar(select(User).where(User.id == to))
                 sender = await db.scalar(select(User).where(User.id == user_id))
                 if recipient is not None and recipient.fcm_token and sender is not None:
-                    preview = (
-                        frame.get("content") or f"[{frame_type}]"
-                    )
+                    # frame["content"] is deliberately not read here. It is the
+                    # ciphertext envelope when encryption is on and the
+                    # plaintext message when it is off, and neither belongs in
+                    # a notification that renders on a locked screen through
+                    # infrastructure we do not control.
                     await push_service.send_message_push(
                         recipient.fcm_token,
                         sender_name=sender.full_name,
-                        preview=preview,
                         peer_id=str(user_id),
                     )
 

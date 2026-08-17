@@ -163,6 +163,29 @@ class MessageStore {
     return rows.reversed.map(_toMessage).toList();
   }
 
+  /// The newest cached message per conversation, keyed by peer id.
+  ///
+  /// This is what the conversation list renders as a preview. It has to come
+  /// from here rather than from the server, because the server holds
+  /// ciphertext and has no key — it once returned a twenty-character slice of
+  /// the envelope, which the list drew as though it were text.
+  ///
+  /// One grouped query rather than one per conversation: a list of forty
+  /// chats would otherwise do forty round trips to sqflite on every rebuild.
+  Future<Map<String, ChatMessage>> latestPerPeer() async {
+    final rows = await _db.rawQuery('''
+      SELECT m.* FROM messages m
+      JOIN (
+        SELECT peer_id, MAX(created_at) AS newest
+        FROM messages WHERE deleted = 0 GROUP BY peer_id
+      ) latest
+        ON m.peer_id = latest.peer_id AND m.created_at = latest.newest
+    ''');
+    return {
+      for (final row in rows) row['peer_id'] as String: _toMessage(row),
+    };
+  }
+
   /// Full-text-ish search across every cached conversation.
   ///
   /// LIKE rather than FTS5: the corpus is one device's message history, where
@@ -317,6 +340,9 @@ class NullMessageStore implements MessageStore {
   @override
   Future<List<ChatMessage>> conversation(String peerId, {int limit = 200}) async =>
       const [];
+
+  @override
+  Future<Map<String, ChatMessage>> latestPerPeer() async => const {};
 
   @override
   Future<List<MessageSearchHit>> search(String query, {int limit = 100}) async =>

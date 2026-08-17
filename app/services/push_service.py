@@ -70,11 +70,26 @@ async def send_message_push(
     fcm_token: str,
     *,
     sender_name: str,
-    preview: str,
     peer_id: str,
 ) -> None:
-    """Offline-message notification. Tapping opens the conversation directly
-    (the app routes on the peer_id in the data payload)."""
+    """Offline-message notification. Carries who, never what.
+
+    There is no `preview` parameter, and that is the point. This function used
+    to take one and set it as the notification body, and the value it was given
+    was the message field straight off the wire — the ciphertext envelope when
+    encryption was on, and the plaintext message when it was off. So the
+    encrypted case put a blob of JSON on the user's lock screen, and the
+    unencrypted case handed the message itself to Google.
+
+    A notification is the one part of a messenger that renders outside the
+    application, on a locked screen, through an infrastructure nobody here
+    controls. Content does not belong in it.
+
+    The title is the sender's name and there is no body. A generic body would
+    have to be written in some language, and the server does not know the
+    recipient's — a notification reading "New message" to someone whose phone
+    is in Arabic is worse than a notification that simply says who it is from.
+    """
     if not _ensure_init():
         return
 
@@ -82,10 +97,7 @@ async def send_message_push(
 
     msg = messaging.Message(
         token=fcm_token,
-        notification=messaging.Notification(
-            title=sender_name,
-            body=preview[:80],
-        ),
+        notification=messaging.Notification(title=sender_name),
         data={"kind": "dm", "peer_id": peer_id},
         android=messaging.AndroidConfig(priority="high"),
     )

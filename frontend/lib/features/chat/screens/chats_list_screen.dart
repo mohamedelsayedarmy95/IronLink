@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../chat_repository.dart';
+import '../local/message_store.dart';
 import 'chat_room_screen.dart';
 import '../../../core/icons.dart';
 
-/// Navy cards, circular avatars, gold online dot, 20-char preview.
+/// Navy cards, circular avatars, gold online dot, and a preview the server
+/// never sees.
+///
+/// The preview is read from this device's decrypted history, not from the
+/// conversation payload. The server holds ciphertext and no key; it used to
+/// return the first twenty characters of the envelope and this list drew them
+/// as though they were words.
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({
     super.key,
@@ -25,11 +33,32 @@ class ChatsListScreen extends StatefulWidget {
   State<ChatsListScreen> createState() => _ChatsListScreenState();
 }
 
+/// A conversation from the server, paired with the last thing this device can
+/// actually read in it.
+typedef _Listed = ({Conversation chat, String? preview});
+
 class _ChatsListScreenState extends State<ChatsListScreen> {
-  late Future<List<Conversation>> _future = widget.repo.conversations();
+  late Future<List<_Listed>> _future = _load();
+
+  Future<List<_Listed>> _load() async {
+    final chats = await widget.repo.conversations();
+    // One grouped query for the whole list rather than one per row.
+    final latest = await context.read<MessageStore>().latestPerPeer();
+    return [
+      for (final chat in chats)
+        (
+          chat: chat,
+          // The server's field is only ever a message *kind* now — "[image]"
+          // for a conversation this device has no local copy of. Local text
+          // wins over it, because local text is the actual message.
+          preview: latest[chat.peerId.toString()]?.content ??
+              chat.lastMessagePreview,
+        ),
+    ];
+  }
 
   Future<void> _refresh() async {
-    setState(() => _future = widget.repo.conversations());
+    setState(() => _future = _load());
     await _future;
   }
 
@@ -39,7 +68,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       color: IronColors.gold,
       backgroundColor: IronColors.navySurface,
       onRefresh: _refresh,
-      child: FutureBuilder<List<Conversation>>(
+      child: FutureBuilder<List<_Listed>>(
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
@@ -69,16 +98,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             itemCount: chats.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, i) => _ChatCard(
-              chat: chats[i],
+              chat: chats[i].chat,
+              preview: chats[i].preview,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ChatRoomScreen(
                     repo: widget.repo,
                     ws: widget.ws,
                     myId: widget.myId,
-                    peerId: chats[i].peerId,
-                    peerName: chats[i].peerName,
-                    peerOnline: chats[i].isOnline,
+                    peerId: chats[i].chat.peerId,
+                    peerName: chats[i].chat.peerName,
+                    peerOnline: chats[i].chat.isOnline,
                     isSecret: false,
                   ),
                 ),
@@ -92,9 +122,19 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 }
 
 class _ChatCard extends StatelessWidget {
-  const _ChatCard({required this.chat, required this.onTap});
+  const _ChatCard({
+    required this.chat,
+    required this.preview,
+    required this.onTap,
+  });
 
   final Conversation chat;
+
+  /// Read from this device's decrypted history, not from the server. Null when
+  /// the device has no local copy of the conversation yet — a fresh install,
+  /// or a chat whose history has not been opened since.
+  final String? preview;
+
   final VoidCallback onTap;
 
   @override
@@ -172,7 +212,7 @@ class _ChatCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      chat.lastMessagePreview ?? '…',
+                      preview ?? '…',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

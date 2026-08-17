@@ -91,9 +91,26 @@ async def list_conversations(
             )
         ) or 0
 
+        # No preview from the server, ever.
+        #
+        # This used to return `content_ciphertext[:20]`, and a twenty-character
+        # fragment of a Signal envelope cannot be decrypted by anybody —
+        # including the recipient it was sent to. The conversation list was
+        # rendering that fragment as though it were text.
+        #
+        # It is not a leak; the fragment is as useless to an attacker as it is
+        # to the user. It is a preview that was designed against a model where
+        # the server could read messages, and never revisited when it could
+        # not. The client holds the decrypted history and renders the preview
+        # from there.
+        #
+        # The message *kind* is still worth sending: it lets the list show
+        # "photo" or "voice note" for a conversation the device has no local
+        # copy of, which is the one case the client cannot cover itself.
         preview = None
         if last_msg is not None and not last_msg.deleted_for_everyone:
-            preview = (last_msg.content_ciphertext or f"[{last_msg.message_type}]")[:20]
+            if last_msg.message_type != "text":
+                preview = f"[{last_msg.message_type}]"
 
         out.append(ConversationOut(
             peer_id=peer.id,

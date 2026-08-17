@@ -3,8 +3,15 @@
 **Against:** `IRONLINK — PRINCIPAL ARCHITECT MASTER EXECUTION SYSTEM v4.0`, §51–57
 **Date:** 2026-08-17
 **Branch:** `fix/boot-crashes-and-backend-merge`
-**Scope:** Phase 0 only. v4.0 §51 says *"Then STOP."* No production code was
+**Scope:** Phase 0. v4.0 §51 says *"Then STOP."* — no production code was
 modified while producing this document.
+
+> **Update, same day.** The stop condition at the end was answered: push
+> notifications carry the sender's name and no content. **Gate A was then
+> executed** — SEC-01, SEC-02 and BE-01 are closed, with tests
+> (`tests/test_push_privacy.py`). Their entries below are left as written, with
+> the finding preserved and a resolution appended, because an audit that edits
+> its findings once they are fixed stops being a record of what was true.
 
 Every claim below is labelled **FACT** / **INFERENCE** / **ASSUMPTION** /
 **PROPOSAL** / **UNVERIFIED** as §3 requires, and carries a repository path.
@@ -148,6 +155,16 @@ current code, not harder.
 
 **Impact:** High. **Confidence:** FACT — read on both sides of the wire.
 
+> **RESOLVED 2026-08-17.** The `preview` parameter was removed from
+> `send_message_push` rather than merely passed a safe value — leaving it in
+> place would leave the next caller free to fill it. The notification is now
+> `Notification(title=sender_name)` with no body, and the call site does not
+> read `frame["content"]` at all. No generic body was substituted: the server
+> does not know the recipient's language, and "New message" in the wrong one is
+> worse than a name on its own. Held by `tests/test_push_privacy.py`, which
+> asserts against the whole frame handler rather than one line, since the leak
+> was a local variable built two lines above the call.
+
 ### SEC-02 · Conversation preview is a slice of ciphertext — **HIGH**
 
 **FACT.** `app/api/routes/chats.py:96`:
@@ -165,6 +182,13 @@ an attacker too); it is a feature that cannot work as written, and its presence
 implies to a reader that server-side previews are a supported concept here.
 
 **Impact:** Medium (correctness), High (as a false architectural signal).
+
+> **RESOLVED 2026-08-17.** The server returns no text preview. It may still
+> return a message *kind* — `[image]`, `[voice]` — which it already knows from
+> a column and which covers the one case the client cannot: a conversation this
+> device holds no local copy of. The conversation list now reads its preview
+> from the decrypted local history via `MessageStore.latestPerPeer()`, one
+> grouped query for the whole list rather than one per row.
 
 ### SEC-03 · No cryptographic review of the Dart Signal implementation
 
@@ -383,6 +407,9 @@ build if it returns. A stale comment claiming a security-relevant mock still
 exists is precisely the "Documentation Reality Check" failure v4.0 §4 asks for.
 One-line fix.
 
+> **RESOLVED 2026-08-17.** The comment now records that the file was deleted and
+> that a test enforces its absence.
+
 ---
 
 ## 13. Dependency Findings
@@ -492,9 +519,9 @@ Nothing new should be built before these.
 
 Derived from v4.0 §2's priority hierarchy, not from feature appeal.
 
-**Gate A — stop the leak** (priority 2–3: cryptographic security, privacy)
-1. P0-1 content-free push (SEC-01)
-2. Quick wins 1 and 2 (BE-01, SEC-02) — same review, same theme
+**Gate A — stop the leak** (priority 2–3: cryptographic security, privacy) — ✅ **DONE 2026-08-17**
+1. ~~P0-1 content-free push (SEC-01)~~ ✅
+2. ~~Quick wins 1 and 2 (BE-01, SEC-02)~~ ✅
 
 **Gate B — stop the loss** (priority 4–7: data integrity, reliability)
 3. P0-2 durable outbox (REL-01)
@@ -525,8 +552,8 @@ nothing, but nothing else matters if it fails.
 
 | ID | Finding | Evidence | Confidence | Impact | Action |
 |---|---|---|---|---|---|
-| SEC-01 | Push body carries message content | `websocket.py:177-183`, `push_service.py:87`, `chat_bloc.dart:471,493-495` | **FACT** | Critical | P0-1 |
-| SEC-02 | Preview is a 20-char ciphertext slice | `chats.py:96` | **FACT** | Medium | Quick win 2 |
+| SEC-01 ✅ | Push body carries message content | `websocket.py:177-183`, `push_service.py:87`, `chat_bloc.dart:471,493-495` | **FACT** | Critical | P0-1 |
+| SEC-02 ✅ | Preview is a 20-char ciphertext slice | `chats.py:96` | **FACT** | Medium | Quick win 2 |
 | SEC-03 | Signal implementation unreviewed | `core/crypto/signal.dart` | **UNVERIFIED** | Catastrophic | P0-3 |
 | SEC-04 | `/metrics` fail-closed, no identifying labels | `observability.py`, `test_observability.py` | **FACT** | — | Verified, no action |
 | SEC-05 | No sensitive data in any log call | 38 call sites read; `sms_gateway.py:24` | **FACT** | — | Verified, no action |
@@ -538,7 +565,7 @@ nothing, but nothing else matters if it fails.
 | REL-04 | Ordering undocumented and untested | absence | **UNVERIFIED** | Medium | Gate B |
 | WS-01 | WebSocket events unversioned | `websocket.py` frame dispatch | **FACT** | Medium | Gate B |
 | DB-01 | No down-migrations | `alembic/versions/` | **FACT** | Medium | Gate D |
-| BE-01 | Stale comment claims a deleted mock exists | `requirements.txt:31` vs `test_key_directory.py:64` | **FACT** | Low | Quick win 1 |
+| BE-01 ✅ | Stale comment claims a deleted mock exists | `requirements.txt:31` vs `test_key_directory.py:64` | **FACT** | Low | Quick win 1 |
 | DEP-01 | `pypdf2` deprecated, parses untrusted files | test output | **FACT** | Medium | Quick win 3 |
 | FL-01 | No RTL layout tests | absence | **FACT** | Medium | Gate C |
 | FL-02 | Screen-state completeness unknown | no inventory | **UNVERIFIED** | Medium | Gate C |
