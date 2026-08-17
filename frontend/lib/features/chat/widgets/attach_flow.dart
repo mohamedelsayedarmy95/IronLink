@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/crypto/attachment_crypto.dart';
+import '../../../core/media/metadata_scrubber.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../l10n/app_localizations.dart';
@@ -212,7 +213,12 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
       setState(() => _progress = null);
       debugPrint('[attach] upload failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(L.of(context).uploadFailed),
+        // A format the scrubber cannot strip is refused rather than sent, so
+        // it needs its own sentence: "upload failed" would send the user to
+        // check their connection over something the connection had no part in.
+        content: Text(e is UnscrubbableMedia
+            ? L.of(context).attachUnsupportedFormat
+            : L.of(context).uploadFailed),
       ));
     }
   }

@@ -3054,6 +3054,12 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'الضغط بالوقت بيمنع الناس من التفكير. الاستعجال لوحده عادي — ظهر هنا مع إشارة تانية.'**
   String get safetyUrgencyWhy;
+
+  /// No description provided for @attachUnsupportedFormat.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملف ده مش من نوع نقدر ننضّفه من البيانات المخفية، فمابعتناهوش. الصور والتسجيلات الصوتية شغالة عادي.'**
+  String get attachUnsupportedFormat;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

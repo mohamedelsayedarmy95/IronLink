@@ -1673,4 +1673,8 @@ class LAr extends L {
   @override
   String get safetyUrgencyWhy =>
       'الضغط بالوقت بيمنع الناس من التفكير. الاستعجال لوحده عادي — ظهر هنا مع إشارة تانية.';
+
+  @override
+  String get attachUnsupportedFormat =>
+      'الملف ده مش من نوع نقدر ننضّفه من البيانات المخفية، فمابعتناهوش. الصور والتسجيلات الصوتية شغالة عادي.';
 }

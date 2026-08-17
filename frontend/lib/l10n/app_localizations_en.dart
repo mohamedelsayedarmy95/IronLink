@@ -1689,4 +1689,8 @@ class LEn extends L {
   @override
   String get safetyUrgencyWhy =>
       'Urgency stops people thinking. On its own it is ordinary — here it appeared with another signal.';
+
+  @override
+  String get attachUnsupportedFormat =>
+      'This file is not a type we can strip hidden data from, so it was not sent. Photos and voice notes work normally.';
 }

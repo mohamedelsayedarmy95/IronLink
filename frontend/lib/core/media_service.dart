@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 
 import 'api_client.dart';
 import 'crypto/attachment_crypto.dart';
+import 'media/metadata_scrubber.dart';
 
 class UploadResult {
   const UploadResult({
@@ -27,11 +28,28 @@ class UploadResult {
 /// [resumeUploadId] asks the server which chunks it already has and sends
 /// only the missing ones.
 class MediaService {
-  MediaService(this._api, [AttachmentCrypto? crypto])
-      : _crypto = crypto ?? AttachmentCrypto();
+  MediaService(this._api, [AttachmentCrypto? crypto, MetadataScrubber? scrub])
+      : _crypto = crypto ?? AttachmentCrypto(),
+        _scrub = scrub ?? const MetadataScrubber();
 
   final ApiClient _api;
   final AttachmentCrypto _crypto;
+  final MetadataScrubber _scrub;
+
+  /// Reads a file and removes its identifying metadata.
+  ///
+  /// This sits here, in the one place both upload paths pass through, rather
+  /// than at the four call sites that pick files. A privacy guarantee enforced
+  /// at the call sites is a guarantee that lasts until somebody adds a fifth,
+  /// and the fifth one is the one that ships a photograph's GPS coordinates.
+  ///
+  /// It throws for a format it does not know how to strip. That is deliberate:
+  /// a scrubber that quietly passes unknown formats through would do nothing
+  /// on the first format nobody tested, and would give no sign of it. Today
+  /// every reachable path sends JPEG, PNG, or MP4 audio; when PDF attachments
+  /// ship they will have to be handled here before they can be sent at all.
+  Future<Uint8List> _readScrubbed(File file) async =>
+      _scrub.scrub(await file.readAsBytes());
 
   /// What an encrypted body declares itself as, matching the server's
   /// ENCRYPTED_MIME_TYPE. The real type travels inside the envelope.
@@ -52,7 +70,7 @@ class MediaService {
     required String mimeType,
     void Function(double progress)? onProgress,
   }) async {
-    final plaintext = await file.readAsBytes();
+    final plaintext = await _readScrubbed(file);
     final material = _crypto.newKey(
       mimeType: mimeType,
       sizeBytes: plaintext.length,
@@ -116,7 +134,7 @@ class MediaService {
     void Function(double progress)? onProgress,
   }) async =>
       _uploadBytes(
-        await file.readAsBytes(),
+        await _readScrubbed(file),
         filename: file.uri.pathSegments.last,
         mimeType: mimeType,
         encrypted: false,

@@ -722,5 +722,6 @@
   "safetyOffPlatform": "A request to move the conversation elsewhere",
   "safetyOffPlatformWhy": "Moving a conversation somewhere unencrypted is a common step before fraud. There may be an ordinary reason, but it is worth confirming.",
   "safetyUrgency": "Time pressure, alongside other signs",
-  "safetyUrgencyWhy": "Urgency stops people thinking. On its own it is ordinary — here it appeared with another signal."
+  "safetyUrgencyWhy": "Urgency stops people thinking. On its own it is ordinary — here it appeared with another signal.",
+  "attachUnsupportedFormat": "This file is not a type we can strip hidden data from, so it was not sent. Photos and voice notes work normally."
 }

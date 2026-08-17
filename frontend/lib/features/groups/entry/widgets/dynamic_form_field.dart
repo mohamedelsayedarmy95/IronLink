@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/media/metadata_scrubber.dart';
 import '../../../../core/icons.dart';
 import '../../../../core/media_service.dart';
 import '../../../../core/theme.dart';
@@ -396,8 +397,12 @@ class _UploadFieldState extends State<_UploadField> {
       setState(() {
         _progress = null;
         // Named separately from the field's validation error: this is about
-        // the transfer, not about the answer being wrong.
-        _error = L.of(context).uploadFailed;
+        // the transfer, not about the answer being wrong. And a format the
+        // metadata scrubber cannot strip is refused before any transfer
+        // happens, which is a different sentence again.
+        _error = e is UnscrubbableMedia
+            ? L.of(context).attachUnsupportedFormat
+            : L.of(context).uploadFailed;
       });
     }
   }
