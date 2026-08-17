@@ -44,41 +44,61 @@ byte-identical to the published package.
 |---|---|
 | Removed the `buildscript` block | It pinned AGP 7.1.2, fighting this project's 9.0.1. A plugin does not resolve its own AGP. |
 | Removed `jcenter()` | The blocker. The method no longer exists. |
-| Removed `flatDir` from `rootProject.allprojects` | It added a flat-directory repository to every module in the consuming app. The AAR is now a file dependency of this module alone. |
+| Removed `flatDir` from `rootProject.allprojects` | It added a flat-directory repository to every module in the consuming app. The AAR is unpacked instead — see below. |
 | `compileSdkVersion` → `compileSdk`, `minSdkVersion` → `minSdk` | Non-deprecated spellings. |
 | Dropped the `images/` asset bundle | 64 KB of upstream test JPEGs, shipped in the APK for no reason. |
 | Dropped the `web` platform entry | Malformed upstream (`default_package: FlutterTesseractOcrPlugin` names a class, not a package) and this app does not target web. |
 
-## The binary, and what trusting it means
+## The binaries, and what trusting them means
 
-`android/libs/tesseract4android-release.aar` — a prebuilt
-[Tesseract4Android](https://github.com/adaptech-cz/Tesseract4Android) build,
-copied unmodified from the published package.
+The upstream package ships `tesseract4android-release.aar`, a prebuilt
+[Tesseract4Android](https://github.com/adaptech-cz/Tesseract4Android) build. That
+AAR is **not** committed here, because AGP refuses it:
 
 ```
-size    14,082,032 bytes
-sha256  831c363204e3e3cd2405665568bf3e09a30f904a87b3922e50ef852fe53153dd
+Direct local .aar file dependencies are not supported when building an AAR.
 ```
 
-It contains `classes.jar` plus `libtesseract.so`, `libleptonica.so`,
-`libjpeg.so` and `libpngx.so` for four ABIs. **These are prebuilt native
-libraries that nobody in this project has audited**, running in-process in a
-security product, over documents the user considers sensitive.
+That is a real restriction rather than pedantry — a nested AAR's classes and
+resources genuinely get dropped from the enclosing one — and it is exactly what
+upstream's `flatDir` hack was working around. So the AAR was unpacked into the
+two forms AGP supports natively:
 
-That is worth stating plainly rather than burying. The realistic alternatives
-were each worse:
+| Path | Contents | Size |
+|---|---|---|
+| `android/libs/tesseract4android.jar` | the AAR's `classes.jar`, unmodified | 49,342 bytes |
+| `android/src/main/jniLibs/<abi>/` | `libtesseract`, `libleptonica`, `libjpeg`, `libpngx` for arm64-v8a, armeabi-v7a, x86, x86_64 | 30.53 MB |
+
+Provenance, so this is reproducible:
+
+```
+source AAR   flutter_tesseract_ocr 0.4.31, android/libs/tesseract4android-release.aar
+AAR size     14,082,032 bytes
+AAR sha256   831c363204e3e3cd2405665568bf3e09a30f904a87b3922e50ef852fe53153dd
+jar sha256   c5894e042af37b88aa4758f22728262195ce6fa8f167d8974ffe2c3987d86fc1
+```
+
+To reproduce: take that AAR from the pub cache, `unzip` it, and the `classes.jar`
+and `jni/` tree are what is committed here. Nothing was recompiled or re-signed.
+
+**These are prebuilt native libraries that nobody in this project has audited**,
+running in-process in a security product, over documents its users consider
+sensitive. That is worth stating plainly rather than burying in a dependency
+list.
+
+The realistic alternatives were each worse:
 
 | Alternative | Problem |
 |---|---|
-| JitPack (`com.github.adaptech-cz:Tesseract4Android`) | Builds arbitrary GitHub repositories on demand. Strictly less predictable than a fixed artifact whose hash is recorded here. |
-| Maven Central | Tesseract4Android is not published there — checked. |
+| JitPack (`com.github.adaptech-cz:Tesseract4Android`) | Builds arbitrary GitHub repositories on demand. Less predictable than a fixed artifact whose hash is recorded here. |
+| Maven Central | Tesseract4Android is not published there — checked directly against repo1. |
 | Build Tesseract from source | Weeks of NDK work, and the result would still need auditing. |
-| No Arabic image OCR | What the product had, and the reason this was done. |
+| No Arabic image OCR | What the product had, and the reason this was done at all. |
 
-If that trade is unacceptable, the honest fallback is to remove this package and
-accept that Arabic works only where characters are *stated* rather than
-recognised — PDF text layers and plain text. Both paths are legitimate; the
-choice belongs to whoever owns the threat model.
+If that trade is unacceptable, the honest fallback is to delete this directory and
+the `flutter_tesseract_ocr` dependency, and accept that Arabic works only where
+characters are *stated* rather than recognised — PDF text layers and plain text.
+Both paths are legitimate; the choice belongs to whoever owns the threat model.
 
 ## Keeping it current
 

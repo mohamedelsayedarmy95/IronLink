@@ -17,11 +17,23 @@
 //    of the Android Gradle plugins" that looked like an AGP incompatibility —
 //    was a consequence of evaluation dying here.
 //
-// 3. `flatDir` is gone. Upstream reached into this project from
-//    `rootProject.allprojects`, adding a flat-directory repository to every
-//    module in the consuming app. That is invasive, and AGP has been moving
-//    away from flatDir for years. The AAR is now a plain file dependency of
-//    this module alone.
+// 3. `flatDir` is gone, and so is the AAR. Upstream reached into this project
+//    from `rootProject.allprojects` to add a flat-directory repository to every
+//    module in the consuming app, then pulled the AAR out of it.
+//
+//    Replacing that with a plain `files('libs/x.aar')` dependency does not work
+//    either — AGP builds this plugin as an AAR and refuses:
+//
+//        Direct local .aar file dependencies are not supported when building an
+//        AAR. The resulting AAR would be broken because the classes and Android
+//        resources from any local .aar file dependencies would not be packaged.
+//
+//    Which is precisely the restriction upstream's flatDir hack existed to dodge,
+//    and it is a real one: the nested AAR's contents genuinely would be dropped.
+//
+//    So the AAR is unpacked into the two things AGP supports natively — a jar of
+//    classes, and .so files under src/main/jniLibs, which the packager picks up
+//    for each ABI on its own. Same bytes, supported layout, no workaround.
 //
 // 4. `compileSdkVersion`/`minSdkVersion` became `compileSdk`/`minSdk`, the
 //    non-deprecated spellings, and the values follow the app rather than being
@@ -50,13 +62,17 @@ android {
 }
 
 dependencies {
-    // The Tesseract4Android AAR, as a dependency of this module rather than a
-    // repository bolted onto every module in the app.
+    // Tesseract4Android's Java classes. A jar is a supported local dependency
+    // where a nested AAR is not.
     //
     // Not fetched from a remote: Tesseract4Android is not on Maven Central, and
     // the alternative is JitPack, which builds arbitrary GitHub repositories on
-    // demand. For a product whose entire premise is a trustworthy channel, a
-    // fixed binary whose hash is recorded in VENDORING.md is the better of two
+    // demand. For a product whose premise is a trustworthy channel, a fixed
+    // artifact whose hash is recorded in VENDORING.md is the better of two
     // imperfect options.
-    implementation files('libs/tesseract4android-release.aar')
+    implementation files('libs/tesseract4android.jar')
+
+    // The native libraries that jar calls into live in src/main/jniLibs and are
+    // packaged automatically, per ABI. They are not declared here because they
+    // are not dependencies — they are resources of this module.
 }
