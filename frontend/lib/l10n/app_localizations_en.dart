@@ -1278,4 +1278,226 @@ class LEn extends L {
   @override
   String get signOutConfirm =>
       'This device will be signed out and everything stored on it erased — your message history, your encryption keys and any drafts. Because messages are end-to-end encrypted, the server cannot restore that history afterwards.';
+
+  @override
+  String get smartAlertTitle => 'Smart Alert';
+
+  @override
+  String get smartAlertOpenDocument => 'Open document';
+
+  @override
+  String get smartAlertAcknowledge => 'Acknowledge';
+
+  @override
+  String smartAlertMoreCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Smart Alerts',
+      one: '1 Smart Alert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String smartAlertSemantics(String matched, String context) {
+    return 'Smart Alert: \"$matched\" found in a document. Context: $context';
+  }
+
+  @override
+  String get alertCenterTitle => 'Smart Alerts';
+
+  @override
+  String get alertCenterEmpty => 'No alerts';
+
+  @override
+  String get alertCenterEmptyHint =>
+      'When an image or document arrives containing one of your keywords, the alert appears here.';
+
+  @override
+  String get alertFilterAll => 'All';
+
+  @override
+  String get alertFilterUnacknowledged => 'Unacknowledged';
+
+  @override
+  String get alertFilterAcknowledged => 'Acknowledged';
+
+  @override
+  String get alertFilterHighConfidence => 'High confidence';
+
+  @override
+  String get alertSectionToday => 'Today';
+
+  @override
+  String get alertSectionYesterday => 'Yesterday';
+
+  @override
+  String get alertSectionEarlier => 'Earlier';
+
+  @override
+  String get alertStatusAcknowledged => 'Acknowledged';
+
+  @override
+  String get alertStatusPresented => 'Not acknowledged';
+
+  @override
+  String get alertStatusOpened => 'Opened, not acknowledged';
+
+  @override
+  String get alertStatusExpired => 'Expired';
+
+  @override
+  String get alertStatusDismissed => 'Dismissed';
+
+  @override
+  String get alertRetentionNote =>
+      'Alerts are kept for 48 hours and then deleted automatically.';
+
+  @override
+  String alertPageNumber(int page) {
+    return 'Page $page';
+  }
+
+  @override
+  String get alertProcessedLocally => 'Processed on this device';
+
+  @override
+  String get alertProcessedInCloud => 'Processed in the cloud';
+
+  @override
+  String get alertSuppressedByCap => 'Over this keyword daily limit';
+
+  @override
+  String get keywordManagementTitle => 'Keywords';
+
+  @override
+  String get keywordManagementSubtitle =>
+      'Private to this conversation. The sender, group admins and everyone else cannot see them.';
+
+  @override
+  String get keywordAddTitle => 'Add keyword';
+
+  @override
+  String get keywordEditTitle => 'Edit keyword';
+
+  @override
+  String get keywordFieldLabel => 'Keyword';
+
+  @override
+  String get keywordFieldHint => 'Type a word or phrase';
+
+  @override
+  String get keywordPriorityLabel => 'Priority';
+
+  @override
+  String get keywordPriorityLow => 'Low';
+
+  @override
+  String get keywordPriorityMedium => 'Medium';
+
+  @override
+  String get keywordPriorityHigh => 'High';
+
+  @override
+  String get keywordPriorityCritical => 'Critical';
+
+  @override
+  String get keywordMatchModeLabel => 'Matching';
+
+  @override
+  String get keywordMatchExact => 'Whole word';
+
+  @override
+  String get keywordMatchPhrase => 'Phrase';
+
+  @override
+  String get keywordMatchFuzzy => 'Tolerate scan errors';
+
+  @override
+  String get keywordMatchRegex => 'Advanced pattern';
+
+  @override
+  String get keywordCategoryLabel => 'Category (optional)';
+
+  @override
+  String get keywordNotesLabel => 'Private note (optional)';
+
+  @override
+  String get keywordCaseSensitiveLabel => 'Match capitalisation';
+
+  @override
+  String get keywordDailyCapLabel => 'Daily alert limit (optional)';
+
+  @override
+  String get keywordEnabledLabel => 'Enabled';
+
+  @override
+  String get keywordDeleteConfirm =>
+      'This keyword and every alert it raised will be deleted. This cannot be undone.';
+
+  @override
+  String get keywordEmpty => 'No keywords for this conversation yet';
+
+  @override
+  String get keywordTestTitle => 'Test this keyword';
+
+  @override
+  String get keywordTestHint =>
+      'Paste some text to see whether the keyword would match it';
+
+  @override
+  String get keywordTestMatched => 'Matches';
+
+  @override
+  String get keywordTestNoMatch => 'No match';
+
+  @override
+  String get keywordErrorTooShort => 'Too short - at least two characters.';
+
+  @override
+  String get keywordErrorTooLong => 'That keyword is too long.';
+
+  @override
+  String get keywordErrorNotMatchable =>
+      'Nothing in that keyword can be matched inside a document.';
+
+  @override
+  String get keywordErrorStopWord =>
+      'That is a common connecting word, and would appear in almost every document.';
+
+  @override
+  String get keywordErrorRegexInvalid => 'That pattern is not valid.';
+
+  @override
+  String get keywordErrorRegexUnsafe =>
+      'That pattern can take unbounded time to evaluate.';
+
+  @override
+  String get keywordErrorDuplicate =>
+      'That keyword is already in this conversation.';
+
+  @override
+  String get documentCheckingNow => 'Checking document…';
+
+  @override
+  String get documentCheckedNothingFound => 'Checked, nothing found';
+
+  @override
+  String get documentUnreadable => 'This document could not be read reliably.';
+
+  @override
+  String get documentTooLowResolution =>
+      'This image is too low-resolution to analyze reliably.';
+
+  @override
+  String get documentUnsupported => 'This kind of file cannot be checked.';
+
+  @override
+  String get documentTooLarge => 'This file is larger than the checking limit.';
+
+  @override
+  String documentTruncated(int pages) {
+    return 'Long document - only the first $pages pages were checked.';
+  }
 }

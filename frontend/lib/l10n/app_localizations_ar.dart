@@ -1264,4 +1264,226 @@ class LAr extends L {
   @override
   String get signOutConfirm =>
       'سيتم تسجيل الخروج من هذا الجهاز ومسح كل ما هو مخزّن عليه — سجل رسائلك ومفاتيح التشفير وأي مسودات. ولأن الرسائل مشفّرة من طرف إلى طرف، لن يستطيع الخادم استعادة هذا السجل بعدها.';
+
+  @override
+  String get smartAlertTitle => 'تنبيه ذكي';
+
+  @override
+  String get smartAlertOpenDocument => 'فتح المستند';
+
+  @override
+  String get smartAlertAcknowledge => 'تم الاطلاع';
+
+  @override
+  String smartAlertMoreCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count تنبيهًا ذكيًا',
+      few: '$count تنبيهات ذكية',
+      two: 'تنبيهان ذكيان',
+      one: 'تنبيه ذكي واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String smartAlertSemantics(String matched, String context) {
+    return 'تنبيه ذكي: عُثر على \"$matched\" في مستند. السياق: $context';
+  }
+
+  @override
+  String get alertCenterTitle => 'التنبيهات الذكية';
+
+  @override
+  String get alertCenterEmpty => 'لا توجد تنبيهات';
+
+  @override
+  String get alertCenterEmptyHint =>
+      'عندما تصل صورة أو مستند يحتوي على إحدى كلماتك، سيظهر التنبيه هنا.';
+
+  @override
+  String get alertFilterAll => 'الكل';
+
+  @override
+  String get alertFilterUnacknowledged => 'لم يتم الاطلاع';
+
+  @override
+  String get alertFilterAcknowledged => 'تم الاطلاع';
+
+  @override
+  String get alertFilterHighConfidence => 'عالية الثقة';
+
+  @override
+  String get alertSectionToday => 'اليوم';
+
+  @override
+  String get alertSectionYesterday => 'أمس';
+
+  @override
+  String get alertSectionEarlier => 'أقدم';
+
+  @override
+  String get alertStatusAcknowledged => 'تم الاطلاع';
+
+  @override
+  String get alertStatusPresented => 'لم يتم الاطلاع';
+
+  @override
+  String get alertStatusOpened => 'فُتح المستند، ولم يتم الاطلاع';
+
+  @override
+  String get alertStatusExpired => 'انتهت صلاحيته';
+
+  @override
+  String get alertStatusDismissed => 'أُهمل';
+
+  @override
+  String get alertRetentionNote => 'تُحفظ التنبيهات ٤٨ ساعة ثم تُحذف تلقائيًا.';
+
+  @override
+  String alertPageNumber(int page) {
+    return 'صفحة $page';
+  }
+
+  @override
+  String get alertProcessedLocally => 'تمت المعالجة على هذا الجهاز';
+
+  @override
+  String get alertProcessedInCloud => 'تمت المعالجة في السحابة';
+
+  @override
+  String get alertSuppressedByCap => 'تجاوز الحد اليومي لهذه الكلمة';
+
+  @override
+  String get keywordManagementTitle => 'الكلمات المفتاحية';
+
+  @override
+  String get keywordManagementSubtitle =>
+      'كلمات خاصة بهذه المحادثة وحدها. لا يراها المرسل ولا مشرفو المجموعة ولا أي شخص آخر.';
+
+  @override
+  String get keywordAddTitle => 'إضافة كلمة';
+
+  @override
+  String get keywordEditTitle => 'تعديل الكلمة';
+
+  @override
+  String get keywordFieldLabel => 'الكلمة';
+
+  @override
+  String get keywordFieldHint => 'اكتب كلمة أو عبارة';
+
+  @override
+  String get keywordPriorityLabel => 'الأولوية';
+
+  @override
+  String get keywordPriorityLow => 'منخفضة';
+
+  @override
+  String get keywordPriorityMedium => 'متوسطة';
+
+  @override
+  String get keywordPriorityHigh => 'عالية';
+
+  @override
+  String get keywordPriorityCritical => 'حرجة';
+
+  @override
+  String get keywordMatchModeLabel => 'طريقة المطابقة';
+
+  @override
+  String get keywordMatchExact => 'كلمة كاملة';
+
+  @override
+  String get keywordMatchPhrase => 'عبارة';
+
+  @override
+  String get keywordMatchFuzzy => 'تسامح مع أخطاء المسح';
+
+  @override
+  String get keywordMatchRegex => 'نمط متقدم';
+
+  @override
+  String get keywordCategoryLabel => 'التصنيف (اختياري)';
+
+  @override
+  String get keywordNotesLabel => 'ملاحظة خاصة (اختياري)';
+
+  @override
+  String get keywordCaseSensitiveLabel => 'مطابقة حالة الأحرف';
+
+  @override
+  String get keywordDailyCapLabel => 'حد التنبيهات اليومي (اختياري)';
+
+  @override
+  String get keywordEnabledLabel => 'مُفعّلة';
+
+  @override
+  String get keywordDeleteConfirm =>
+      'سيتم حذف هذه الكلمة وكل التنبيهات التي أنشأتها. لا يمكن التراجع.';
+
+  @override
+  String get keywordEmpty => 'لا توجد كلمات لهذه المحادثة بعد';
+
+  @override
+  String get keywordTestTitle => 'جرّب الكلمة';
+
+  @override
+  String get keywordTestHint => 'الصق نصًا لترى إن كانت الكلمة ستطابقه';
+
+  @override
+  String get keywordTestMatched => 'تطابق';
+
+  @override
+  String get keywordTestNoMatch => 'لا تطابق';
+
+  @override
+  String get keywordErrorTooShort => 'الكلمة قصيرة جدًا — حرفان على الأقل.';
+
+  @override
+  String get keywordErrorTooLong => 'الكلمة طويلة جدًا.';
+
+  @override
+  String get keywordErrorNotMatchable =>
+      'لا يوجد في هذه الكلمة ما يمكن مطابقته داخل مستند.';
+
+  @override
+  String get keywordErrorStopWord =>
+      'هذه كلمة رابطة شائعة، وستظهر في كل مستند تقريبًا.';
+
+  @override
+  String get keywordErrorRegexInvalid => 'النمط غير صالح.';
+
+  @override
+  String get keywordErrorRegexUnsafe =>
+      'قد يستغرق هذا النمط وقتًا غير محدود في التنفيذ.';
+
+  @override
+  String get keywordErrorDuplicate =>
+      'هذه الكلمة موجودة بالفعل في هذه المحادثة.';
+
+  @override
+  String get documentCheckingNow => 'جارٍ فحص المستند…';
+
+  @override
+  String get documentCheckedNothingFound => 'فُحص المستند ولم يُعثر على شيء';
+
+  @override
+  String get documentUnreadable => 'تعذّرت قراءة هذا المستند بشكل موثوق.';
+
+  @override
+  String get documentTooLowResolution =>
+      'دقة الصورة أقل من أن تُقرأ بشكل موثوق.';
+
+  @override
+  String get documentUnsupported => 'هذا النوع من الملفات غير مدعوم للفحص.';
+
+  @override
+  String get documentTooLarge => 'الملف أكبر من الحد المسموح للفحص.';
+
+  @override
+  String documentTruncated(int pages) {
+    return 'مستند طويل — فُحصت الصفحات الأولى فقط ($pages صفحة).';
+  }
 }

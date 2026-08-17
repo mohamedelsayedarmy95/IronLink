@@ -2340,6 +2340,402 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'سيتم تسجيل الخروج من هذا الجهاز ومسح كل ما هو مخزّن عليه — سجل رسائلك ومفاتيح التشفير وأي مسودات. ولأن الرسائل مشفّرة من طرف إلى طرف، لن يستطيع الخادم استعادة هذا السجل بعدها.'**
   String get signOutConfirm;
+
+  /// No description provided for @smartAlertTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه ذكي'**
+  String get smartAlertTitle;
+
+  /// No description provided for @smartAlertOpenDocument.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح المستند'**
+  String get smartAlertOpenDocument;
+
+  /// No description provided for @smartAlertAcknowledge.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الاطلاع'**
+  String get smartAlertAcknowledge;
+
+  /// No description provided for @smartAlertMoreCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{تنبيه ذكي واحد} =2{تنبيهان ذكيان} few{{count} تنبيهات ذكية} other{{count} تنبيهًا ذكيًا}}'**
+  String smartAlertMoreCount(int count);
+
+  /// No description provided for @smartAlertSemantics.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه ذكي: عُثر على \"{matched}\" في مستند. السياق: {context}'**
+  String smartAlertSemantics(String matched, String context);
+
+  /// No description provided for @alertCenterTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التنبيهات الذكية'**
+  String get alertCenterTitle;
+
+  /// No description provided for @alertCenterEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد تنبيهات'**
+  String get alertCenterEmpty;
+
+  /// No description provided for @alertCenterEmptyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'عندما تصل صورة أو مستند يحتوي على إحدى كلماتك، سيظهر التنبيه هنا.'**
+  String get alertCenterEmptyHint;
+
+  /// No description provided for @alertFilterAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get alertFilterAll;
+
+  /// No description provided for @alertFilterUnacknowledged.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم الاطلاع'**
+  String get alertFilterUnacknowledged;
+
+  /// No description provided for @alertFilterAcknowledged.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الاطلاع'**
+  String get alertFilterAcknowledged;
+
+  /// No description provided for @alertFilterHighConfidence.
+  ///
+  /// In ar, this message translates to:
+  /// **'عالية الثقة'**
+  String get alertFilterHighConfidence;
+
+  /// No description provided for @alertSectionToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'اليوم'**
+  String get alertSectionToday;
+
+  /// No description provided for @alertSectionYesterday.
+  ///
+  /// In ar, this message translates to:
+  /// **'أمس'**
+  String get alertSectionYesterday;
+
+  /// No description provided for @alertSectionEarlier.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقدم'**
+  String get alertSectionEarlier;
+
+  /// No description provided for @alertStatusAcknowledged.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الاطلاع'**
+  String get alertStatusAcknowledged;
+
+  /// No description provided for @alertStatusPresented.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم الاطلاع'**
+  String get alertStatusPresented;
+
+  /// No description provided for @alertStatusOpened.
+  ///
+  /// In ar, this message translates to:
+  /// **'فُتح المستند، ولم يتم الاطلاع'**
+  String get alertStatusOpened;
+
+  /// No description provided for @alertStatusExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحيته'**
+  String get alertStatusExpired;
+
+  /// No description provided for @alertStatusDismissed.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُهمل'**
+  String get alertStatusDismissed;
+
+  /// No description provided for @alertRetentionNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'تُحفظ التنبيهات ٤٨ ساعة ثم تُحذف تلقائيًا.'**
+  String get alertRetentionNote;
+
+  /// No description provided for @alertPageNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'صفحة {page}'**
+  String alertPageNumber(int page);
+
+  /// No description provided for @alertProcessedLocally.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت المعالجة على هذا الجهاز'**
+  String get alertProcessedLocally;
+
+  /// No description provided for @alertProcessedInCloud.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت المعالجة في السحابة'**
+  String get alertProcessedInCloud;
+
+  /// No description provided for @alertSuppressedByCap.
+  ///
+  /// In ar, this message translates to:
+  /// **'تجاوز الحد اليومي لهذه الكلمة'**
+  String get alertSuppressedByCap;
+
+  /// No description provided for @keywordManagementTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكلمات المفتاحية'**
+  String get keywordManagementTitle;
+
+  /// No description provided for @keywordManagementSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمات خاصة بهذه المحادثة وحدها. لا يراها المرسل ولا مشرفو المجموعة ولا أي شخص آخر.'**
+  String get keywordManagementSubtitle;
+
+  /// No description provided for @keywordAddTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة كلمة'**
+  String get keywordAddTitle;
+
+  /// No description provided for @keywordEditTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل الكلمة'**
+  String get keywordEditTitle;
+
+  /// No description provided for @keywordFieldLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكلمة'**
+  String get keywordFieldLabel;
+
+  /// No description provided for @keywordFieldHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب كلمة أو عبارة'**
+  String get keywordFieldHint;
+
+  /// No description provided for @keywordPriorityLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأولوية'**
+  String get keywordPriorityLabel;
+
+  /// No description provided for @keywordPriorityLow.
+  ///
+  /// In ar, this message translates to:
+  /// **'منخفضة'**
+  String get keywordPriorityLow;
+
+  /// No description provided for @keywordPriorityMedium.
+  ///
+  /// In ar, this message translates to:
+  /// **'متوسطة'**
+  String get keywordPriorityMedium;
+
+  /// No description provided for @keywordPriorityHigh.
+  ///
+  /// In ar, this message translates to:
+  /// **'عالية'**
+  String get keywordPriorityHigh;
+
+  /// No description provided for @keywordPriorityCritical.
+  ///
+  /// In ar, this message translates to:
+  /// **'حرجة'**
+  String get keywordPriorityCritical;
+
+  /// No description provided for @keywordMatchModeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة المطابقة'**
+  String get keywordMatchModeLabel;
+
+  /// No description provided for @keywordMatchExact.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة كاملة'**
+  String get keywordMatchExact;
+
+  /// No description provided for @keywordMatchPhrase.
+  ///
+  /// In ar, this message translates to:
+  /// **'عبارة'**
+  String get keywordMatchPhrase;
+
+  /// No description provided for @keywordMatchFuzzy.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسامح مع أخطاء المسح'**
+  String get keywordMatchFuzzy;
+
+  /// No description provided for @keywordMatchRegex.
+  ///
+  /// In ar, this message translates to:
+  /// **'نمط متقدم'**
+  String get keywordMatchRegex;
+
+  /// No description provided for @keywordCategoryLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التصنيف (اختياري)'**
+  String get keywordCategoryLabel;
+
+  /// No description provided for @keywordNotesLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة خاصة (اختياري)'**
+  String get keywordNotesLabel;
+
+  /// No description provided for @keywordCaseSensitiveLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطابقة حالة الأحرف'**
+  String get keywordCaseSensitiveLabel;
+
+  /// No description provided for @keywordDailyCapLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'حد التنبيهات اليومي (اختياري)'**
+  String get keywordDailyCapLabel;
+
+  /// No description provided for @keywordEnabledLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مُفعّلة'**
+  String get keywordEnabledLabel;
+
+  /// No description provided for @keywordDeleteConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم حذف هذه الكلمة وكل التنبيهات التي أنشأتها. لا يمكن التراجع.'**
+  String get keywordDeleteConfirm;
+
+  /// No description provided for @keywordEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد كلمات لهذه المحادثة بعد'**
+  String get keywordEmpty;
+
+  /// No description provided for @keywordTestTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'جرّب الكلمة'**
+  String get keywordTestTitle;
+
+  /// No description provided for @keywordTestHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصق نصًا لترى إن كانت الكلمة ستطابقه'**
+  String get keywordTestHint;
+
+  /// No description provided for @keywordTestMatched.
+  ///
+  /// In ar, this message translates to:
+  /// **'تطابق'**
+  String get keywordTestMatched;
+
+  /// No description provided for @keywordTestNoMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا تطابق'**
+  String get keywordTestNoMatch;
+
+  /// No description provided for @keywordErrorTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكلمة قصيرة جدًا — حرفان على الأقل.'**
+  String get keywordErrorTooShort;
+
+  /// No description provided for @keywordErrorTooLong.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكلمة طويلة جدًا.'**
+  String get keywordErrorTooLong;
+
+  /// No description provided for @keywordErrorNotMatchable.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد في هذه الكلمة ما يمكن مطابقته داخل مستند.'**
+  String get keywordErrorNotMatchable;
+
+  /// No description provided for @keywordErrorStopWord.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه كلمة رابطة شائعة، وستظهر في كل مستند تقريبًا.'**
+  String get keywordErrorStopWord;
+
+  /// No description provided for @keywordErrorRegexInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'النمط غير صالح.'**
+  String get keywordErrorRegexInvalid;
+
+  /// No description provided for @keywordErrorRegexUnsafe.
+  ///
+  /// In ar, this message translates to:
+  /// **'قد يستغرق هذا النمط وقتًا غير محدود في التنفيذ.'**
+  String get keywordErrorRegexUnsafe;
+
+  /// No description provided for @keywordErrorDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه الكلمة موجودة بالفعل في هذه المحادثة.'**
+  String get keywordErrorDuplicate;
+
+  /// No description provided for @documentCheckingNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ فحص المستند…'**
+  String get documentCheckingNow;
+
+  /// No description provided for @documentCheckedNothingFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'فُحص المستند ولم يُعثر على شيء'**
+  String get documentCheckedNothingFound;
+
+  /// No description provided for @documentUnreadable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّرت قراءة هذا المستند بشكل موثوق.'**
+  String get documentUnreadable;
+
+  /// No description provided for @documentTooLowResolution.
+  ///
+  /// In ar, this message translates to:
+  /// **'دقة الصورة أقل من أن تُقرأ بشكل موثوق.'**
+  String get documentTooLowResolution;
+
+  /// No description provided for @documentUnsupported.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا النوع من الملفات غير مدعوم للفحص.'**
+  String get documentUnsupported;
+
+  /// No description provided for @documentTooLarge.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملف أكبر من الحد المسموح للفحص.'**
+  String get documentTooLarge;
+
+  /// No description provided for @documentTruncated.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستند طويل — فُحصت الصفحات الأولى فقط ({pages} صفحة).'**
+  String documentTruncated(int pages);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

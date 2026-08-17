@@ -386,6 +386,176 @@ class AlertStore {
   Future<void> close() => _db.close();
 }
 
+/// The same store, entirely in memory.
+///
+/// Two uses, and the second is why it lives here rather than in a test file.
+///
+/// On a platform with no sqflite implementation the alternative was
+/// [NullAlertStore], which silently does nothing — the user could type a
+/// keyword, see it accepted, and never learn that it was discarded. This keeps
+/// the feature working for the session instead, and losing rules on restart is
+/// a limitation that can at least be stated.
+///
+/// It is also what widget tests run against. A test that drives real file I/O
+/// through `pumpAndSettle` hangs: the widget binding runs the test body in a
+/// fake-async zone whose clock never advances to meet a future completing on a
+/// real I/O thread. That is a property of the test harness, not of this code,
+/// and the honest fix is a store whose futures complete on the microtask
+/// queue rather than sprinkling `runAsync` through every assertion.
+class InMemoryAlertStore implements AlertStore {
+  InMemoryAlertStore();
+
+  final Map<String, KeywordRule> _rules = {};
+  final Map<String, KeywordAlert> _alerts = {};
+
+  @override
+  Database get _db => throw UnsupportedError('in-memory store has no database');
+
+  @override
+  Future<void> saveRule(KeywordRule rule) async {
+    // Mirrors the unique index: the same keyword twice in one conversation is
+    // one rule, not two identical alerts per document.
+    _rules.removeWhere((id, existing) =>
+        id != rule.id &&
+        existing.conversationScope == rule.conversationScope &&
+        existing.normalizedRepresentation == rule.normalizedRepresentation &&
+        existing.matchMode == rule.matchMode);
+    _rules[rule.id] = rule;
+  }
+
+  @override
+  Future<List<KeywordRule>> rulesFor(
+    String conversationScope, {
+    bool onlyEnabled = false,
+  }) async =>
+      _rules.values
+          .where((r) =>
+              r.conversationScope == conversationScope &&
+              (!onlyEnabled || r.enabled))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+  @override
+  Future<KeywordRule?> rule(String id) async => _rules[id];
+
+  @override
+  Future<void> deleteRule(String id) async {
+    _rules.remove(id);
+    // The cascade the schema declares, honoured here too.
+    _alerts.removeWhere((_, alert) => alert.keywordRuleId == id);
+  }
+
+  @override
+  Future<int> ruleCount() async => _rules.length;
+
+  @override
+  Future<KeywordAlert> record(KeywordAlert alert) async =>
+      _alerts.putIfAbsent(alert.id, () => alert);
+
+  @override
+  Future<KeywordAlert?> byId(String id) async => _alerts[id];
+
+  @override
+  Future<void> save(KeywordAlert alert) async {
+    if (_alerts.containsKey(alert.id)) _alerts[alert.id] = alert;
+  }
+
+  @override
+  Future<KeywordAlert?> transition(
+    String alertId,
+    AlertStatus next, {
+    required DateTime now,
+    String? failureReason,
+    bool incrementRetry = false,
+  }) async {
+    final current = _alerts[alertId];
+    if (current == null) return null;
+    final updated = current.transitionTo(
+      next,
+      now: now,
+      failureReason: failureReason,
+      incrementRetry: incrementRetry,
+    );
+    _alerts[alertId] = updated;
+    return updated;
+  }
+
+  @override
+  Future<List<KeywordAlert>> outstanding({DateTime? now, int limit = 100}) async {
+    final at = now ?? DateTime.now().toUtc();
+    await sweepExpired(at);
+    return _alerts.values.where((a) => a.status.isOutstanding).toList()
+      ..sort(compareAlertsForPresentation);
+  }
+
+  @override
+  Future<List<KeywordAlert>> history({
+    String? conversationId,
+    DateTime? now,
+    int limit = 200,
+  }) async {
+    await sweepExpired(now ?? DateTime.now().toUtc());
+    return _alerts.values
+        .where((a) =>
+            conversationId == null || a.conversationId == conversationId)
+        .toList()
+      ..sort((a, b) => b.detectedAt.compareTo(a.detectedAt));
+  }
+
+  @override
+  Future<int> alertsInLastDay(String ruleId, DateTime now) async {
+    final since = now.toUtc().subtract(const Duration(hours: 24));
+    return _alerts.values
+        .where((a) => a.keywordRuleId == ruleId && !a.detectedAt.isBefore(since))
+        .length;
+  }
+
+  @override
+  Future<bool> alreadyProcessed({
+    required String conversationId,
+    required String messageId,
+    required String attachmentId,
+    required String keywordRuleId,
+    required String sourceDocumentHash,
+    required int processingVersion,
+  }) async =>
+      _alerts.containsKey(KeywordAlert.deriveId(
+        conversationId: conversationId,
+        messageId: messageId,
+        attachmentId: attachmentId,
+        keywordRuleId: keywordRuleId,
+        sourceDocumentHash: sourceDocumentHash,
+        processingVersion: processingVersion,
+      ));
+
+  @override
+  Future<int> sweepExpired(DateTime now) async {
+    final at = now.toUtc();
+    var expired = 0;
+    for (final entry in _alerts.entries.toList()) {
+      final alert = entry.value;
+      if (alert.status.isTerminal || !at.isAfter(alert.expiresAt)) continue;
+      _alerts[entry.key] = alert.transitionTo(AlertStatus.expired, now: at);
+      expired++;
+    }
+    _alerts.removeWhere((_, a) =>
+        a.expiresAt.isBefore(at.subtract(const Duration(days: 7))));
+    return expired;
+  }
+
+  @override
+  Future<int> alertCount() async => _alerts.length;
+
+  @override
+  Future<void> clear() async {
+    _alerts.clear();
+    _rules.clear();
+  }
+
+  @override
+  Future<void> close() async {}
+}
+
 /// Used where sqflite has no platform implementation, so the app degrades to
 /// "no keyword alerts" rather than failing to start.
 class NullAlertStore implements AlertStore {

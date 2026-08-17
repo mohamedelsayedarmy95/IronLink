@@ -603,5 +603,102 @@
   "aiFeatures": "مميزات الذكاء الاصطناعي",
   "aiSummarise": "تلخيص المحادثة",
   "signOut": "تسجيل الخروج",
-  "signOutConfirm": "سيتم تسجيل الخروج من هذا الجهاز ومسح كل ما هو مخزّن عليه — سجل رسائلك ومفاتيح التشفير وأي مسودات. ولأن الرسائل مشفّرة من طرف إلى طرف، لن يستطيع الخادم استعادة هذا السجل بعدها."
+  "signOutConfirm": "سيتم تسجيل الخروج من هذا الجهاز ومسح كل ما هو مخزّن عليه — سجل رسائلك ومفاتيح التشفير وأي مسودات. ولأن الرسائل مشفّرة من طرف إلى طرف، لن يستطيع الخادم استعادة هذا السجل بعدها.",
+  "smartAlertTitle": "تنبيه ذكي",
+  "smartAlertOpenDocument": "فتح المستند",
+  "smartAlertAcknowledge": "تم الاطلاع",
+  "smartAlertMoreCount": "{count, plural, =1{تنبيه ذكي واحد} =2{تنبيهان ذكيان} few{{count} تنبيهات ذكية} other{{count} تنبيهًا ذكيًا}}",
+  "@smartAlertMoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "smartAlertSemantics": "تنبيه ذكي: عُثر على \"{matched}\" في مستند. السياق: {context}",
+  "@smartAlertSemantics": {
+    "placeholders": {
+      "matched": {
+        "type": "String"
+      },
+      "context": {
+        "type": "String"
+      }
+    }
+  },
+  "alertCenterTitle": "التنبيهات الذكية",
+  "alertCenterEmpty": "لا توجد تنبيهات",
+  "alertCenterEmptyHint": "عندما تصل صورة أو مستند يحتوي على إحدى كلماتك، سيظهر التنبيه هنا.",
+  "alertFilterAll": "الكل",
+  "alertFilterUnacknowledged": "لم يتم الاطلاع",
+  "alertFilterAcknowledged": "تم الاطلاع",
+  "alertFilterHighConfidence": "عالية الثقة",
+  "alertSectionToday": "اليوم",
+  "alertSectionYesterday": "أمس",
+  "alertSectionEarlier": "أقدم",
+  "alertStatusAcknowledged": "تم الاطلاع",
+  "alertStatusPresented": "لم يتم الاطلاع",
+  "alertStatusOpened": "فُتح المستند، ولم يتم الاطلاع",
+  "alertStatusExpired": "انتهت صلاحيته",
+  "alertStatusDismissed": "أُهمل",
+  "alertRetentionNote": "تُحفظ التنبيهات ٤٨ ساعة ثم تُحذف تلقائيًا.",
+  "alertPageNumber": "صفحة {page}",
+  "@alertPageNumber": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "alertProcessedLocally": "تمت المعالجة على هذا الجهاز",
+  "alertProcessedInCloud": "تمت المعالجة في السحابة",
+  "alertSuppressedByCap": "تجاوز الحد اليومي لهذه الكلمة",
+  "keywordManagementTitle": "الكلمات المفتاحية",
+  "keywordManagementSubtitle": "كلمات خاصة بهذه المحادثة وحدها. لا يراها المرسل ولا مشرفو المجموعة ولا أي شخص آخر.",
+  "keywordAddTitle": "إضافة كلمة",
+  "keywordEditTitle": "تعديل الكلمة",
+  "keywordFieldLabel": "الكلمة",
+  "keywordFieldHint": "اكتب كلمة أو عبارة",
+  "keywordPriorityLabel": "الأولوية",
+  "keywordPriorityLow": "منخفضة",
+  "keywordPriorityMedium": "متوسطة",
+  "keywordPriorityHigh": "عالية",
+  "keywordPriorityCritical": "حرجة",
+  "keywordMatchModeLabel": "طريقة المطابقة",
+  "keywordMatchExact": "كلمة كاملة",
+  "keywordMatchPhrase": "عبارة",
+  "keywordMatchFuzzy": "تسامح مع أخطاء المسح",
+  "keywordMatchRegex": "نمط متقدم",
+  "keywordCategoryLabel": "التصنيف (اختياري)",
+  "keywordNotesLabel": "ملاحظة خاصة (اختياري)",
+  "keywordCaseSensitiveLabel": "مطابقة حالة الأحرف",
+  "keywordDailyCapLabel": "حد التنبيهات اليومي (اختياري)",
+  "keywordEnabledLabel": "مُفعّلة",
+  "keywordDeleteConfirm": "سيتم حذف هذه الكلمة وكل التنبيهات التي أنشأتها. لا يمكن التراجع.",
+  "keywordEmpty": "لا توجد كلمات لهذه المحادثة بعد",
+  "keywordTestTitle": "جرّب الكلمة",
+  "keywordTestHint": "الصق نصًا لترى إن كانت الكلمة ستطابقه",
+  "keywordTestMatched": "تطابق",
+  "keywordTestNoMatch": "لا تطابق",
+  "keywordErrorTooShort": "الكلمة قصيرة جدًا — حرفان على الأقل.",
+  "keywordErrorTooLong": "الكلمة طويلة جدًا.",
+  "keywordErrorNotMatchable": "لا يوجد في هذه الكلمة ما يمكن مطابقته داخل مستند.",
+  "keywordErrorStopWord": "هذه كلمة رابطة شائعة، وستظهر في كل مستند تقريبًا.",
+  "keywordErrorRegexInvalid": "النمط غير صالح.",
+  "keywordErrorRegexUnsafe": "قد يستغرق هذا النمط وقتًا غير محدود في التنفيذ.",
+  "keywordErrorDuplicate": "هذه الكلمة موجودة بالفعل في هذه المحادثة.",
+  "documentCheckingNow": "جارٍ فحص المستند…",
+  "documentCheckedNothingFound": "فُحص المستند ولم يُعثر على شيء",
+  "documentUnreadable": "تعذّرت قراءة هذا المستند بشكل موثوق.",
+  "documentTooLowResolution": "دقة الصورة أقل من أن تُقرأ بشكل موثوق.",
+  "documentUnsupported": "هذا النوع من الملفات غير مدعوم للفحص.",
+  "documentTooLarge": "الملف أكبر من الحد المسموح للفحص.",
+  "documentTruncated": "مستند طويل — فُحصت الصفحات الأولى فقط ({pages} صفحة).",
+  "@documentTruncated": {
+    "placeholders": {
+      "pages": {
+        "type": "int"
+      }
+    }
+  }
 }
