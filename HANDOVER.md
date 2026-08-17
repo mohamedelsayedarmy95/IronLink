@@ -624,11 +624,19 @@ frontend/lib/features/keyword_alert/
    options were checked and ruled out one by one; forking and modernising a
    plugin is the only path left, and was not taken unprompted. iOS is unaffected:
    Apple Vision needs a platform channel, not a Gradle plugin.
-2. **The native surface builds, but has never run.** `flutter build apk
-   --release` now passes in CI with ML Kit and Syncfusion PDF, so Gradle, R8 and
-   asset bundling are verified. What no unit test and no build can verify is
-   behaviour - whether ML Kit actually recognises text on a real photograph, and
-   whether the PDF reader copes with a real document. That still needs a device.
+2. **The native surface builds in CI, and has never run anywhere.**
+   `flutter build apk --release` verifies Gradle configuration, compilation,
+   every native plugin, R8 shrinking and asset bundling. It required a
+   placeholder `google-services.json` (`android/app/google-services.ci.json`) —
+   the real one is gitignored, and without any the Google Services plugin
+   refuses to configure the project, which is why the whole native surface had
+   gone unverified for want of a config file.
+   That job deliberately publishes nothing. An APK with a placeholder Firebase
+   config would look like a working build and fail at sign-in. Build the
+   shippable one where the real config lives.
+   What no build can verify is behaviour: whether ML Kit actually recognises
+   text on a real photograph, and whether the PDF reader copes with a real
+   document. That still needs a device.
 3. ~~`deploy.yml` targets Fly.io.~~ **Settled 2026-08-17: the file is gone.**
    `fly.toml` has never existed anywhere in this repository's history, and
    `flyctl deploy` requires one — so that step could not have worked even with

@@ -127,17 +127,24 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # The real google-services.json is gitignored, so a runner has none, and
+      # the Google Services Gradle plugin refuses to configure the project
+      # without it: "File google-services.json is missing." That single missing
+      # file was enough to keep the whole native surface of this app unverified.
+      - name: Put a placeholder Firebase config in place
+        run: cp android/app/google-services.ci.json android/app/google-services.json
+
       # THIS JOB IS WHY THE OTHERS ARE NOT ENOUGH.
       #
-      # The app depends on three native plugins — ML Kit text recognition,
-      # Tesseract, and the Syncfusion PDF reader — and until this job existed
-      # none of them had been through an Android build. Unit tests cannot reach
-      # a platform channel, so the entire native surface was unverified.
+      # The app depends on native plugins — ML Kit text recognition, the
+      # Syncfusion PDF reader, Firebase — and until this job existed none of
+      # them had been through an Android build in CI. Unit tests cannot reach a
+      # platform channel, so the entire native surface was unverified.
       #
       # A release build rather than debug, deliberately: R8 shrinking is where
-      # ML Kit and Tesseract break, by stripping classes reached only
-      # reflectively. A debug build would pass and say nothing about the
-      # configuration that actually ships.
+      # native plugins break, by stripping classes reached only reflectively.
+      # A debug build would pass and say nothing about the configuration that
+      # actually ships.
       #
       # Signing uses the debug key, because android/app/build.gradle still says
       # so — there is no release keystore in this repository. That is a real gap
@@ -151,11 +158,13 @@ jobs:
             --dart-define=API_BASE_URL=https://ironlink-api.onrender.com/api/v1 \
             --dart-define=WS_BASE_URL=wss://ironlink-api.onrender.com
 
-      # Only from main. A downloadable build of every pull request is noise; a
-      # downloadable build of what is on main is useful.
-      - uses: actions/upload-artifact@v7
-        if: github.event_name == 'push'
-        with:
-          name: android-apk
-          path: frontend/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
+      # No artifact upload, deliberately. This APK has a placeholder Firebase
+      # config baked into it: it would look like a working build and fail at
+      # sign-in, and someone would lose an afternoon to that. This job answers
+      # "does it build", which is the question that was unanswered. Build the
+      # shippable APK where the real config lives.
+      - name: Report what was verified
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          size=$(stat -c%s "$apk")
+          echo "::notice::Release APK built: $((size / 1048576)) MB. Compilation, R8 and asset bundling verified; Firebase config is a placeholder, so nothing network-facing was."
