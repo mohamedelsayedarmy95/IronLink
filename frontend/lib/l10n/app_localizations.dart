@@ -2778,6 +2778,198 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'لم يسمح المستلم بمشاركة هذه الحالة'**
   String get senderReportUnavailable;
+
+  /// No description provided for @securityCenterTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مركز الأمان'**
+  String get securityCenterTitle;
+
+  /// No description provided for @securityCenterSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل ما يظهر هنا مبني على معلومات يعرفها النظام فعلاً. لا يوجد تقدير ولا تخمين.'**
+  String get securityCenterSubtitle;
+
+  /// No description provided for @securityLevelHigh.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة جيدة'**
+  String get securityLevelHigh;
+
+  /// No description provided for @securityLevelMedium.
+  ///
+  /// In ar, this message translates to:
+  /// **'يستحق المراجعة'**
+  String get securityLevelMedium;
+
+  /// No description provided for @securityLevelLow.
+  ///
+  /// In ar, this message translates to:
+  /// **'يحتاج انتباهك الآن'**
+  String get securityLevelLow;
+
+  /// No description provided for @securityActiveSessions.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأجهزة المسجَّل دخولها'**
+  String get securityActiveSessions;
+
+  /// No description provided for @securityThisDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الجهاز'**
+  String get securityThisDevice;
+
+  /// No description provided for @securityUnknownDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'جهاز غير معروف'**
+  String get securityUnknownDevice;
+
+  /// No description provided for @securityLastActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر نشاط {when}'**
+  String securityLastActive(String when);
+
+  /// No description provided for @securityNeverActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يُستخدم بعد'**
+  String get securityNeverActive;
+
+  /// No description provided for @securitySignOutDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل خروج هذا الجهاز'**
+  String get securitySignOutDevice;
+
+  /// No description provided for @securitySignOutDeviceConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم تسجيل خروج هذا الجهاز فورًا وقطع اتصاله. لن يتأثر أي جهاز آخر.'**
+  String get securitySignOutDeviceConfirm;
+
+  /// No description provided for @securitySecureAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأمين حسابي'**
+  String get securitySecureAccount;
+
+  /// No description provided for @securitySecureAccountConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم تسجيل خروج كل الأجهزة الأخرى. هذا الجهاز يبقى مسجَّلًا.'**
+  String get securitySecureAccountConfirm;
+
+  /// No description provided for @securitySecureAccountDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تسجيل خروج كل الأجهزة الأخرى.'**
+  String get securitySecureAccountDone;
+
+  /// No description provided for @securitySecureAccountPartial.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تسجيل خروج {count} من الأجهزة. القائمة أدناه تعرض ما هو مسجَّل فعلًا الآن.'**
+  String securitySecureAccountPartial(int count);
+
+  /// No description provided for @securityNoOtherDevices.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد أجهزة أخرى مسجَّلة'**
+  String get securityNoOtherDevices;
+
+  /// No description provided for @securityFindingOtherDevices.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت مسجَّل الدخول على أكثر من جهاز'**
+  String get securityFindingOtherDevices;
+
+  /// No description provided for @securityFindingOtherDevicesWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليست مشكلة بحد ذاتها. تُذكر لأنها أول ما تحتاج معرفته لو وصل أحد إلى حسابك.'**
+  String get securityFindingOtherDevicesWhy;
+
+  /// No description provided for @securityFindingStaleSession.
+  ///
+  /// In ar, this message translates to:
+  /// **'جهاز لم يُستخدم منذ أكثر من أسبوعين'**
+  String get securityFindingStaleSession;
+
+  /// No description provided for @securityFindingStaleSessionWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'قد يكون جهازًا تستخدمه أحيانًا. راجعه، وسجِّل خروجه إن لم تعرفه.'**
+  String get securityFindingStaleSessionWhy;
+
+  /// No description provided for @securityFindingEncryptionOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'التشفير من طرف إلى طرف مُفعَّل افتراضيًا'**
+  String get securityFindingEncryptionOn;
+
+  /// No description provided for @securityFindingEncryptionOnWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخادم لا يملك المفتاح، ولا يستطيع قراءة رسائلك ولا مرفقاتك.'**
+  String get securityFindingEncryptionOnWhy;
+
+  /// No description provided for @securityFindingEncryptionOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'التشفير ليس هو الافتراضي على هذا الجهاز'**
+  String get securityFindingEncryptionOff;
+
+  /// No description provided for @securityFindingEncryptionOffWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا أخطر ما يمكن أن يظهر في هذه الشاشة. أعد تشغيل التطبيق، وإن استمر فالمشكلة تحتاج فحصًا.'**
+  String get securityFindingEncryptionOffWhy;
+
+  /// No description provided for @securityFindingKeywordsLocal.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلماتك المفتاحية مخزَّنة على هذا الجهاز فقط'**
+  String get securityFindingKeywordsLocal;
+
+  /// No description provided for @securityFindingKeywordsLocalWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخادم لم يستلمها أصلًا، فلا يمكن أن تُفشى منه.'**
+  String get securityFindingKeywordsLocalWhy;
+
+  /// No description provided for @securityFindingCloudOcr.
+  ///
+  /// In ar, this message translates to:
+  /// **'فحص المستندات في السحابة مُفعَّل'**
+  String get securityFindingCloudOcr;
+
+  /// No description provided for @securityFindingCloudOcrWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت اخترت هذا. معناه أن المستند قد يُقرأ خارج جهازك عند تعذّر القراءة محليًا.'**
+  String get securityFindingCloudOcrWhy;
+
+  /// No description provided for @securityWhyLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'لماذا أرى هذا؟'**
+  String get securityWhyLabel;
+
+  /// No description provided for @securityCheckedNothingWrong.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الفحص، ولا يوجد ما يستدعي القلق'**
+  String get securityCheckedNothingWrong;
+
+  /// No description provided for @securityLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل حالة الأمان'**
+  String get securityLoadFailed;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

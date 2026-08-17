@@ -707,5 +707,51 @@
   "senderReportAlertRaised": "صدر تنبيه ذكي",
   "senderReportNoAlert": "لا يوجد تنبيه",
   "senderReportKeywordHidden": "الكلمة المفتاحية خاصة بالمستلم ولا تظهر لك",
-  "senderReportUnavailable": "لم يسمح المستلم بمشاركة هذه الحالة"
+  "senderReportUnavailable": "لم يسمح المستلم بمشاركة هذه الحالة",
+  "securityCenterTitle": "مركز الأمان",
+  "securityCenterSubtitle": "كل ما يظهر هنا مبني على معلومات يعرفها النظام فعلاً. لا يوجد تقدير ولا تخمين.",
+  "securityLevelHigh": "الحالة جيدة",
+  "securityLevelMedium": "يستحق المراجعة",
+  "securityLevelLow": "يحتاج انتباهك الآن",
+  "securityActiveSessions": "الأجهزة المسجَّل دخولها",
+  "securityThisDevice": "هذا الجهاز",
+  "securityUnknownDevice": "جهاز غير معروف",
+  "securityLastActive": "آخر نشاط {when}",
+  "@securityLastActive": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "securityNeverActive": "لم يُستخدم بعد",
+  "securitySignOutDevice": "تسجيل خروج هذا الجهاز",
+  "securitySignOutDeviceConfirm": "سيتم تسجيل خروج هذا الجهاز فورًا وقطع اتصاله. لن يتأثر أي جهاز آخر.",
+  "securitySecureAccount": "تأمين حسابي",
+  "securitySecureAccountConfirm": "سيتم تسجيل خروج كل الأجهزة الأخرى. هذا الجهاز يبقى مسجَّلًا.",
+  "securitySecureAccountDone": "تم تسجيل خروج كل الأجهزة الأخرى.",
+  "securitySecureAccountPartial": "تعذّر تسجيل خروج {count} من الأجهزة. القائمة أدناه تعرض ما هو مسجَّل فعلًا الآن.",
+  "@securitySecureAccountPartial": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "securityNoOtherDevices": "لا توجد أجهزة أخرى مسجَّلة",
+  "securityFindingOtherDevices": "أنت مسجَّل الدخول على أكثر من جهاز",
+  "securityFindingOtherDevicesWhy": "ليست مشكلة بحد ذاتها. تُذكر لأنها أول ما تحتاج معرفته لو وصل أحد إلى حسابك.",
+  "securityFindingStaleSession": "جهاز لم يُستخدم منذ أكثر من أسبوعين",
+  "securityFindingStaleSessionWhy": "قد يكون جهازًا تستخدمه أحيانًا. راجعه، وسجِّل خروجه إن لم تعرفه.",
+  "securityFindingEncryptionOn": "التشفير من طرف إلى طرف مُفعَّل افتراضيًا",
+  "securityFindingEncryptionOnWhy": "الخادم لا يملك المفتاح، ولا يستطيع قراءة رسائلك ولا مرفقاتك.",
+  "securityFindingEncryptionOff": "التشفير ليس هو الافتراضي على هذا الجهاز",
+  "securityFindingEncryptionOffWhy": "هذا أخطر ما يمكن أن يظهر في هذه الشاشة. أعد تشغيل التطبيق، وإن استمر فالمشكلة تحتاج فحصًا.",
+  "securityFindingKeywordsLocal": "كلماتك المفتاحية مخزَّنة على هذا الجهاز فقط",
+  "securityFindingKeywordsLocalWhy": "الخادم لم يستلمها أصلًا، فلا يمكن أن تُفشى منه.",
+  "securityFindingCloudOcr": "فحص المستندات في السحابة مُفعَّل",
+  "securityFindingCloudOcrWhy": "أنت اخترت هذا. معناه أن المستند قد يُقرأ خارج جهازك عند تعذّر القراءة محليًا.",
+  "securityWhyLabel": "لماذا أرى هذا؟",
+  "securityCheckedNothingWrong": "تم الفحص، ولا يوجد ما يستدعي القلق",
+  "securityLoadFailed": "تعذّر تحميل حالة الأمان"
 }

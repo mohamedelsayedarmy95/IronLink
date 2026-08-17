@@ -9,6 +9,7 @@ import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../core/ws_service.dart';
 import '../keyword_alert/keyword_alert_service.dart';
+import '../security/screens/security_center_screen.dart';
 import '../keyword_alert/local/alert_store.dart';
 import '../keyword_alert/screens/alert_center_screen.dart';
 import '../keyword_alert/widgets/smart_alert_ticker.dart';
@@ -117,6 +118,60 @@ class _HomeScreenState extends State<_HomeView> {
   /// encryption the local cache IS the message history, so signing out is
   /// destructive in a way it is not in most apps — the server cannot give
   /// those messages back.
+
+  /// The account menu: security first, sign-out last.
+  ///
+  /// Ordered deliberately. Signing out erases every key on this device and
+  /// cannot be undone, so it sits at the bottom, away from the thumb's resting
+  /// position and below the thing most people came for.
+  Future<void> _openAccountMenu() async {
+    final t = L.of(context);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: IronColors.navySurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.shield_outlined,
+                  color: IronColors.accentText),
+              title: Text(t.securityCenterTitle),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const SecurityCenterScreen(
+                    // Facts this screen can state truthfully. Encryption is the
+                    // default for every chat, and keyword rules are written to
+                    // a local database the server never sees. Cloud OCR has no
+                    // user-facing switch yet, so it is left unestablished
+                    // rather than asserted to be off.
+                    encryptionDefault: true,
+                    keywordsAreLocal: true,
+                  ),
+                ));
+              },
+            ),
+            const Divider(height: 1, color: IronColors.borderSubtle),
+            ListTile(
+              leading:
+                  const Icon(Icons.logout, color: IronColors.semanticError),
+              title: Text(t.signOut),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _confirmSignOut();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmSignOut() async {
     final t = L.of(context);
     final confirmed = await showDialog<bool>(
@@ -257,9 +312,11 @@ class _HomeScreenState extends State<_HomeView> {
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 16),
             child: GestureDetector(
-              // The avatar is where people look for their account, and until
-              // now there was nowhere at all to sign out from.
-              onTap: _confirmSignOut,
+              // The avatar is where people look for their account. It used to
+              // sign out on a single tap — one gesture from losing every key on
+              // the device, with only a dialog in the way. It opens a menu now,
+              // with the Security Center above the irreversible action.
+              onTap: _openAccountMenu,
               child: CircleAvatar(
               radius: 18,
               backgroundColor: IronColors.navySurface,

@@ -696,3 +696,75 @@ Flutter is pinned to 3.47.0 in both workflows deliberately. A toolchain that
 moves on its own turns an unrelated pull request red and sends its author
 hunting a bug they did not write.
 
+---
+
+## 13. IronShield — Security Center (added 2026-08-17)
+
+The first P0 feature from `IRONLINK-Competitive-Moat-Master-Prompt`, which named
+it "the highest-value, lowest-dependency P0 feature". The audit confirmed that:
+its stated dependency, the authentication system, already provided everything it
+needed.
+
+### Built on what already existed
+
+| Endpoint | Status |
+|---|---|
+| `GET /auth/sessions` | Already present. Returns device type/name, IP, city, created, last-active, and which session is the caller's. |
+| `DELETE /auth/sessions/{id}` | Already present. Per-device revoke: kills the refresh token and closes that device's socket. |
+
+**No server change was made.** A Security Center is the last place to introduce
+new privileged operations, so "Secure my account" composes from the per-device
+endpoint rather than adding a bulk one.
+
+### Where the code is
+
+```
+frontend/lib/features/security/
+  domain/security_posture.dart     findings, levels, session model
+  security_repository.dart         the two endpoints
+  bloc/security_bloc.dart          load, revoke, revoke-others
+  screens/security_center_screen.dart
+```
+
+### The design decisions worth knowing
+
+**No percentage.** A number implies precision that a handful of boolean signals
+cannot support. Three levels — high, medium, low.
+
+**The worst finding sets the level**, never an average. Averaging lets four
+reassuring facts bury one critical one, which is the failure mode of every
+security score that tells users what they want to hear.
+
+**An unestablished signal produces no finding.** Not a default that flatters the
+score. If the app cannot confirm encryption is on, the screen says nothing about
+encryption rather than assuming the best.
+
+**Good news is stated too**, so "checked and fine" is distinguishable from "not
+checked". Every finding carries a "why am I seeing this?" in one sentence.
+
+**Findings are codes, not sentences**, localized at the edge — a finding
+carrying its own English text would be shown in English to an Arabic speaker.
+
+**A partial "secure my account" is counted and reported.** Signing out three of
+four devices and saying "account secured" would be the worst lie this screen
+could tell.
+
+The avatar tap used to sign out in one gesture, taking every key on the device
+with it. It opens an account menu now, with the Security Center above the
+irreversible action.
+
+### Not done
+
+Of the eight capabilities the prompt lists for IronShield, four are implemented
+(session management, device list, security score, secure-my-account). The
+remaining four are separate features rather than polish on this one:
+
+| Capability | Why not |
+|---|---|
+| Login alerts | Needs a server-side push on new-session creation |
+| Suspicious activity | Needs anomaly detection; the `AuditLog` model exists but nothing writes login patterns to it |
+| Link safety | On-device phishing detection — a feature in its own right |
+| Scam intelligence | On-device model; the prompt itself lists it separately as P1 |
+
+30 tests. Analyzer clean.
+

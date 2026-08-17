@@ -1510,4 +1510,119 @@ class LAr extends L {
 
   @override
   String get senderReportUnavailable => 'لم يسمح المستلم بمشاركة هذه الحالة';
+
+  @override
+  String get securityCenterTitle => 'مركز الأمان';
+
+  @override
+  String get securityCenterSubtitle =>
+      'كل ما يظهر هنا مبني على معلومات يعرفها النظام فعلاً. لا يوجد تقدير ولا تخمين.';
+
+  @override
+  String get securityLevelHigh => 'الحالة جيدة';
+
+  @override
+  String get securityLevelMedium => 'يستحق المراجعة';
+
+  @override
+  String get securityLevelLow => 'يحتاج انتباهك الآن';
+
+  @override
+  String get securityActiveSessions => 'الأجهزة المسجَّل دخولها';
+
+  @override
+  String get securityThisDevice => 'هذا الجهاز';
+
+  @override
+  String get securityUnknownDevice => 'جهاز غير معروف';
+
+  @override
+  String securityLastActive(String when) {
+    return 'آخر نشاط $when';
+  }
+
+  @override
+  String get securityNeverActive => 'لم يُستخدم بعد';
+
+  @override
+  String get securitySignOutDevice => 'تسجيل خروج هذا الجهاز';
+
+  @override
+  String get securitySignOutDeviceConfirm =>
+      'سيتم تسجيل خروج هذا الجهاز فورًا وقطع اتصاله. لن يتأثر أي جهاز آخر.';
+
+  @override
+  String get securitySecureAccount => 'تأمين حسابي';
+
+  @override
+  String get securitySecureAccountConfirm =>
+      'سيتم تسجيل خروج كل الأجهزة الأخرى. هذا الجهاز يبقى مسجَّلًا.';
+
+  @override
+  String get securitySecureAccountDone => 'تم تسجيل خروج كل الأجهزة الأخرى.';
+
+  @override
+  String securitySecureAccountPartial(int count) {
+    return 'تعذّر تسجيل خروج $count من الأجهزة. القائمة أدناه تعرض ما هو مسجَّل فعلًا الآن.';
+  }
+
+  @override
+  String get securityNoOtherDevices => 'لا توجد أجهزة أخرى مسجَّلة';
+
+  @override
+  String get securityFindingOtherDevices =>
+      'أنت مسجَّل الدخول على أكثر من جهاز';
+
+  @override
+  String get securityFindingOtherDevicesWhy =>
+      'ليست مشكلة بحد ذاتها. تُذكر لأنها أول ما تحتاج معرفته لو وصل أحد إلى حسابك.';
+
+  @override
+  String get securityFindingStaleSession =>
+      'جهاز لم يُستخدم منذ أكثر من أسبوعين';
+
+  @override
+  String get securityFindingStaleSessionWhy =>
+      'قد يكون جهازًا تستخدمه أحيانًا. راجعه، وسجِّل خروجه إن لم تعرفه.';
+
+  @override
+  String get securityFindingEncryptionOn =>
+      'التشفير من طرف إلى طرف مُفعَّل افتراضيًا';
+
+  @override
+  String get securityFindingEncryptionOnWhy =>
+      'الخادم لا يملك المفتاح، ولا يستطيع قراءة رسائلك ولا مرفقاتك.';
+
+  @override
+  String get securityFindingEncryptionOff =>
+      'التشفير ليس هو الافتراضي على هذا الجهاز';
+
+  @override
+  String get securityFindingEncryptionOffWhy =>
+      'هذا أخطر ما يمكن أن يظهر في هذه الشاشة. أعد تشغيل التطبيق، وإن استمر فالمشكلة تحتاج فحصًا.';
+
+  @override
+  String get securityFindingKeywordsLocal =>
+      'كلماتك المفتاحية مخزَّنة على هذا الجهاز فقط';
+
+  @override
+  String get securityFindingKeywordsLocalWhy =>
+      'الخادم لم يستلمها أصلًا، فلا يمكن أن تُفشى منه.';
+
+  @override
+  String get securityFindingCloudOcr => 'فحص المستندات في السحابة مُفعَّل';
+
+  @override
+  String get securityFindingCloudOcrWhy =>
+      'أنت اخترت هذا. معناه أن المستند قد يُقرأ خارج جهازك عند تعذّر القراءة محليًا.';
+
+  @override
+  String get securityWhyLabel => 'لماذا أرى هذا؟';
+
+  @override
+  String get securityCheckedNothingWrong =>
+      'تم الفحص، ولا يوجد ما يستدعي القلق';
+
+  @override
+  String get securityLoadFailed => 'تعذّر تحميل حالة الأمان';
 }

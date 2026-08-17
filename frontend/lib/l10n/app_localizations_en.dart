@@ -1525,4 +1525,118 @@ class LEn extends L {
   @override
   String get senderReportUnavailable =>
       'The recipient has not shared this status';
+
+  @override
+  String get securityCenterTitle => 'Security Center';
+
+  @override
+  String get securityCenterSubtitle =>
+      'Everything here is based on something the system actually knows. Nothing is estimated.';
+
+  @override
+  String get securityLevelHigh => 'Looks good';
+
+  @override
+  String get securityLevelMedium => 'Worth reviewing';
+
+  @override
+  String get securityLevelLow => 'Needs your attention';
+
+  @override
+  String get securityActiveSessions => 'Signed-in devices';
+
+  @override
+  String get securityThisDevice => 'This device';
+
+  @override
+  String get securityUnknownDevice => 'Unrecognised device';
+
+  @override
+  String securityLastActive(String when) {
+    return 'Last active $when';
+  }
+
+  @override
+  String get securityNeverActive => 'Not used yet';
+
+  @override
+  String get securitySignOutDevice => 'Sign out this device';
+
+  @override
+  String get securitySignOutDeviceConfirm =>
+      'This device will be signed out immediately and disconnected. No other device is affected.';
+
+  @override
+  String get securitySecureAccount => 'Secure my account';
+
+  @override
+  String get securitySecureAccountConfirm =>
+      'Every other device will be signed out. This one stays signed in.';
+
+  @override
+  String get securitySecureAccountDone => 'All other devices were signed out.';
+
+  @override
+  String securitySecureAccountPartial(int count) {
+    return '$count devices could not be signed out. The list below shows what is actually signed in now.';
+  }
+
+  @override
+  String get securityNoOtherDevices => 'No other devices are signed in';
+
+  @override
+  String get securityFindingOtherDevices =>
+      'You are signed in on more than one device';
+
+  @override
+  String get securityFindingOtherDevicesWhy =>
+      'Not a problem in itself. It is stated because it is the first thing you would need to know if someone reached your account.';
+
+  @override
+  String get securityFindingStaleSession =>
+      'A device has not been used in over two weeks';
+
+  @override
+  String get securityFindingStaleSessionWhy =>
+      'It may be a device you use occasionally. Have a look, and sign it out if you do not recognise it.';
+
+  @override
+  String get securityFindingEncryptionOn =>
+      'End-to-end encryption is on by default';
+
+  @override
+  String get securityFindingEncryptionOnWhy =>
+      'The server holds no key and cannot read your messages or attachments.';
+
+  @override
+  String get securityFindingEncryptionOff =>
+      'Encryption is not the default on this device';
+
+  @override
+  String get securityFindingEncryptionOffWhy =>
+      'This is the most serious thing this screen can say. Restart the app; if it persists, it needs investigating.';
+
+  @override
+  String get securityFindingKeywordsLocal =>
+      'Your keywords are stored only on this device';
+
+  @override
+  String get securityFindingKeywordsLocalWhy =>
+      'The server never received them, so it cannot leak them.';
+
+  @override
+  String get securityFindingCloudOcr => 'Cloud document checking is enabled';
+
+  @override
+  String get securityFindingCloudOcrWhy =>
+      'You chose this. It means a document may be read outside your device when local reading fails.';
+
+  @override
+  String get securityWhyLabel => 'Why am I seeing this?';
+
+  @override
+  String get securityCheckedNothingWrong => 'Checked, nothing to report';
+
+  @override
+  String get securityLoadFailed => 'Could not load security status';
 }
