@@ -139,6 +139,29 @@ class SessionOut(BaseModel):
     is_current: bool = False
 
 
+class SecurityEventOut(BaseModel):
+    """One security-relevant thing that happened to this account.
+
+    Deliberately narrow. It carries an action code, a time, and the coarse
+    context of where it happened — never message content, never a resource the
+    event touched, and never another user's identity. IronShield's promise is
+    that it reports on the account without exposing what the account contains.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    action: str
+    created_at: datetime
+    ip_address: str | None
+    device_type: str | None
+    success: bool
+
+    #: True when this event involved a device the account had not seen before.
+    #: Derived server-side from the audit metadata rather than guessed at by
+    #: the client, which has no way to know what "before" was.
+    new_device: bool = False
+
+
 class WsTicketOut(BaseModel):
     ticket: str
     expires_in: int

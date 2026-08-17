@@ -18,6 +18,7 @@ from app.api.schemas import (
     RegisterOut,
     RequestOtpIn,
     RequestOtpOut,
+    SecurityEventOut,
     SessionOut,
     UserOut,
     VerifyIn,
@@ -634,6 +635,69 @@ async def create_ws_ticket(user: User = Depends(get_current_user)) -> WsTicketOu
 
 
 # ── Multi-device session management ──────────────────────────────────────────
+
+@router.get("/security-events", response_model=list[SecurityEventOut])
+async def security_events(
+    limit: int = 30,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[SecurityEventOut]:
+    """This account's recent security history — IronShield's activity feed.
+
+    WHAT THIS DELIBERATELY CANNOT RETURN
+
+    Only events whose actor is the caller, and only from a fixed list of
+    auth-related actions. Not "audit rows about this user": an admin action
+    *on* an account is a different thing from the account's own history, and
+    conflating them would turn a personal security screen into a leak of
+    moderation activity.
+
+    The projection is narrower still — action, time, IP, device class. No
+    resource ids, no descriptions, no before/after state. AuditLog rows can
+    carry all of those for other event types, and a security feed that
+    returned the row wholesale would eventually surface one.
+
+    Sorting is newest-first because the question this answers is "did
+    something just happen", not "what is my history".
+    """
+    watched = [
+        AuditAction.LOGIN_SUCCESS,
+        AuditAction.LOGIN_FAILED,
+        AuditAction.LOGOUT,
+        AuditAction.SESSION_REVOKED,
+        AuditAction.DEVICE_FINGERPRINT_CHANGED,
+        AuditAction.SUSPICIOUS_LOGIN,
+        AuditAction.MFA_FAILED,
+        AuditAction.RATE_LIMIT_HIT,
+        AuditAction.FORCE_DISCONNECT,
+    ]
+
+    rows = (await db.scalars(
+        select(AuditLog)
+        .where(
+            AuditLog.actor_id == user.id,
+            AuditLog.action.in_([a.value for a in watched]),
+            # An event the caller did not cause is not their security history.
+            AuditLog.impersonator_id.is_(None),
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(max(1, min(limit, 100)))
+    )).all()
+
+    return [
+        SecurityEventOut(
+            action=row.action,
+            created_at=row.created_at,
+            ip_address=row.ip_address,
+            device_type=_classify_device(row.user_agent),
+            success=row.success,
+            # Written at login time by _issue_login, which is the only place
+            # that knows what the previous fingerprint was.
+            new_device=bool((row.metadata_ or {}).get("fingerprint_changed")),
+        )
+        for row in rows
+    ]
+
 
 @router.get("/sessions", response_model=list[SessionOut])
 async def list_sessions(

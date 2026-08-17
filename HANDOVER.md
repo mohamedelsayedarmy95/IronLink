@@ -753,18 +753,68 @@ The avatar tap used to sign out in one gesture, taking every key on the device
 with it. It opens an account menu now, with the Security Center above the
 irreversible action.
 
-### Not done
+### All eight capabilities
 
-Of the eight capabilities the prompt lists for IronShield, four are implemented
-(session management, device list, security score, secure-my-account). The
-remaining four are separate features rather than polish on this one:
-
-| Capability | Why not |
+| Capability | Where |
 |---|---|
-| Login alerts | Needs a server-side push on new-session creation |
-| Suspicious activity | Needs anomaly detection; the `AuditLog` model exists but nothing writes login patterns to it |
-| Link safety | On-device phishing detection — a feature in its own right |
-| Scam intelligence | On-device model; the prompt itself lists it separately as P1 |
+| Session management | `security_repository.dart` — the two endpoints that already existed |
+| Device trust | session list with current-device marking and staleness |
+| Security score | `domain/security_posture.dart` |
+| Secure my account | composed from the per-device revoke, never a bulk endpoint |
+| Login alerts | `GET /auth/security-events` — new-device logins were already detected and audit-logged by `_issue_login`; nothing detected them *for the user* until now |
+| Suspicious activity | same feed: failed logins, revocations, rate-limit hits, forced disconnects |
+| Link safety | `domain/link_safety.dart` — structural only, no network |
+| Scam intelligence | `domain/scam_signals.dart` — on-device, bilingual |
 
-30 tests. Analyzer clean.
+### The two on-device engines, and why they are shaped that way
 
+**Link safety consults nothing.** The obvious build checks each URL against a
+reputation service, which would send the user's browsing to a third party from
+inside an end-to-end encrypted messenger. So it reads the URL and nothing
+leaves. That bounds it — it cannot know a domain registered yesterday serves
+malware — in exchange for catching deception encoded in the URL itself, which is
+how nearly all phishing reaches someone in a chat app.
+
+Its most valuable check is per-*label* mixed-script detection. "pаypal.com" with
+a Cyrillic а is invisible at any font size and defeats any amount of care, but
+the codepoints say so instantly. Per label, not per host: every
+internationalised domain has a Latin TLD, so a whole-host comparison would flag
+the entire non-Latin internet.
+
+Two bugs found while building it, both silent:
+
+- Dart percent-encodes non-ASCII hosts rather than punycoding them, so
+  "pаypal.com" arrived as "p%D0%B0ypal.com" and looked like pure ASCII. The
+  homograph check — the whole point of the class — was passing its tests by
+  finding nothing.
+- Fixing that made a genuine Arabic domain look mixed-script, because of the
+  Latin TLD. Hence per-label.
+
+**Scam intelligence is built to under-fire.** A detector that fires on ordinary
+conversation is worse than none: every false positive spends trust, and once the
+banner is learned as noise the one real warning goes with it. One signal never
+warns; two must agree. The exception is a request for a verification code, which
+warns alone because it has no innocent reading in an app that sends codes — and
+which is the commonest account-takeover vector against this product.
+
+The patterns are bilingual. A scam detector that only reads English would
+protect this product's users selectively, which is how a security feature
+becomes a false assurance.
+
+Most of that test file is ordinary messages that must stay silent. It earned its
+keep immediately: a fix for one pattern would have warned on "what is the code
+review process here?" — a false positive on the one signal allowed to warn
+alone.
+
+### Still not done
+
+- **Nothing pushes a login alert.** The events are recorded and shown; the
+  device is not woken. `send_ocr_push` reads a single `User.fcm_token`, so a
+  push would also reach the device that just logged in. Doing it properly wants
+  a token per session.
+- **Link and scam analysis are not wired into the chat UI.** Both engines are
+  complete and tested; no message bubble consults them yet. That is a UI
+  decision — where a warning appears, and how a user dismisses one — rather
+  than more detection work.
+
+63 tests across the feature. Analyzer clean.
