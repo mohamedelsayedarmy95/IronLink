@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy import select
 
+from app.core import observability
 from app.core.database import AsyncSessionLocal
 from app.core.redis import redis_pubsub, redis_sessions
 from app.models import User
@@ -75,6 +76,7 @@ async def chat_socket(
     user_id = UUID(user_id_raw)
     await websocket.accept()
     connection_id = await manager.register(user_id, websocket)
+    observability.websocket_connections.inc()
     relay_task = asyncio.create_task(_relay_loop(websocket, user_id, connection_id))
 
     try:
@@ -99,6 +101,11 @@ async def chat_socket(
     finally:
         relay_task.cancel()
         await manager.unregister(user_id, connection_id)
+        # In the `finally`, so a connection dropped by a crashing handler
+        # is still subtracted. A gauge that only decrements on the clean
+        # path climbs forever and eventually reads as an outage that is
+        # not happening.
+        observability.websocket_connections.dec()
 
 
 async def _handle_frame(
@@ -164,6 +171,9 @@ async def _handle_frame(
             # Offline recipient → FCM push with sender name + short preview.
             # Checked while the session is open so we read fcm_token in one trip.
             recipient_offline = not await manager.is_online(to)
+            observability.message_delivery.labels(
+                outcome="push" if recipient_offline else "realtime"
+            ).inc()
             if recipient_offline:
                 recipient = await db.scalar(select(User).where(User.id == to))
                 sender = await db.scalar(select(User).where(User.id == user_id))

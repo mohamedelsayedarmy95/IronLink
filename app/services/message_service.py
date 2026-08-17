@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import observability
 from app.models import Message, UserBlock
 from app.models.message import MessageStatus, MessageType
 
@@ -112,6 +113,14 @@ async def save_message(
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
+    # Counted after the commit, so the number means "accepted and durable"
+    # rather than "attempted". Labelled by whether it is a direct or a group
+    # conversation and by nothing else — a sender or a chat in a label would
+    # publish who is talking and to whom, which is the one thing this product
+    # exists to keep off the server.
+    observability.messages_accepted.labels(
+        kind="group" if group_id is not None else "direct"
+    ).inc()
     return msg
 
 

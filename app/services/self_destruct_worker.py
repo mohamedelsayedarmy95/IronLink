@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import structlog
 from sqlalchemy import select
 
+from app.core import observability
 from app.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models import AuditLog, Message
@@ -49,9 +50,17 @@ class SelfDestructWorker:
         while True:
             try:
                 wiped = await self.sweep_once()
+                # The gauge is the backlog: how many messages were already past
+                # their expiry when the sweep ran. If it stops returning to
+                # zero, the sweeper is not keeping up and messages are
+                # outliving the lifetime their sender chose — which is a
+                # privacy failure, not a slow background job.
+                observability.self_destruct_overdue.set(wiped)
                 if wiped:
+                    observability.self_destruct_wiped.inc(wiped)
                     logger.info("self_destruct_sweep", wiped=wiped)
             except Exception as exc:  # worker must never die silently
+                observability.self_destruct_failures.inc()
                 logger.error("self_destruct_sweep_failed", error=str(exc))
             await asyncio.sleep(SWEEP_INTERVAL_SECONDS)
 

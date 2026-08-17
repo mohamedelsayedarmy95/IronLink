@@ -174,6 +174,19 @@ class Settings(BaseSettings):
     # false and the endpoints refuse regardless of who agreed.
     AI_FEATURES_ENABLED: bool = True
 
+    # ── Observability ─────────────────────────────────────────────────────────
+    # Bearer token required to scrape /metrics. Empty means the endpoint does
+    # not exist at all — 404, not 401, so an unauthenticated caller cannot even
+    # confirm it is there.
+    #
+    # Defaulting to disabled rather than to open is the point. A metrics page
+    # here publishes how many people are connected, when traffic rises and
+    # falls, and which endpoints are failing; for users who may be targeted,
+    # that shape is information about them even though no metric names anyone.
+    # An operator who forgets to set this gets a scrape failure, which is loud
+    # and gets fixed. The other default gets nobody's attention.
+    METRICS_TOKEN: str = ""
+
     # ── Self-registration ─────────────────────────────────────────────────────
     # Whether a phone number that verifies with Firebase may register itself.
     # With it off, accounts have to be created out of band and the app is only

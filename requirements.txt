@@ -46,6 +46,7 @@ firebase-admin==6.6.0
 
 # ── Observability ──────────────────────────────────────────────────────
 structlog==24.4.0
+prometheus-client==0.21.1
 
 # ── GeoIP (city-level location from IP) ────────────────────────────────
 geoip2==4.8.0
