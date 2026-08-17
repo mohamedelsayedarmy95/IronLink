@@ -31,7 +31,7 @@ pipeline is on-device, which is what P-4 mandates anyway. Rules and alerts
 live on the device; the server never receives a keyword; and the push payload
 that used to carry one to Google no longer does.
 
-**Totals: 398 frontend tests, 339 backend tests, analyzer clean.**
+**Totals: 426 frontend tests, 339 backend tests, analyzer clean.**
 
 ---
 
@@ -123,7 +123,11 @@ heuristic catches every catastrophic pattern.
 ## 8. Data flow
 
 ```
-attachment decrypted for display (client already does this)
+EncryptedImage decrypts an attachment to render it   (the one moment plaintext exists)
+  → KeywordScanContext.offer(bytes)
+  → KeywordAlertService  — skips own messages and secret chats,
+                           dedupes repeat offers from list rebuilds,
+                           serializes extraction, bounds the queue
   → KeywordAlertPipeline.process(bytes, conversation, message, attachment)
       → rules for this conversation?            no  → skippedNoRules
       → Preflight.inspect(bytes)                bad → unsupportedDocument / failed
@@ -173,7 +177,7 @@ and an alert they have not answered cannot be rebuilt from anywhere.
 | Suite | Count | Result |
 |---|---|---|
 | Backend (`tests/`) | 339 | pass |
-| Frontend (`frontend/test/`) | 398 | pass |
+| Frontend (`frontend/test/`) | 426 | pass |
 | Analyzer (`lib/features/keyword_alert`, `test/keyword_alert`) | — | clean |
 
 ## 13. Performance results
@@ -199,13 +203,12 @@ baseline.
 3. **No performance or battery measurements.**
 4. **No production dashboards.** The event types and guardrail thresholds
    exist; the sink that ships them does not.
-5. **The pipeline is not yet wired into the chat attachment flow.** Every
-   layer is built and tested; the call site that invokes it when an attachment
-   is decrypted for display is the remaining integration.
+5. **Untested on a device.** Every layer has unit and widget coverage, but the
+   native engines (ML Kit, the PDF parser) have only been exercised through
+   fakes. The end-to-end device run is the remaining verification.
 
 ## 15. Remaining work
 
-- Wire `KeywordAlertPipeline` into attachment display.
 - Arabic image OCR (Apple Vision / Tesseract).
 - Scanned-PDF rasterization.
 - Device measurement of processing time and battery.
@@ -252,7 +255,8 @@ baseline.
 | Guardrails (§10.4) | IMPLEMENTED | `keyword_telemetry.dart` | `telemetry_and_flags_test.dart` | Thresholds from §10.3 |
 | Dashboards (§11 Phase 7) | NOT IMPLEMENTED | — | — | Needs a sink and infra |
 | Legacy server keyword API | IMPLEMENTED (deprecated) | `app/api/routes/ocr.py`, `app/redis.py` | `test_keyword_alerts.py` | Repaired; flagged off |
-| Pipeline → chat integration | NOT IMPLEMENTED | — | — | See §14.5 |
+| Pipeline → chat integration | IMPLEMENTED | `keyword_alert_service.dart`, `chat/widgets/encrypted_image.dart`, `chat/screens/chat_room_screen.dart`, `groups/screens/group_chat_screen.dart`, `main.dart` | `alert_service_test.dart` | Serialized queue, bounded, own/secret messages skipped |
+| Sign-out erases rules and alerts | IMPLEMENTED | `auth/sign_out_service.dart` | `alert_service_test.dart` | Store wiped, scan state reset |
 
 ## 17. Sign-off record
 

@@ -7,23 +7,36 @@ import '../../../core/icons.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../keyword_alert/keyword_alert_service.dart';
 
 /// Displays an attachment whose stored bytes are encrypted.
 ///
 /// The usual `Image.network` path cannot work here: the object in storage is
 /// ciphertext, so the bytes have to be fetched and decrypted on the device
 /// before anything can be decoded.
+///
+/// This is also the only moment a keyword rule can see the document. The
+/// server holds no key, so plaintext exists exactly once — here, in memory,
+/// for as long as the image is on screen. [scan] hands those bytes to the
+/// Smart Keyword Alert queue, which decides whether checking them is worth
+/// doing; this widget does not decide, and does not wait.
 class EncryptedImage extends StatefulWidget {
   const EncryptedImage({
     super.key,
     required this.media,
     required this.mediaKey,
     required this.attachmentKey,
+    this.scan,
   });
 
   final MediaService media;
   final String mediaKey;
   final AttachmentKey attachmentKey;
+
+  /// Null where keyword alerts are not configured — a platform without a
+  /// local store, or a screen that has no conversation to attribute an alert
+  /// to. The image renders identically either way.
+  final KeywordScanContext? scan;
 
   @override
   State<EncryptedImage> createState() => _EncryptedImageState();
@@ -45,6 +58,12 @@ class _EncryptedImageState extends State<EncryptedImage> {
           .downloadDecrypted(widget.mediaKey, widget.attachmentKey);
       if (!mounted) return;
       setState(() => _bytes = bytes);
+
+      // After the image is on screen, not before. Checking a document is
+      // never allowed to delay showing it — the user asked to see a picture,
+      // not to wait for a background feature — and a document that fails to
+      // decrypt is never offered at all, because there is nothing to read.
+      widget.scan?.offer(bytes);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e);

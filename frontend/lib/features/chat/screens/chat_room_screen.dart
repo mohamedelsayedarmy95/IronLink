@@ -8,7 +8,8 @@ import '../../../core/failure.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
-import '../../../core/widgets/ticker.dart';
+import '../../keyword_alert/keyword_alert_service.dart';
+import '../../keyword_alert/widgets/smart_alert_ticker.dart';
 import '../../../l10n/app_localizations.dart';
 import '../bloc/chat_bloc.dart';
 import '../ai_consent_repository.dart';
@@ -78,6 +79,7 @@ class ChatRoomScreen extends StatelessWidget {
       child: _ChatRoomView(
         isSecret: isSecret,
         encrypted: encrypted,
+        myId: myId,
         peerId: peerId,
         peerName: peerName,
         peerOnline: peerOnline,
@@ -90,6 +92,7 @@ class _ChatRoomView extends StatefulWidget {
   const _ChatRoomView({
     required this.isSecret,
     required this.encrypted,
+    required this.myId,
     required this.peerId,
     required this.peerName,
     required this.peerOnline,
@@ -97,6 +100,10 @@ class _ChatRoomView extends StatefulWidget {
 
   final bool isSecret;
   final bool encrypted;
+
+  /// Whose device this is. An alert belongs to the person reading the
+  /// document, not to the conversation.
+  final String myId;
   final String peerId;
   final String peerName;
   final bool peerOnline;
@@ -271,6 +278,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
     });
   }
 
+
   @override
   Widget build(BuildContext context) {
     final t = L.of(context);
@@ -438,8 +446,10 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
       ),
       body: Column(
         children: [
-          // News Ticker for OCR alerts
-          const NewsTicker(),
+          // The Smart Alert ticker, anchored below the app bar and above the
+          // messages — never over the compose bar (§5.2.1). Draws nothing
+          // when there is nothing outstanding.
+          const SmartAlertTicker(),
           Expanded(
             child: BlocConsumer<ChatBloc, ChatRoomState>(
               listener: (context, state) {
@@ -483,6 +493,9 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                           final message = state.messages[i];
                           return _MessageBubble(
                             message: message,
+                            conversationId: widget.peerId,
+                            myId: widget.myId,
+                            isSecret: widget.isSecret,
                             onTranslatePressed: (text, targetLang) {
                               // Trigger translation for this message
                               // We need the message ID - we'll pass it via the message object
@@ -617,12 +630,23 @@ class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     super.key,
     required this.message,
+    required this.conversationId,
+    required this.myId,
+    required this.isSecret,
     required this.onTranslatePressed,
     required this.onModeratePressed,
     required this.onReportPressed,
   });
 
   final ChatMessage message;
+
+  /// Who this conversation is with, whose device this is, and whether the
+  /// chat is ephemeral — everything the keyword pipeline needs to attribute
+  /// an alert, and nothing it does not.
+  final String conversationId;
+  final String myId;
+  final bool isSecret;
+
   final void Function(String text, String targetLang) onTranslatePressed;
   final void Function(String text) onModeratePressed;
 
@@ -630,6 +654,29 @@ class _MessageBubble extends StatelessWidget {
   /// ciphertext it cannot read, so this device is the only place the evidence
   /// exists in a readable form.
   final void Function(String messageId, String? snapshot) onReportPressed;
+
+
+  /// What the keyword pipeline needs, or null when the service is absent.
+  ///
+  /// Read from the widget tree rather than held as a field, so a bubble built
+  /// without the service — in a test, or on a platform with no local store —
+  /// simply gets null instead of failing to build.
+  KeywordScanContext? _scanContext(BuildContext context) {
+    final service = context.read<KeywordAlertService?>();
+    if (service == null) return null;
+
+    return KeywordScanContext(
+      service: service,
+      conversationId: conversationId,
+      messageId: message.id,
+      attachmentId: message.mediaKey ?? message.id,
+      recipientUserId: myId,
+      isMine: message.isMine,
+      // A secret chat leaves nothing on this device, and an alert about one
+      // would outlive the message it describes by 48 hours.
+      isSecret: isSecret,
+    );
+  }
 
   static const _slateGrey = Color(0xFF3E4A5C);
 
@@ -708,6 +755,10 @@ class _MessageBubble extends StatelessWidget {
                     media: context.read<MediaService>(),
                     mediaKey: message.mediaKey!,
                     attachmentKey: message.attachmentKey!,
+                    // The one moment plaintext exists on this device. Null
+                    // when keyword alerts are unavailable, which changes
+                    // nothing about how the image renders.
+                    scan: _scanContext(context),
                   ),
                   if ((message.content ?? '').isNotEmpty) ...[
                     const SizedBox(height: 6),

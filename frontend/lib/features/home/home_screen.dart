@@ -8,7 +8,10 @@ import '../../core/crypto/signal.dart';
 import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../core/ws_service.dart';
-import '../../core/widgets/ticker.dart';
+import '../keyword_alert/keyword_alert_service.dart';
+import '../keyword_alert/local/alert_store.dart';
+import '../keyword_alert/screens/alert_center_screen.dart';
+import '../keyword_alert/widgets/smart_alert_ticker.dart';
 import '../../l10n/app_localizations.dart';
 import '../auth/auth_repository.dart';
 import '../auth/screens/splash_screen.dart';
@@ -26,7 +29,6 @@ import '../contacts/contacts_repository.dart';
 import '../contacts/screens/contacts_discovery_screen.dart';
 import '../groups/groups_repository.dart';
 import '../groups/groups_screen.dart';
-import '../settings/ocr_settings_page.dart';
 import '../../core/icons.dart';
 
 /// Home: live chats list in tab 0; other tabs land in later sprints.
@@ -146,6 +148,8 @@ class _HomeScreenState extends State<_HomeView> {
       messages: context.read<MessageStore>(),
       socket: context.read<WsService>(),
       signal: context.read<SignalService>(),
+      alerts: context.read<AlertStore>(),
+      keywordAlerts: context.read<KeywordAlertService?>(),
     ).signOut();
 
     if (!mounted) return;
@@ -280,7 +284,7 @@ class _HomeScreenState extends State<_HomeView> {
       body: Column(
         children: [
           // News Ticker for OCR alerts
-          const NewsTicker(),
+          const SmartAlertTicker(),
           Expanded(
             child: BroadcastBannerHost(
               api: context.read<ApiClient>(),
@@ -309,7 +313,11 @@ class _HomeScreenState extends State<_HomeView> {
                         ],
                       ),
                     ),
-                3 => const OcrSettingsPage(),
+                // The OCR tab now opens alert history rather than the old
+                // global keyword list. Keywords are per-conversation, so they
+                // are managed from inside a chat; what belongs at app level is
+                // "what has been found", not "what am I watching for".
+                3 => const AlertCenterScreen(),
                 _ => const SizedBox.shrink(),
               },
             ),

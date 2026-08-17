@@ -11,6 +11,7 @@ import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../chat/widgets/attach_flow.dart';
 import '../../chat/widgets/encrypted_image.dart';
+import '../../keyword_alert/keyword_alert_service.dart';
 import '../../chat/widgets/voice_player.dart';
 import '../../chat/widgets/voice_recorder.dart';
 import '../bloc/group_chat_bloc.dart';
@@ -38,15 +39,19 @@ class GroupChatScreen extends StatelessWidget {
         groupCrypto: ctx.read<GroupSignalService>(),
         pairwise: ctx.read<SignalService>(),
       )..add(const GroupChatOpened()),
-      child: _GroupChatView(group: group),
+      child: _GroupChatView(group: group, myId: myId),
     );
   }
 }
 
 class _GroupChatView extends StatefulWidget {
-  const _GroupChatView({required this.group});
+  const _GroupChatView({required this.group, required this.myId});
 
   final GroupInfo group;
+
+  /// Whose device this is. An alert belongs to the person reading the
+  /// document, not to the group.
+  final String myId;
 
   @override
   State<_GroupChatView> createState() => _GroupChatViewState();
@@ -174,7 +179,11 @@ class _GroupChatViewState extends State<_GroupChatView> {
                         padding: const EdgeInsets.all(16),
                         itemCount: state.messages.length,
                         itemBuilder: (context, i) =>
-                            _GroupBubble(message: state.messages[i]),
+                            _GroupBubble(
+                              message: state.messages[i],
+                              groupId: widget.group.id,
+                              myId: widget.myId,
+                            ),
                       ),
               ),
               if (state.canPost)
@@ -214,9 +223,30 @@ class _GroupChatViewState extends State<_GroupChatView> {
 }
 
 class _GroupBubble extends StatelessWidget {
-  const _GroupBubble({required this.message});
+  const _GroupBubble({
+    required this.message,
+    required this.groupId,
+    required this.myId,
+  });
 
   final GroupChatMessage message;
+  final String groupId;
+  final String myId;
+
+  /// What the keyword pipeline needs, or null where the service is absent.
+  KeywordScanContext? _scanContext(BuildContext context) {
+    final service = context.read<KeywordAlertService?>();
+    if (service == null) return null;
+
+    return KeywordScanContext(
+      service: service,
+      conversationId: groupId,
+      messageId: message.id,
+      attachmentId: message.mediaKey ?? message.id,
+      recipientUserId: myId,
+      isMine: message.isMine,
+    );
+  }
 
   static const _slateGrey = Color(0xFF3E4A5C);
 
@@ -281,6 +311,10 @@ class _GroupBubble extends StatelessWidget {
                 media: context.read<MediaService>(),
                 mediaKey: message.mediaKey!,
                 attachmentKey: message.attachmentKey!,
+                // Each member's rules are their own and invisible to the
+                // others (§6.2), so the alert is scoped to this device's
+                // user rather than to the group.
+                scan: _scanContext(context),
               ),
               if ((message.content ?? '').isNotEmpty) ...[
                 const SizedBox(height: 6),

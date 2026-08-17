@@ -6,6 +6,8 @@ import '../../core/crypto/signal.dart';
 import '../../core/secure_storage.dart';
 import '../../core/ws_service.dart';
 import '../chat/local/message_store.dart';
+import '../keyword_alert/keyword_alert_service.dart';
+import '../keyword_alert/local/alert_store.dart';
 
 /// Signs out and erases what this device holds.
 ///
@@ -24,13 +26,29 @@ class SignOutService {
     required MessageStore messages,
     WsService? socket,
     SignalService? signal,
+    AlertStore? alerts,
+    KeywordAlertService? keywordAlerts,
   })  : _api = api,
         _messages = messages,
         _socket = socket,
-        _signal = signal;
+        _signal = signal,
+        _alerts = alerts,
+        _keywordAlerts = keywordAlerts;
 
   final ApiClient _api;
   final MessageStore _messages;
+
+  /// Keyword rules and the alerts they raised.
+  ///
+  /// Wiped alongside the message cache, and arguably more urgently: a
+  /// watchlist says more about the person who wrote it than their message
+  /// history does, because it states what they were watching *for*.
+  final AlertStore? _alerts;
+
+  /// The in-session record of which documents have already been checked.
+  /// Without clearing it the next user's identical attachment would be
+  /// treated as already handled.
+  final KeywordAlertService? _keywordAlerts;
 
   /// Closed first, and told to stop reconnecting: it retries on a backoff
   /// now, so without this it would keep trying to re-establish a session
@@ -58,6 +76,8 @@ class SignOutService {
     // must not leave the rest behind.
     await _attempt('signal keys', () async => _signal?.reset());
     await _attempt('message cache', _messages.clear);
+    await _attempt('keyword rules and alerts', () async => _alerts?.clear());
+    await _attempt('keyword scan state', () async => _keywordAlerts?.reset());
     await _attempt('secure storage', _wipeSecureStorage);
     await _attempt('tokens', _api.clearTokens);
   }
