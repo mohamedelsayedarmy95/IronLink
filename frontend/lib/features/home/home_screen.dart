@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../core/ws_service.dart';
 import '../keyword_alert/keyword_alert_service.dart';
 import '../security/screens/security_center_screen.dart';
+import '../security/widgets/message_safety_banner.dart';
 import '../keyword_alert/local/alert_store.dart';
 import '../keyword_alert/screens/alert_center_screen.dart';
 import '../keyword_alert/widgets/smart_alert_ticker.dart';
@@ -205,6 +206,7 @@ class _HomeScreenState extends State<_HomeView> {
       signal: context.read<SignalService>(),
       alerts: context.read<AlertStore>(),
       keywordAlerts: context.read<KeywordAlertService?>(),
+      messageSafety: context.read<MessageSafety>(),
     ).signOut();
 
     if (!mounted) return;

@@ -708,5 +708,19 @@
   "securityFindingCloudOcrWhy": "You chose this. It means a document may be read outside your device when local reading fails.",
   "securityWhyLabel": "Why am I seeing this?",
   "securityCheckedNothingWrong": "Checked, nothing to report",
-  "securityLoadFailed": "Could not load security status"
+  "securityLoadFailed": "Could not load security status",
+  "safetyWarningTitle": "Safety notice",
+  "safetyDismiss": "Hide",
+  "safetyCredentialRequest": "This message asks for a verification code",
+  "safetyCredentialRequestWhy": "IronLink sends verification codes to you alone. Anyone asking you for one — even claiming to be support — is trying to get into your account. Do not send it to anybody.",
+  "safetySuspiciousLink": "A link here looks deceptive",
+  "safetySuspiciousLinkWhy": "This address is written to look like a different site. It was checked on your device, and nobody else saw it.",
+  "safetyPaymentRequest": "A payment request, alongside other signs",
+  "safetyPaymentRequestWhy": "A request for money on its own is ordinary. This is flagged because it arrived with another signal — urgency, a claimed identity, or a deceptive link.",
+  "safetyAuthorityClaim": "The sender claims an official identity",
+  "safetyAuthorityClaimWhy": "Someone is claiming to be support, a bank, or an administrator. Those parties do not ask for codes or passwords in messages.",
+  "safetyOffPlatform": "A request to move the conversation elsewhere",
+  "safetyOffPlatformWhy": "Moving a conversation somewhere unencrypted is a common step before fraud. There may be an ordinary reason, but it is worth confirming.",
+  "safetyUrgency": "Time pressure, alongside other signs",
+  "safetyUrgencyWhy": "Urgency stops people thinking. On its own it is ordinary — here it appeared with another signal."
 }

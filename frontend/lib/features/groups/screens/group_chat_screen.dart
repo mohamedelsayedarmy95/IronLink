@@ -12,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../chat/widgets/attach_flow.dart';
 import '../../chat/widgets/encrypted_image.dart';
 import '../../keyword_alert/keyword_alert_service.dart';
+import '../../security/widgets/message_safety_banner.dart';
 import '../../chat/widgets/voice_player.dart';
 import '../../chat/widgets/voice_recorder.dart';
 import '../bloc/group_chat_bloc.dart';
@@ -352,6 +353,17 @@ class _GroupBubble extends StatelessWidget {
                   color: mine ? IronColors.navyDeep : IronColors.textHi,
                   fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
                   fontSize: 15,
+                ),
+              ),
+            // Groups need this more than one-to-one chats do, not less: a
+            // stranger reaching someone through a group they both joined is a
+            // commoner opening than a direct message from an unknown number.
+            if (!mine && (message.content ?? '').isNotEmpty)
+              MessageSafetyBanner(
+                isMine: mine,
+                assessment: context.read<MessageSafety>().assess(
+                  message.id,
+                  message.content!,
                 ),
               ),
             const SizedBox(height: 4),

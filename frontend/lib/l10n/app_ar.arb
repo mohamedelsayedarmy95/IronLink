@@ -753,5 +753,19 @@
   "securityFindingCloudOcrWhy": "أنت اخترت هذا. معناه أن المستند قد يُقرأ خارج جهازك عند تعذّر القراءة محليًا.",
   "securityWhyLabel": "لماذا أرى هذا؟",
   "securityCheckedNothingWrong": "تم الفحص، ولا يوجد ما يستدعي القلق",
-  "securityLoadFailed": "تعذّر تحميل حالة الأمان"
+  "securityLoadFailed": "تعذّر تحميل حالة الأمان",
+  "safetyWarningTitle": "تنبيه أمان",
+  "safetyDismiss": "إخفاء",
+  "safetyCredentialRequest": "الرسالة دي بتطلب كود تحقق",
+  "safetyCredentialRequestWhy": "IronLink بيبعت أكواد التحقق لك انت وحدك. أي حد يطلب منك الكود — حتى لو قال إنه من الدعم — بيحاول يدخل حسابك. متبعتوش لأي حد.",
+  "safetySuspiciousLink": "فيه رابط شكله مضلل",
+  "safetySuspiciousLinkWhy": "العنوان ده مكتوب بطريقة تخليه يبان زي موقع تاني. اتفحص على جهازك، ومحدش غيرك شافه.",
+  "safetyPaymentRequest": "طلب تحويل فلوس مع علامات أخرى",
+  "safetyPaymentRequestWhy": "طلب الفلوس لوحده عادي. اللي خلانا نقول ده إنه جه مع إشارة تانية — استعجال، أو ادعاء صفة، أو رابط مشبوه.",
+  "safetyAuthorityClaim": "المُرسل بيدّعي صفة رسمية",
+  "safetyAuthorityClaimWhy": "حد بيقول إنه من الدعم أو البنك أو الإدارة. الجهات دي مابتطلبش أكواد ولا كلمات سر في رسايل.",
+  "safetyOffPlatform": "طلب ينقل الكلام لتطبيق تاني",
+  "safetyOffPlatformWhy": "نقل المحادثة لمكان مش مشفّر خطوة شائعة قبل الاحتيال. ممكن يكون سبب عادي، بس يستاهل تتأكد.",
+  "safetyUrgency": "استعجال مع علامات أخرى",
+  "safetyUrgencyWhy": "الضغط بالوقت بيمنع الناس من التفكير. الاستعجال لوحده عادي — ظهر هنا مع إشارة تانية."
 }

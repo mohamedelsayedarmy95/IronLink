@@ -1639,4 +1639,54 @@ class LEn extends L {
 
   @override
   String get securityLoadFailed => 'Could not load security status';
+
+  @override
+  String get safetyWarningTitle => 'Safety notice';
+
+  @override
+  String get safetyDismiss => 'Hide';
+
+  @override
+  String get safetyCredentialRequest =>
+      'This message asks for a verification code';
+
+  @override
+  String get safetyCredentialRequestWhy =>
+      'IronLink sends verification codes to you alone. Anyone asking you for one — even claiming to be support — is trying to get into your account. Do not send it to anybody.';
+
+  @override
+  String get safetySuspiciousLink => 'A link here looks deceptive';
+
+  @override
+  String get safetySuspiciousLinkWhy =>
+      'This address is written to look like a different site. It was checked on your device, and nobody else saw it.';
+
+  @override
+  String get safetyPaymentRequest => 'A payment request, alongside other signs';
+
+  @override
+  String get safetyPaymentRequestWhy =>
+      'A request for money on its own is ordinary. This is flagged because it arrived with another signal — urgency, a claimed identity, or a deceptive link.';
+
+  @override
+  String get safetyAuthorityClaim => 'The sender claims an official identity';
+
+  @override
+  String get safetyAuthorityClaimWhy =>
+      'Someone is claiming to be support, a bank, or an administrator. Those parties do not ask for codes or passwords in messages.';
+
+  @override
+  String get safetyOffPlatform =>
+      'A request to move the conversation elsewhere';
+
+  @override
+  String get safetyOffPlatformWhy =>
+      'Moving a conversation somewhere unencrypted is a common step before fraud. There may be an ordinary reason, but it is worth confirming.';
+
+  @override
+  String get safetyUrgency => 'Time pressure, alongside other signs';
+
+  @override
+  String get safetyUrgencyWhy =>
+      'Urgency stops people thinking. On its own it is ordinary — here it appeared with another signal.';
 }

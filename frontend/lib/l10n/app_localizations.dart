@@ -2970,6 +2970,90 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'تعذّر تحميل حالة الأمان'**
   String get securityLoadFailed;
+
+  /// No description provided for @safetyWarningTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه أمان'**
+  String get safetyWarningTitle;
+
+  /// No description provided for @safetyDismiss.
+  ///
+  /// In ar, this message translates to:
+  /// **'إخفاء'**
+  String get safetyDismiss;
+
+  /// No description provided for @safetyCredentialRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسالة دي بتطلب كود تحقق'**
+  String get safetyCredentialRequest;
+
+  /// No description provided for @safetyCredentialRequestWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'IronLink بيبعت أكواد التحقق لك انت وحدك. أي حد يطلب منك الكود — حتى لو قال إنه من الدعم — بيحاول يدخل حسابك. متبعتوش لأي حد.'**
+  String get safetyCredentialRequestWhy;
+
+  /// No description provided for @safetySuspiciousLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'فيه رابط شكله مضلل'**
+  String get safetySuspiciousLink;
+
+  /// No description provided for @safetySuspiciousLinkWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'العنوان ده مكتوب بطريقة تخليه يبان زي موقع تاني. اتفحص على جهازك، ومحدش غيرك شافه.'**
+  String get safetySuspiciousLinkWhy;
+
+  /// No description provided for @safetyPaymentRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب تحويل فلوس مع علامات أخرى'**
+  String get safetyPaymentRequest;
+
+  /// No description provided for @safetyPaymentRequestWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب الفلوس لوحده عادي. اللي خلانا نقول ده إنه جه مع إشارة تانية — استعجال، أو ادعاء صفة، أو رابط مشبوه.'**
+  String get safetyPaymentRequestWhy;
+
+  /// No description provided for @safetyAuthorityClaim.
+  ///
+  /// In ar, this message translates to:
+  /// **'المُرسل بيدّعي صفة رسمية'**
+  String get safetyAuthorityClaim;
+
+  /// No description provided for @safetyAuthorityClaimWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'حد بيقول إنه من الدعم أو البنك أو الإدارة. الجهات دي مابتطلبش أكواد ولا كلمات سر في رسايل.'**
+  String get safetyAuthorityClaimWhy;
+
+  /// No description provided for @safetyOffPlatform.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب ينقل الكلام لتطبيق تاني'**
+  String get safetyOffPlatform;
+
+  /// No description provided for @safetyOffPlatformWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'نقل المحادثة لمكان مش مشفّر خطوة شائعة قبل الاحتيال. ممكن يكون سبب عادي، بس يستاهل تتأكد.'**
+  String get safetyOffPlatformWhy;
+
+  /// No description provided for @safetyUrgency.
+  ///
+  /// In ar, this message translates to:
+  /// **'استعجال مع علامات أخرى'**
+  String get safetyUrgency;
+
+  /// No description provided for @safetyUrgencyWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'الضغط بالوقت بيمنع الناس من التفكير. الاستعجال لوحده عادي — ظهر هنا مع إشارة تانية.'**
+  String get safetyUrgencyWhy;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

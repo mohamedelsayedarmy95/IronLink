@@ -8,6 +8,7 @@ import '../../core/ws_service.dart';
 import '../chat/local/message_store.dart';
 import '../keyword_alert/keyword_alert_service.dart';
 import '../keyword_alert/local/alert_store.dart';
+import '../security/widgets/message_safety_banner.dart';
 
 /// Signs out and erases what this device holds.
 ///
@@ -28,12 +29,14 @@ class SignOutService {
     SignalService? signal,
     AlertStore? alerts,
     KeywordAlertService? keywordAlerts,
+    MessageSafety? messageSafety,
   })  : _api = api,
         _messages = messages,
         _socket = socket,
         _signal = signal,
         _alerts = alerts,
-        _keywordAlerts = keywordAlerts;
+        _keywordAlerts = keywordAlerts,
+        _messageSafety = messageSafety;
 
   final ApiClient _api;
   final MessageStore _messages;
@@ -49,6 +52,10 @@ class SignOutService {
   /// Without clearing it the next user's identical attachment would be
   /// treated as already handled.
   final KeywordAlertService? _keywordAlerts;
+
+  /// Scam assessments, which are derived from decrypted message text and so
+  /// must not outlive the account that received it.
+  final MessageSafety? _messageSafety;
 
   /// Closed first, and told to stop reconnecting: it retries on a backoff
   /// now, so without this it would keep trying to re-establish a session
@@ -78,6 +85,7 @@ class SignOutService {
     await _attempt('message cache', _messages.clear);
     await _attempt('keyword rules and alerts', () async => _alerts?.clear());
     await _attempt('keyword scan state', () async => _keywordAlerts?.reset());
+    await _attempt('message safety cache', () async => _messageSafety?.clear());
     await _attempt('secure storage', _wipeSecureStorage);
     await _attempt('tokens', _api.clearTokens);
   }

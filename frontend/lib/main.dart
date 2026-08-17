@@ -19,6 +19,7 @@ import 'features/chat/local/message_store.dart';
 import 'features/keyword_alert/bloc/alert_bloc.dart';
 import 'features/keyword_alert/keyword_alert_service.dart';
 import 'features/keyword_alert/local/alert_store.dart';
+import 'features/security/widgets/message_safety_banner.dart';
 import 'features/contacts/contact_sync_service.dart';
 import 'features/contacts/contacts_repository.dart';
 import 'features/moderation/moderation_repository.dart';
@@ -133,6 +134,10 @@ class MilAcademyApp extends StatelessWidget {
         RepositoryProvider(
             create: (ctx) => PushService(ctx.read<ApiClient>())),
         RepositoryProvider<AlertStore>.value(value: alerts),
+        // One instance, app-wide, because its value is the cache: assessing
+        // the same message again on every scroll frame is the cost this
+        // exists to avoid.
+        RepositoryProvider(create: (_) => MessageSafety()),
         RepositoryProvider<KeywordAlertService?>.value(value: keywordAlerts),
       ],
       child: Builder(

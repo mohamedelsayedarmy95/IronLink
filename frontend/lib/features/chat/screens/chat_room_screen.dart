@@ -9,6 +9,7 @@ import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
 import '../../keyword_alert/keyword_alert_service.dart';
+import '../../security/widgets/message_safety_banner.dart';
 import '../../keyword_alert/widgets/smart_alert_ticker.dart';
 import '../../../l10n/app_localizations.dart';
 import '../bloc/chat_bloc.dart';
@@ -800,6 +801,18 @@ class _MessageBubble extends StatelessWidget {
                       fontSize: 15,
                     ),
                   ),
+                  // Below the message, never over it. The text stays readable
+                  // and the links stay tappable; this annotates, it does not
+                  // gate. Analysis happened on this device — the server holds
+                  // only ciphertext and could not do this if it wanted to.
+                  if (!mine && (message.content ?? '').isNotEmpty)
+                    MessageSafetyBanner(
+                      isMine: mine,
+                      assessment: context.read<MessageSafety>().assess(
+                        message.id,
+                        message.content!,
+                      ),
+                    ),
                 ],
               const SizedBox(height: 4),
               Row(

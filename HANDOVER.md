@@ -812,9 +812,28 @@ alone.
   device is not woken. `send_ocr_push` reads a single `User.fcm_token`, so a
   push would also reach the device that just logged in. Doing it properly wants
   a token per session.
-- **Link and scam analysis are not wired into the chat UI.** Both engines are
-  complete and tested; no message bubble consults them yet. That is a UI
-  decision — where a warning appears, and how a user dismisses one — rather
-  than more detection work.
+- ~~Link and scam analysis are not wired into the chat UI.~~ **Done.** Both
+  bubbles — one-to-one and group — consult the engines and render
+  `MessageSafetyBanner` beneath a received message that warrants it.
+
+  It annotates and never gates: the message renders normally above it, links
+  stay tappable, and there is no confirmation to click through. A warning that
+  must be dismissed before continuing is one that gets dismissed reflexively.
+  Never on the user's own messages, because telling someone their own message
+  looks like a scam implies the app is grading their conversation.
+
+  Amber rather than red, since red is reserved here for what is certainly wrong
+  — a failed decryption, a tampered attachment — and this is a caution about a
+  possibility. The headline states the concern in words, so the warning does not
+  depend on colour. "Why am I seeing this?" is collapsed by default and, when
+  opened, names the actual host rather than the category: a user told "this link
+  is deceptive" learns nothing, one shown `evil.example` can check it against
+  what they expected.
+
+  Assessments are cached by message id in an app-wide `MessageSafety`, bounded
+  at 200 entries and cleared on sign-out. The cache is the point: a dozen
+  regular expressions plus URL parsing per bubble per frame is jank on exactly
+  the devices this product is likeliest to run on, and an unbounded one would
+  hold decrypted text for the length of a conversation.
 
 63 tests across the feature. Analyzer clean.

@@ -1625,4 +1625,52 @@ class LAr extends L {
 
   @override
   String get securityLoadFailed => 'تعذّر تحميل حالة الأمان';
+
+  @override
+  String get safetyWarningTitle => 'تنبيه أمان';
+
+  @override
+  String get safetyDismiss => 'إخفاء';
+
+  @override
+  String get safetyCredentialRequest => 'الرسالة دي بتطلب كود تحقق';
+
+  @override
+  String get safetyCredentialRequestWhy =>
+      'IronLink بيبعت أكواد التحقق لك انت وحدك. أي حد يطلب منك الكود — حتى لو قال إنه من الدعم — بيحاول يدخل حسابك. متبعتوش لأي حد.';
+
+  @override
+  String get safetySuspiciousLink => 'فيه رابط شكله مضلل';
+
+  @override
+  String get safetySuspiciousLinkWhy =>
+      'العنوان ده مكتوب بطريقة تخليه يبان زي موقع تاني. اتفحص على جهازك، ومحدش غيرك شافه.';
+
+  @override
+  String get safetyPaymentRequest => 'طلب تحويل فلوس مع علامات أخرى';
+
+  @override
+  String get safetyPaymentRequestWhy =>
+      'طلب الفلوس لوحده عادي. اللي خلانا نقول ده إنه جه مع إشارة تانية — استعجال، أو ادعاء صفة، أو رابط مشبوه.';
+
+  @override
+  String get safetyAuthorityClaim => 'المُرسل بيدّعي صفة رسمية';
+
+  @override
+  String get safetyAuthorityClaimWhy =>
+      'حد بيقول إنه من الدعم أو البنك أو الإدارة. الجهات دي مابتطلبش أكواد ولا كلمات سر في رسايل.';
+
+  @override
+  String get safetyOffPlatform => 'طلب ينقل الكلام لتطبيق تاني';
+
+  @override
+  String get safetyOffPlatformWhy =>
+      'نقل المحادثة لمكان مش مشفّر خطوة شائعة قبل الاحتيال. ممكن يكون سبب عادي، بس يستاهل تتأكد.';
+
+  @override
+  String get safetyUrgency => 'استعجال مع علامات أخرى';
+
+  @override
+  String get safetyUrgencyWhy =>
+      'الضغط بالوقت بيمنع الناس من التفكير. الاستعجال لوحده عادي — ظهر هنا مع إشارة تانية.';
 }
