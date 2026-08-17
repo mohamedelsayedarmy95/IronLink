@@ -31,7 +31,7 @@ pipeline is on-device, which is what P-4 mandates anyway. Rules and alerts
 live on the device; the server never receives a keyword; and the push payload
 that used to carry one to Google no longer does.
 
-**Totals: 426 frontend tests, 339 backend tests, analyzer clean.**
+**Totals: 444 frontend tests, 339 backend tests, analyzer clean.**
 
 ---
 
@@ -177,7 +177,7 @@ and an alert they have not answered cannot be rebuilt from anywhere.
 | Suite | Count | Result |
 |---|---|---|
 | Backend (`tests/`) | 339 | pass |
-| Frontend (`frontend/test/`) | 426 | pass |
+| Frontend (`frontend/test/`) | 444 | pass |
 | Analyzer (`lib/features/keyword_alert`, `test/keyword_alert`) | — | clean |
 
 ## 13. Performance results
@@ -192,14 +192,14 @@ baseline.
 
 ## 14. Known limitations
 
-1. **ML Kit has no Arabic recognizer.** §3.6 of the spec is wrong about this;
-   the package declares latin, chinese, devanagiri, japanese, korean. Arabic
-   works today in PDF text layers and plain text, and does not work in
-   photographs. Closing it needs Apple Vision on iOS and a Tesseract `ara`
-   binding on Android — the latter bundling tens of megabytes of model data,
-   an app-size decision the product owner should make deliberately.
+1. **Arabic image OCR is done** — Tesseract `ara`, 1.37 MB bundled, running as
+   the fallback when ML Kit's Latin-only recognizer comes back empty. §3.6 of
+   the spec is still wrong that ML Kit has an Arabic model; it does not. An
+   earlier version of this report said closing the gap would cost tens of
+   megabytes: that was wrong by an order of magnitude and was the only reason
+   it had been deferred. Apple Vision remains the better choice on iOS.
 2. **Scanned (image-only) PDFs are not rasterized**, so a scan inside a PDF is
-   not OCR'd at all yet.
+   not OCR'd at all yet — in either language.
 3. **No performance or battery measurements.**
 4. **No production dashboards.** The event types and guardrail thresholds
    exist; the sink that ships them does not.
@@ -236,7 +236,7 @@ baseline.
 | PDF text-layer extraction | IMPLEMENTED | `ocr/pdf_text_extractor.dart` | — | Untested until device run |
 | Plain-text extraction | IMPLEMENTED | `ocr/text_extractor.dart` | `pipeline_test.dart` | |
 | Image OCR (Latin) | IMPLEMENTED | `ocr/mlkit_text_extractor.dart` | — | Needs device to verify |
-| Image OCR (Arabic) | **BLOCKED** | — | — | No ML Kit Arabic model; see §14.1 |
+| Image OCR (Arabic) | IMPLEMENTED | `ocr/tesseract_text_extractor.dart`, `ocr/image_text_extractor.dart` | `arabic_ocr_test.dart` | Tesseract `ara`, 1.37 MB bundled; native call device-unverified |
 | Scanned-PDF OCR | NOT IMPLEMENTED | — | — | Needs rasterization |
 | Local/cloud decision matrix | IMPLEMENTED | `ocr/ocr_mode.dart` | `pipeline_test.dart` | Pure function, no silent fallback |
 | Cloud OCR engine | NOT IMPLEMENTED | — | — | Flagged off |

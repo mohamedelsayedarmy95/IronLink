@@ -61,7 +61,30 @@ void main() async {
     alerts = InMemoryAlertStore();
   }
 
-  runApp(MilAcademyApp(store: store, alerts: alerts));
+  // The alert bloc and the keyword service are built here rather than in the
+  // widget tree because resolving which OCR engines this device has is async,
+  // and because both are app-wide: an alert raised in one conversation is
+  // still outstanding while the user reads another.
+  final alertBloc = AlertBloc(alerts)..add(const AlertsRequested());
+
+  // Nullable on purpose. If the native engines cannot be resolved — a platform
+  // channel that failed to attach, a model that did not unpack — the app runs
+  // without document scanning rather than failing to start. Every screen that
+  // reads it treats null as "not available on this build".
+  KeywordAlertService? keywordAlerts;
+  try {
+    keywordAlerts =
+        await KeywordAlertService.create(store: alerts, bloc: alertBloc);
+  } catch (e) {
+    debugPrint('[keyword-alert] unavailable: $e');
+  }
+
+  runApp(MilAcademyApp(
+    store: store,
+    alerts: alerts,
+    alertBloc: alertBloc,
+    keywordAlerts: keywordAlerts,
+  ));
 }
 
 class MilAcademyApp extends StatelessWidget {
@@ -69,10 +92,16 @@ class MilAcademyApp extends StatelessWidget {
     super.key,
     required this.store,
     required this.alerts,
+    required this.alertBloc,
+    this.keywordAlerts,
   });
 
   final MessageStore store;
   final AlertStore alerts;
+  final AlertBloc alertBloc;
+
+  /// Null where document scanning could not be started. See main().
+  final KeywordAlertService? keywordAlerts;
 
   @override
   Widget build(BuildContext context) {
@@ -104,29 +133,15 @@ class MilAcademyApp extends StatelessWidget {
         RepositoryProvider(
             create: (ctx) => PushService(ctx.read<ApiClient>())),
         RepositoryProvider<AlertStore>.value(value: alerts),
+        RepositoryProvider<KeywordAlertService?>.value(value: keywordAlerts),
       ],
       child: Builder(
         builder: (context) => MultiBlocProvider(
           providers: [
-            BlocProvider(
-              // App-wide rather than per-chat: the ticker and the alert centre
-              // both read it, and an alert raised in one conversation is still
-              // outstanding while the user is reading another.
-              create: (ctx) =>
-                  AlertBloc(ctx.read<AlertStore>())..add(const AlertsRequested()),
-            ),
+            BlocProvider<AlertBloc>.value(value: alertBloc),
           ],
           child: Builder(
-            builder: (context) => RepositoryProvider<KeywordAlertService?>(
-              // Built here because it needs both the store and the bloc, and
-              // nullable because a screen that reads it must be able to say
-              // "not available" rather than crash — the widget tree is the
-              // one place that knows whether this build has the feature.
-              create: (ctx) => KeywordAlertService(
-                store: ctx.read<AlertStore>(),
-                bloc: ctx.read<AlertBloc>(),
-              ),
-              child: BlocProvider(
+            builder: (ctx) => BlocProvider(
                 create: (ctx) => AuthBloc(
                   ctx.read<AuthRepository>(),
                   deviceFingerprint: _deviceFingerprint(),
@@ -153,7 +168,6 @@ class MilAcademyApp extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 

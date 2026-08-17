@@ -615,14 +615,18 @@ frontend/lib/features/keyword_alert/
 
 ### Open decisions — these need a human
 
-1. **ML Kit has no Arabic recognizer.** §3.6 of the specification is factually
-   wrong about this; the package declares `latin, chinese, devanagiri,
-   japanese, korean`. Arabic works in PDF text layers and plain text, and does
-   not work in photographs. Closing it needs Apple Vision on iOS and a
-   Tesseract `ara` binding on Android — the latter bundling tens of megabytes
-   of model data into the APK, which is a product decision.
-2. **Two new native dependencies** — `google_mlkit_text_recognition` and
-   `syncfusion_flutter_pdf`. Neither has been through a device build.
+1. ~~ML Kit has no Arabic recognizer.~~ **Settled 2026-08-17.** Tesseract
+   `ara` is bundled — 1,432,056 bytes, 1.37 MB — and runs as the fallback when
+   ML Kit's Latin-only recognizer comes back with nothing usable. The earlier
+   claim that this would cost "tens of megabytes" was wrong by an order of
+   magnitude and was the only reason it had been deferred. §3.6 of the
+   specification is still wrong that an ML Kit Arabic model exists. Apple
+   Vision is still the better engine on iOS and remains worth doing there.
+2. **Three native dependencies have never been through a device build** —
+   `google_mlkit_text_recognition`, `syncfusion_flutter_pdf` and
+   `flutter_tesseract_ocr`. This is now the single largest unverified area in
+   the project. The hOCR parsing and engine routing have 18 tests; the platform
+   channels have none, because they cannot.
 3. **`deploy.yml` targets Fly.io** while this project deploys on Render. The
    Fly steps are now skipped unless a `FLY_API_TOKEN` secret exists, so they
    fail closed rather than red, but the intent should be settled and the dead

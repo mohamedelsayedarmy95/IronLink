@@ -32,15 +32,31 @@ class KeywordAlertService {
   KeywordAlertService({
     required AlertStore store,
     required AlertBloc bloc,
-    KeywordAlertPipeline? pipeline,
+    required KeywordAlertPipeline pipeline,
     this.maxQueueDepth = 32,
   })  : _store = store,
         _bloc = bloc,
-        _pipeline = pipeline ??
-            KeywordAlertPipeline(
-              store: store,
-              extractors: KeywordExtractors.forPlatform(),
-            );
+        _pipeline = pipeline;
+
+  /// Builds the service, resolving which OCR engines this device actually has.
+  ///
+  /// Async because that question is about the installation rather than the
+  /// build — whether the bundled Arabic model unpacked and is intact. Settled
+  /// once at startup instead of guessed at per document.
+  static Future<KeywordAlertService> create({
+    required AlertStore store,
+    required AlertBloc bloc,
+    int maxQueueDepth = 32,
+  }) async =>
+      KeywordAlertService(
+        store: store,
+        bloc: bloc,
+        maxQueueDepth: maxQueueDepth,
+        pipeline: KeywordAlertPipeline(
+          store: store,
+          extractors: await KeywordExtractors.forPlatform(),
+        ),
+      );
 
   final AlertStore _store;
   final AlertBloc _bloc;

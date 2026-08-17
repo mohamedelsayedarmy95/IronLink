@@ -36,6 +36,7 @@ dependencies:
   sqflite: ^2.4.3                  # local message cache, powers offline + search
   google_mlkit_text_recognition: ^0.16.0
   syncfusion_flutter_pdf: ^33.2.13
+  flutter_tesseract_ocr: ^0.4.31
 
 dev_dependencies:
   flutter_test:
@@ -51,6 +52,12 @@ flutter:
   assets:
     - assets/icons/
     - assets/intro/
+    # Tesseract's Arabic model, and the manifest the plugin reads to copy it
+    # out of the bundle on first use. Arabic only: ML Kit covers Latin script
+    # well and its English model is already in the app, whereas Tesseract's
+    # own English data is 22 MB for no gain here.
+    - assets/tessdata/
+    - assets/tessdata_config.json
 
 flutter_launcher_icons:
   android: true

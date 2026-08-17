@@ -160,18 +160,70 @@ What this means in practice:
 | Photograph or scanned image | **Does not work** | BLOCKED — ML Kit returns nothing for Arabic script. Latin script in images works fully. |
 | Scanned (image-only) PDF | **Does not work** | BLOCKED — needs page rasterization plus an Arabic recognizer. |
 
-Resolution path, deliberately not taken blind:
+**RESOLVED 2026-08-17.** Arabic image OCR now works, via Tesseract.
 
-* **iOS** — Apple Vision (`VNRecognizeTextRequest`) does support Arabic in recent OS
-  versions. It needs a platform channel, which is native code that cannot be verified
-  from here.
-* **Android** — Tesseract with `ara` trained data, via a binding. This bundles roughly
-  15–40 MB of model data into the app, which is an app-size decision the product owner
-  should make rather than one that arrives as a side effect of a commit.
+The earlier version of this section said closing the gap on Android would bundle
+"15–40 MB of model data" and was therefore a product decision. **That number was
+wrong by an order of magnitude**, and it was the whole basis for deferring. The
+measured sizes, from the tessdata repositories:
 
-Both slot in behind the existing `TextExtractor` interface without touching the pipeline,
-the matcher, or the domain. The interface exists precisely so that this gap is a
-registration, not a rewrite.
+| Variant | `ara.traineddata` |
+|---|---|
+| `tessdata_fast` | **1,432,056 bytes — 1.37 MB** |
+| `tessdata` | 2.38 MB |
+| `tessdata_best` | 12.02 MB |
+
+`tessdata_fast` is bundled. Arabic only — ML Kit already covers Latin, and
+Tesseract's own English data is 22 MB for no benefit here.
+
+### How the two engines divide the work
+
+`ImageTextExtractor` is the §3.3 retry ladder rather than a preference: ML Kit
+runs first because it is cheaper, and Tesseract runs as the alternate
+configuration when the first pass returns nothing usable. Not "run both and
+merge", because running two OCR engines over every photograph doubles the most
+expensive thing this feature does in order to improve documents the first engine
+already read correctly.
+
+The trigger is the *result*, not an exception. ML Kit does not fail on an Arabic
+page — it succeeds and returns a scattering of stray marks. So the fall-through
+fires on too little text, or on text the engine was not confident about, which
+is exactly that signature.
+
+Output is parsed from hOCR rather than plain text, so each word carries the
+bounding box and confidence Tesseract reported. Plain text would have left every
+Arabic alert without a highlight and forced its confidence score back onto page
+quality — an Arabic match scored more crudely than a Latin one for no reason but
+the output format.
+
+### No feature flag, and why
+
+The extractor registers only if the model is present on disk and not truncated
+(`TesseractTextExtractor.isAvailable`). A flag would be a claim about the build;
+this is a fact about the installation. If the asset failed to unpack, the
+registry reports no Arabic engine and the pipeline records OCR_UNAVAILABLE —
+which is true — rather than a stub returning empty text, which would tell the
+user a document was checked when it was not.
+
+### The limit that remains, honestly
+
+Tesseract reads printed Arabic on a reasonable scan competently and a hand-held
+photograph of cursive text poorly. That is the engine, not the wiring, and it is
+why the confidence layer exists: weak readings arrive with low confidence and are
+discarded before they can become alerts. The failure mode is a **missed match**
+rather than a false one, which is the right direction to fail in (P-2).
+
+If device measurement shows recall short of the §10.3 target of 90%, the tuning
+lever is swapping the 1.37 MB fast model for the 2.38 MB standard one — a
+one-file change.
+
+**Still unverified:** the native call itself. `flutter_tesseract_ocr` 0.4.31 has
+never been through an Android build here. The hOCR parsing and the engine
+routing are covered by 18 tests; the platform channel is not.
+
+iOS keeps a better option available: Apple Vision handles Arabic well and needs
+a platform channel. Worth doing there, and it changes nothing about the contract
+above.
 
 ---
 
