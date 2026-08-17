@@ -192,28 +192,53 @@ A problem occurred configuring project ':flutter_tesseract_ocr'.
    > 'kotlin-android' plugin requires one of the Android Gradle plugins.
 ```
 
-### The actual blocker
+### The actual blocker — established twice, second time properly
 
-This project is on **AGP 9.0.1** with Kotlin 2.3.20 and the declarative plugins
-DSL (`frontend/android/settings.gradle.kts`). `flutter_tesseract_ocr` still
-declares its own `buildscript` with a `com.android.tools.build:gradle:7.1.2`
-classpath, and pulls its native library through `flatDir` - the pre-AGP-8
-layout. Under AGP 9 that project never gets a recognised Android plugin applied,
-and configuration dies.
+`flutter_tesseract_ocr`'s own `android/build.gradle` calls **`jcenter()`**, and
+Gradle removed that method. JCenter itself shut down in 2021. So the plugin's
+project cannot be *evaluated*, let alone configured:
+
+```
+1: A problem occurred evaluating project ':flutter_tesseract_ocr'.
+   > Could not find method jcenter() for arguments [] on repository container...
+
+2: A problem occurred configuring project ':flutter_tesseract_ocr'.
+   > java.lang.NullPointerException
+   > 'kotlin-android' plugin requires one of the Android Gradle plugins.
+```
+
+Failure 2 is the consequence of failure 1: evaluation died, so
+`com.android.library` was never applied, so Kotlin had nothing to attach to.
+
+The first attempt at this diagnosis read only failure 2 and blamed AGP 9. It was
+directionally right — the plugin is stuck in a pre-AGP-8 world — and wrong about
+the mechanism. Worse, it was judged on a run where `google-services.json` was
+also missing, so nothing had configured properly and the run proved nothing.
+The retry was done on a green baseline, where the Android job passes and this
+project's first release APK had just been produced. The result above is therefore
+evidence rather than noise.
 
 Checked and ruled out:
 
 | Option | Why not |
 |---|---|
-| `android.newDsl=false` | Already set in `gradle.properties`. Not the fix. |
-| `tesseract_ocr` (arrrrny) | Same legacy `buildscript` layout, AGP 8.2.1 classpath. |
-| `flusseract` | Version 0.1.3, published two years ago - predates AGP 8. |
-| Downgrade the project to AGP 8 | A whole-project toolchain regression for one dependency. |
-| Fork and modernise the plugin | Possible: it is a MethodChannel plus a bundled AAR. Real work, real maintenance, and it means vendoring third-party native code. Not undertaken unprompted. |
+| `android.newDsl=false` | Already set in `gradle.properties`. Never the fix. |
+| `tesseract_ocr` (arrrrny) | Same `jcenter()` call, same legacy layout. |
+| `flusseract` | Version 0.1.3, published two years ago. |
+| Downgrade the project to AGP 8 | Would not help: `jcenter()` is removed by *Gradle*, not by AGP. |
+| Add a repository override from the app | Impossible. You cannot restore a DSL method that no longer exists in someone else's build script. |
 
-**There is currently no Arabic OCR binding on pub that builds against this
-project's toolchain.** That is a sharper and better-founded blocker than the
-size claim it replaces, and it is verified rather than assumed.
+### The one remaining path, scoped
+
+Vendor the plugin. It is small — a MethodChannel, a thin Java shim, and a
+bundled `tesseract4android` AAR — and the Gradle fix is roughly fifteen lines:
+drop the `buildscript` block, replace `jcenter()` with `mavenCentral()`, apply
+the Android library plugin the modern way, and reference the AAR as a proper
+dependency instead of through `flatDir`.
+
+That is a bounded piece of work with an unbounded tail: it means taking
+ownership of third-party native code, its licence, and its future. It is a
+product decision, not a refactor, and it has not been taken.
 
 ### What survives
 

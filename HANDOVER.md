@@ -619,11 +619,14 @@ frontend/lib/features/keyword_alert/
    This entry has been wrong twice; `docs/SMART_KEYWORD_ALERT_AUDIT.md` section
    4b keeps both versions. Short form: the model is 1.37 MB, not tens of
    megabytes, so size was never the issue - but this project is on AGP 9.0.1 and
-   every Arabic OCR binding on pub still uses the pre-AGP-8 Gradle layout, so
-   none of them configure. CI established that by failing an APK build. The
-   options were checked and ruled out one by one; forking and modernising a
-   plugin is the only path left, and was not taken unprompted. iOS is unaffected:
-   Apple Vision needs a platform channel, not a Gradle plugin.
+   every Arabic OCR binding on pub calls `jcenter()` in its Gradle script, and
+   Gradle removed that method — JCenter shut down in 2021. The plugin project
+   cannot even be evaluated. Established twice by CI, the second time on a green
+   baseline so the result means what it says. Downgrading AGP would not help,
+   because the removal is Gradle's, not AGP's. The only path left is vendoring
+   the plugin and rewriting ~15 lines of its Gradle script — bounded work with an
+   unbounded tail, since it means owning third-party native code. Not taken. iOS
+   is unaffected: Apple Vision needs a platform channel, not a Gradle plugin.
 2. **The native surface builds in CI, and has never run anywhere.**
    `flutter build apk --release` verifies Gradle configuration, compilation,
    every native plugin, R8 shrinking and asset bundling. It required a
