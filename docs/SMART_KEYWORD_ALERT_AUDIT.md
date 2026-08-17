@@ -160,70 +160,80 @@ What this means in practice:
 | Photograph or scanned image | **Does not work** | BLOCKED — ML Kit returns nothing for Arabic script. Latin script in images works fully. |
 | Scanned (image-only) PDF | **Does not work** | BLOCKED — needs page rasterization plus an Arabic recognizer. |
 
-**RESOLVED 2026-08-17.** Arabic image OCR now works, via Tesseract.
+**STILL BLOCKED, for a different reason than first recorded.** Two wrong
+answers preceded this one, and both are worth keeping visible.
 
-The earlier version of this section said closing the gap on Android would bundle
-"15–40 MB of model data" and was therefore a product decision. **That number was
-wrong by an order of magnitude**, and it was the whole basis for deferring. The
-measured sizes, from the tessdata repositories:
+### Wrong answer 1: the size
+
+The first version of this section said closing the gap would bundle "15-40 MB"
+of model data, making it a product decision about app size. Measured:
 
 | Variant | `ara.traineddata` |
 |---|---|
-| `tessdata_fast` | **1,432,056 bytes — 1.37 MB** |
+| `tessdata_fast` | 1,432,056 bytes - **1.37 MB** |
 | `tessdata` | 2.38 MB |
 | `tessdata_best` | 12.02 MB |
 
-`tessdata_fast` is bundled. Arabic only — ML Kit already covers Latin, and
-Tesseract's own English data is 22 MB for no benefit here.
+Wrong by an order of magnitude, and it was the entire basis for deferring.
 
-### How the two engines divide the work
+### Wrong answer 2: declaring it done
 
-`ImageTextExtractor` is the §3.3 retry ladder rather than a preference: ML Kit
-runs first because it is cheaper, and Tesseract runs as the alternate
-configuration when the first pass returns nothing usable. Not "run both and
-merge", because running two OCR engines over every photograph doubles the most
-expensive thing this feature does in order to improve documents the first engine
-already read correctly.
+On the strength of that correction, `flutter_tesseract_ocr` 0.4.31 was added,
+`ara.traineddata` bundled, an hOCR-parsing extractor written with 18 tests, and
+the feature declared working. **The app did not build.**
 
-The trigger is the *result*, not an exception. ML Kit does not fail on an Arabic
-page — it succeeds and returns a scattering of stray marks. So the fall-through
-fires on too little text, or on text the engine was not confident about, which
-is exactly that signature.
+That was found one commit later, by the Android job added to CI - which is the
+point of having added it. The Gradle failure:
 
-Output is parsed from hOCR rather than plain text, so each word carries the
-bounding box and confidence Tesseract reported. Plain text would have left every
-Arabic alert without a highlight and forced its confidence score back onto page
-quality — an Arabic match scored more crudely than a Latin one for no reason but
-the output format.
+```
+A problem occurred configuring project ':flutter_tesseract_ocr'.
+> Failed to notify project evaluation listener.
+   > java.lang.NullPointerException (no error message)
+   > 'kotlin-android' plugin requires one of the Android Gradle plugins.
+```
 
-### No feature flag, and why
+### The actual blocker
 
-The extractor registers only if the model is present on disk and not truncated
-(`TesseractTextExtractor.isAvailable`). A flag would be a claim about the build;
-this is a fact about the installation. If the asset failed to unpack, the
-registry reports no Arabic engine and the pipeline records OCR_UNAVAILABLE —
-which is true — rather than a stub returning empty text, which would tell the
-user a document was checked when it was not.
+This project is on **AGP 9.0.1** with Kotlin 2.3.20 and the declarative plugins
+DSL (`frontend/android/settings.gradle.kts`). `flutter_tesseract_ocr` still
+declares its own `buildscript` with a `com.android.tools.build:gradle:7.1.2`
+classpath, and pulls its native library through `flatDir` - the pre-AGP-8
+layout. Under AGP 9 that project never gets a recognised Android plugin applied,
+and configuration dies.
 
-### The limit that remains, honestly
+Checked and ruled out:
 
-Tesseract reads printed Arabic on a reasonable scan competently and a hand-held
-photograph of cursive text poorly. That is the engine, not the wiring, and it is
-why the confidence layer exists: weak readings arrive with low confidence and are
-discarded before they can become alerts. The failure mode is a **missed match**
-rather than a false one, which is the right direction to fail in (P-2).
+| Option | Why not |
+|---|---|
+| `android.newDsl=false` | Already set in `gradle.properties`. Not the fix. |
+| `tesseract_ocr` (arrrrny) | Same legacy `buildscript` layout, AGP 8.2.1 classpath. |
+| `flusseract` | Version 0.1.3, published two years ago - predates AGP 8. |
+| Downgrade the project to AGP 8 | A whole-project toolchain regression for one dependency. |
+| Fork and modernise the plugin | Possible: it is a MethodChannel plus a bundled AAR. Real work, real maintenance, and it means vendoring third-party native code. Not undertaken unprompted. |
 
-If device measurement shows recall short of the §10.3 target of 90%, the tuning
-lever is swapping the 1.37 MB fast model for the 2.38 MB standard one — a
-one-file change.
+**There is currently no Arabic OCR binding on pub that builds against this
+project's toolchain.** That is a sharper and better-founded blocker than the
+size claim it replaces, and it is verified rather than assumed.
 
-**Still unverified:** the native call itself. `flutter_tesseract_ocr` 0.4.31 has
-never been through an Android build here. The hOCR parsing and the engine
-routing are covered by 18 tests; the platform channel is not.
+### What survives
 
-iOS keeps a better option available: Apple Vision handles Arabic well and needs
-a platform channel. Worth doing there, and it changes nothing about the contract
-above.
+`ImageTextExtractor` stays, as a one-engine composite. The fall-through logic,
+the definition of "nothing usable", and the tests for both are the work; the
+second engine is one constructor argument when a compatible one exists. Its
+tests run against fakes and still pass.
+
+### So where Arabic stands today
+
+| Path | Arabic |
+|---|---|
+| PDF with a text layer | **Works** - characters are stated, not recognised |
+| Plain text attachment | **Works** |
+| Photograph or scanned image | **Does not work** |
+| Scanned (image-only) PDF | **Does not work** |
+
+iOS remains the better prospect: Apple Vision handles Arabic well and needs a
+platform channel rather than a Gradle-era plugin, so it is not subject to this
+problem at all.
 
 ---
 

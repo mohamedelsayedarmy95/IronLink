@@ -615,18 +615,20 @@ frontend/lib/features/keyword_alert/
 
 ### Open decisions — these need a human
 
-1. ~~ML Kit has no Arabic recognizer.~~ **Settled 2026-08-17.** Tesseract
-   `ara` is bundled — 1,432,056 bytes, 1.37 MB — and runs as the fallback when
-   ML Kit's Latin-only recognizer comes back with nothing usable. The earlier
-   claim that this would cost "tens of megabytes" was wrong by an order of
-   magnitude and was the only reason it had been deferred. §3.6 of the
-   specification is still wrong that an ML Kit Arabic model exists. Apple
-   Vision is still the better engine on iOS and remains worth doing there.
-2. **Three native dependencies have never been through a device build** —
-   `google_mlkit_text_recognition`, `syncfusion_flutter_pdf` and
-   `flutter_tesseract_ocr`. This is now the single largest unverified area in
-   the project. The hOCR parsing and engine routing have 18 tests; the platform
-   channels have none, because they cannot.
+1. **Arabic image OCR is blocked by the Android toolchain, not by app size.**
+   This entry has been wrong twice; `docs/SMART_KEYWORD_ALERT_AUDIT.md` section
+   4b keeps both versions. Short form: the model is 1.37 MB, not tens of
+   megabytes, so size was never the issue - but this project is on AGP 9.0.1 and
+   every Arabic OCR binding on pub still uses the pre-AGP-8 Gradle layout, so
+   none of them configure. CI established that by failing an APK build. The
+   options were checked and ruled out one by one; forking and modernising a
+   plugin is the only path left, and was not taken unprompted. iOS is unaffected:
+   Apple Vision needs a platform channel, not a Gradle plugin.
+2. **The native surface builds, but has never run.** `flutter build apk
+   --release` now passes in CI with ML Kit and Syncfusion PDF, so Gradle, R8 and
+   asset bundling are verified. What no unit test and no build can verify is
+   behaviour - whether ML Kit actually recognises text on a real photograph, and
+   whether the PDF reader copes with a real document. That still needs a device.
 3. ~~`deploy.yml` targets Fly.io.~~ **Settled 2026-08-17: the file is gone.**
    `fly.toml` has never existed anywhere in this repository's history, and
    `flyctl deploy` requires one — so that step could not have worked even with

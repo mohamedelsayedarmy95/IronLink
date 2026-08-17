@@ -3,22 +3,27 @@ import 'dart:typed_data';
 import 'extracted_document.dart';
 import 'mlkit_text_extractor.dart';
 import 'preflight.dart';
-import 'tesseract_text_extractor.dart';
 import 'text_extractor.dart';
 
 /// Reads an image with whichever engine can actually read it.
 ///
-/// Two engines, because neither is sufficient alone. ML Kit is fast, ships with
-/// the app, and handles Latin script well — and has no Arabic model at all.
-/// Tesseract reads Arabic and is slower and weaker on everything else. In an
-/// Arabic-first product, either one on its own leaves a language unreadable.
+/// Today there is one: ML Kit, which handles Latin script well and has no
+/// Arabic model at all. This class exists for the second engine — the one that
+/// reads Arabic — which is **not currently present**. No Arabic OCR binding on
+/// pub builds against this project's Android Gradle Plugin, and CI established
+/// that by failing rather than by anyone assuming it.
+///
+/// It is kept as a one-engine composite rather than deleted because the seam is
+/// where the work already is: the fall-through logic, the decision about what
+/// counts as an unread page, and the tests for both. When a compatible binding
+/// exists it becomes one constructor argument.
 ///
 /// THE ORDER IS THE §3.3 LADDER, NOT A PREFERENCE
 ///
 /// §3.3 specifies "Local Fail → Retry with Preprocessing → Retry Alternate
-/// Config → Unable to read", deterministically. That is what this is: ML Kit
-/// first because it is cheaper, Tesseract as the alternate configuration when
-/// the first pass comes back with nothing usable.
+/// Config → Unable to read", deterministically. That is the shape here: the
+/// primary engine first because it is cheaper, the Arabic one as the alternate
+/// configuration when the first pass comes back with nothing usable.
 ///
 /// It is a fallback rather than "run both and merge" for a reason that matters
 /// on a phone: running two OCR engines over every photograph doubles the most
@@ -42,8 +47,8 @@ class ImageTextExtractor implements TextExtractor {
 
   final TextExtractor _primary;
 
-  /// Null where the Arabic model is not present on this device. Checked at
-  /// startup rather than assumed — see [TesseractTextExtractor.isAvailable].
+  /// Null today, and null on every platform: see the class comment. Resolved
+  /// once at startup by the extractor factory rather than per document.
   final TextExtractor? _arabic;
 
   /// Below this many characters, a page is treated as unread rather than empty.
@@ -51,8 +56,8 @@ class ImageTextExtractor implements TextExtractor {
   /// A photograph of a landscape genuinely contains no words and must not
   /// trigger a second expensive pass; a page of Arabic through a Latin
   /// recognizer returns a scattering of stray marks. Both are short, so this
-  /// threshold accepts the cost of one wasted Tesseract pass on a wordless
-  /// photo in exchange for never missing an Arabic document. Given the choice,
+  /// threshold accepts the cost of one wasted second pass on a wordless photo
+  /// in exchange for never missing an Arabic document. Given the choice,
   /// wasting work is better than not doing it.
   final int minimumUsableCharacters;
 
