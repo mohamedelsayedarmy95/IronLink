@@ -37,8 +37,15 @@ in photographs.
 
 ## Changes from upstream
 
-Only `android/build.gradle` was rewritten. Dart, Java, and iOS sources are
-byte-identical to the published package.
+Only `android/build.gradle` was rewritten. **Dart, Java, and iOS sources are
+byte-identical to the published package**, and deliberately so: that is what
+keeps this fork diffable when a new upstream version appears.
+
+Which is why `analysis_options.yaml` excludes `packages/**` from analysis. This
+project's CI fails on any analyzer warning, and upstream's `lib/web.dart` carries
+two `unused_element` warnings. Silencing them by editing the file would trade a
+CI annoyance for permanent merge pain. Third-party source is not held to our lint
+rules; our own code is.
 
 | Change | Reason |
 |---|---|

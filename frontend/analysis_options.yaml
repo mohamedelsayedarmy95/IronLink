@@ -11,6 +11,16 @@ analyzer:
   exclude:
     - build/**
     - android/**
+    # Vendored third-party source. Excluded on purpose rather than cleaned up:
+    # packages/flutter_tesseract_ocr is a fork whose Dart, Java and iOS sources
+    # are byte-identical to the published package, and that is what keeps it
+    # diffable against upstream when a new version appears. Applying this
+    # project's lints to it would mean editing code we did not write, and every
+    # such edit is a line of future merge pain. Only its android/build.gradle
+    # was changed, and Gradle is not analysed here anyway.
+    #
+    # See packages/flutter_tesseract_ocr/VENDORING.md.
+    - packages/**
     - ios/**
     - web/**
     - windows/**
