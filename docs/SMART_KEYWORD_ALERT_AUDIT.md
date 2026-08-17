@@ -133,6 +133,48 @@ repository wins).
 
 ---
 
+## 4b. Engine finding: ML Kit has no Arabic recognizer
+
+Added during Phase 2, after inspecting the package rather than trusting the spec.
+
+§3.6 of the master prompt recommends "Google ML Kit Text Recognition v2 (+ Arabic model)"
+for Android local OCR, and says Arabic "requires the ML Kit Arabic model (v2)".
+
+**No such model is available.** `google_mlkit_text_recognition` 0.16.0 declares:
+
+```dart
+enum TextRecognitionScript { latin, chinese, devanagiri, japanese, korean }
+```
+
+Five scripts, no Arabic. This is a factual error in the spec, and it matters more here
+than it would almost anywhere, because IronLink is an Arabic-first product. Shipping the
+ML Kit engine alone and declaring the feature done would reproduce precisely the defect
+this audit opened with: a keyword feature that silently never matches Arabic.
+
+What this means in practice:
+
+| Path | Arabic | Status |
+|---|---|---|
+| PDF with a text layer | **Works** | IMPLEMENTED — `PdfNativeTextExtractor` reads stated characters; no recognition involved, so no script model is needed. Arabic normalization then does the rest. |
+| Plain text attachment | **Works** | IMPLEMENTED — same reason. |
+| Photograph or scanned image | **Does not work** | BLOCKED — ML Kit returns nothing for Arabic script. Latin script in images works fully. |
+| Scanned (image-only) PDF | **Does not work** | BLOCKED — needs page rasterization plus an Arabic recognizer. |
+
+Resolution path, deliberately not taken blind:
+
+* **iOS** — Apple Vision (`VNRecognizeTextRequest`) does support Arabic in recent OS
+  versions. It needs a platform channel, which is native code that cannot be verified
+  from here.
+* **Android** — Tesseract with `ara` trained data, via a binding. This bundles roughly
+  15–40 MB of model data into the app, which is an app-size decision the product owner
+  should make rather than one that arrives as a side effect of a commit.
+
+Both slot in behind the existing `TextExtractor` interface without touching the pipeline,
+the matcher, or the domain. The interface exists precisely so that this gap is a
+registration, not a rewrite.
+
+---
+
 ## 5. Security analysis
 
 | Issue | Severity | Note |

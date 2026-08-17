@@ -115,8 +115,10 @@ class TextExtractorRegistry {
 
   final List<TextExtractor> extractors;
 
-  /// The extractors that ship regardless of platform. Image and PDF engines
-  /// register on top of this at startup, where the platform is known.
+  /// The extractors that need no platform channel and no model download.
+  ///
+  /// The image engine registers on top of this at startup, where the platform
+  /// is known — it is the only one whose availability depends on the device.
   static const minimal = TextExtractorRegistry([PlainTextExtractor()]);
 
   TextExtractor? forKind(DocumentKind kind) {
