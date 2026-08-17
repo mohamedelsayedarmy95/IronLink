@@ -19,7 +19,10 @@
 > | Evidence for every claim | `SMART_KEYWORD_ALERT_REPORT.md` §16 — a file and a test per capability |
 > | Never present incomplete work as complete | The same report's BLOCKED and NOT IMPLEMENTED rows |
 > | Rollback for every change | `frontend/lib/features/keyword_alert/keyword_feature_flags.dart` |
-> | Privacy-safe observability | `frontend/lib/features/keyword_alert/keyword_telemetry.dart` — no field can hold free text |
+> | Privacy-safe observability | `../app/core/observability.py` — a test fails the build on any identifying metric label |
+> | Data minimisation, EXIF stripping | `../frontend/lib/core/media/metadata_scrubber.dart` |
+> | SLOs defined before claiming "stable" | `SLO.md` — every number labelled `[ESTIMATE]`, one objective `[UNVERIFIED]` |
+> | Runbook written before release, not after incident | `RUNBOOK.md` |
 >
 > Two places where following it caught something nothing else would have: the
 > CI Android job found three separate real defects on its first runs, and a

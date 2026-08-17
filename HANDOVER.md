@@ -837,3 +837,102 @@ alone.
   hold decrypted text for the length of a conversation.
 
 63 tests across the feature. Analyzer clean.
+
+---
+
+## 14. Media metadata and observability (added 2026-08-17)
+
+Two requirements the engineering standard had carried since it was adopted, and
+that nothing in the repository met. Both were closed in the order the standard
+imposes — privacy (priority 3) before observability (priority 7).
+
+### 14.1 Media metadata stripping
+
+**The finding that mattered:** the code looked like it already did this. The
+attach flow picks images with `imageQuality: 92`, a re-encode that would
+reasonably be assumed to drop metadata. `image_picker_android`'s
+`ExifDataCopier` copies the old header back onto the resized copy, and its
+attribute list explicitly includes `TAG_GPS_LATITUDE`, `TAG_GPS_LONGITUDE`,
+`TAG_GPS_ALTITUDE`, `TAG_GPS_TIMESTAMP`, `TAG_CAMERA_OWNER_NAME`,
+`TAG_BODY_SERIAL_NUMBER` and `TAG_LENS_SERIAL_NUMBER`. Every photograph sent
+carried the coordinates of where it was taken.
+
+`frontend/lib/core/media/metadata_scrubber.dart` strips it, on the device,
+because attachment bodies are encrypted here before upload and the server holds
+ciphertext it could not read. It rewrites container structure rather than
+re-encoding pixels — the picture bytes are copied through untouched.
+
+Orientation survives, alone, in a header built from scratch. It has eight
+possible values and identifies nobody, and dropping it would turn every portrait
+photograph on Android sideways.
+
+Three formats, three different problems. JPEG uses an allowlist over the APPn
+slots (APP0 only if JFIF, because JFXX holds a thumbnail; APP2 only if an ICC
+profile, because MPF hides a second image there). PNG uses a chunk allowlist.
+MP4 **cannot remove bytes** — `stco` holds absolute file offsets into `mdat`, so
+deleting a box before the media data corrupts it; `udta` and `meta` are
+overwritten in place with `free`.
+
+**Fail closed.** An unrecognised container throws and the send is refused, with
+its own message in both languages. When PDF attachments ship they must be
+handled in the scrubber before they can be sent at all.
+
+The seam is inside `MediaService`, which both upload paths pass through — not at
+the four call sites that pick files.
+
+### 14.2 Observability
+
+`app/core/observability.py`. Before it, `structlog` was imported in five files
+and configured in none, so production logs were neither JSON nor timestamped.
+There were no metrics.
+
+**No metric carries a user, chat, group, device or phone in any label.** A test
+enumerates every metric in the module and fails on any identifying label name,
+so this survives metrics nobody has written yet.
+
+Labels use the matched route template, never the raw path — the raw path carries
+identifiers, and labelling by it also lets anyone with a URL bar grow the
+registry without limit. Unmatched requests collapse into one bucket.
+
+`/metrics` requires a bearer token and **404s when no token is set**. Off by
+default, not open by default.
+
+A structlog processor censors by key stem (`otp_code`, `message_content`,
+`phone_number`, `reply_text`). The existing log calls were all read first and
+none leaked — but "we checked once" is not a control.
+
+`/health` stays as liveness, deliberately shallow, because the platform restarts
+on its failure and a deep check would turn a dependency blip into a restart
+loop. `/health/ready` is new, checks Postgres and Redis, names which is down,
+and returns 503. It returns a dependency name and never the exception text,
+which carries hostnames and sometimes credentials — it is unauthenticated.
+
+### 14.3 SLOs and runbook
+
+`docs/SLO.md` and `docs/RUNBOOK.md`.
+
+**Every SLO number is `[ESTIMATE]`.** IronLink has never run under production
+load, so nothing there is derived from measurement. They are design targets, and
+the first thirty days of real traffic should replace them.
+
+One objective is explicitly `[UNVERIFIED]`: message durability is measured by a
+proxy that counts loud failures. Silent loss — a commit that succeeded and a row
+that later vanished — is invisible to it, and closing that needs a client-side
+delivery-gap probe that does not exist.
+
+`docs/SLO.md` also lists what is deliberately *not* an SLO yet, including push
+delivery rate: measuring it now would measure the known `fcm_token` bug rather
+than the service.
+
+### 14.4 New configuration
+
+| Variable | Default | Effect |
+|---|---|---|
+| `METRICS_TOKEN` | `""` | Bearer token for `/metrics`. Empty means the route 404s. |
+
+### 14.5 Still open after this work
+
+- No delivery-gap probe, so message durability remains unverified.
+- Push delivery rate unmeasurable until `fcm_token` becomes per-session.
+- No dashboards. The metrics exist and are scrapeable; nothing renders them.
+- SLO targets are guesses until there is traffic to measure.
