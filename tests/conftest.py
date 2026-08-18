@@ -42,42 +42,49 @@ requires_db = pytest.mark.skipif(
 )
 
 
-@pytest_asyncio.fixture(scope="session")
-async def db_engine():
+@pytest_asyncio.fixture()
+async def db():
+    """A session on a real database, rolled back when the test ends.
+
+    The engine is built **per test**, which looks wasteful and is not.
+    pytest-asyncio gives every test its own event loop, and an asyncpg
+    connection belongs to the loop that opened it — a session-scoped engine
+    hands the second test a connection from the first test's loop, which fails
+    as "another operation is in progress" or "attached to a different loop".
+    Those errors name the symptom and not the cause, and chasing them costs
+    far more than the engine setup this avoids.
+
+    `create_all` runs with `checkfirst`, so only the first test in a run
+    actually issues DDL and the rest pay one round trip of introspection.
+
+    Writes are rolled back rather than truncated: faster, and two tests cannot
+    leak into each other even when one fails part-way through.
+    """
     url = _test_database_url()
     if url is None:
         pytest.skip("TEST_DATABASE_URL is not set")
 
-    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-    from app.models.base import Base
     import app.models  # noqa: F401 — registers every table on the metadata
+    from app.models.base import Base
 
     engine = create_async_engine(url, future=True)
-    async with engine.begin() as conn:
-        # create_all rather than `alembic upgrade head`. The migrations are
-        # tested separately for being additive; what these journeys need is the
-        # schema the models currently describe, and running migrations here
-        # would make an unrelated migration bug fail every journey test.
-        await conn.run_sync(Base.metadata.create_all)
-    yield engine
-    await engine.dispose()
+    try:
+        async with engine.begin() as conn:
+            # create_all rather than `alembic upgrade head`. The migrations are
+            # tested separately for being additive; what these journeys need is
+            # the schema the models describe, and running migrations here would
+            # make one unrelated migration bug fail every journey.
+            await conn.run_sync(Base.metadata.create_all)
 
-
-@pytest_asyncio.fixture()
-async def db(db_engine):
-    """A session whose writes are rolled back when the test ends.
-
-    Rollback rather than truncation: it is faster, and it means two tests
-    cannot leak state into each other even if one fails part-way through.
-    """
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    async with db_engine.connect() as conn:
-        transaction = await conn.begin()
-        session = AsyncSession(bind=conn, expire_on_commit=False)
-        try:
-            yield session
-        finally:
-            await session.close()
-            await transaction.rollback()
+        async with engine.connect() as conn:
+            transaction = await conn.begin()
+            session = AsyncSession(bind=conn, expire_on_commit=False)
+            try:
+                yield session
+            finally:
+                await session.close()
+                await transaction.rollback()
+    finally:
+        await engine.dispose()
