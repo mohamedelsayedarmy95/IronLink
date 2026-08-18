@@ -401,7 +401,21 @@ updated, with no negotiation and no fallback.
 zero warnings and zero errors. CI treats warnings as fatal
 (`.github/workflows/ci.yml:95`).
 
-**FL-01 (open).** **FACT** — RTL is not tested. Arabic is the template locale
+**FL-01 — RESOLVED 2026-08-17, and the finding was half wrong.**
+
+> Writing the tests showed the code was already direction-clean: **zero**
+> `EdgeInsets.only(left:/right:)`, zero hardcoded `Alignment.centerLeft`, zero
+> `TextAlign.left`. The gap was verification, not correctness.
+>
+> `test/rtl_layout_test.dart` pumps widgets under `ar` at 320px and at 2× text
+> scale, and — more usefully — statically guards the source, because the
+> directional bugs that matter never throw. `EdgeInsets.only(left: 16)` renders
+> perfectly in both directions and is simply wrong in one of them.
+>
+> Gradient stops are excluded deliberately: `Alignment.topLeft` on a
+> `LinearGradient` names a decorative sweep, not a reading direction.
+
+**Original finding.** **FACT** — RTL is not tested. Arabic is the template locale
 (`app_ar.arb`) and strings exist for both languages, but there is no widget test
 that pumps a screen under `Directionality.rtl` and asserts layout. v4.0 §31–45
 says Arabic and RTL are first-class and warns specifically against
@@ -558,10 +572,14 @@ Derived from v4.0 §2's priority hierarchy, not from feature appeal.
 > `WsStatus` has no consumer outside the transport. The reliability half is
 > done (the retry loop is gone); the surfacing is a UI gap, tracked with FL-02.
 
-**Gate C — establish the floor** (priority 8–9)
-7. Failure-injection and E2E journey tests
-8. RTL layout tests, 10k-message list test
-9. CI-01 vulnerability and secret scanning, CI-02 coverage floor
+**Gate C — establish the floor** (priority 8–9) — ✅ **DONE 2026-08-17**
+7. ~~Failure-injection and E2E journey tests~~ ✅ — the suite had no database at
+   all; one was added (Postgres in CI, skipped locally) rather than faking a
+   journey, since a fake cannot answer the question a journey asks
+8. ~~RTL layout tests, 10k-message list test~~ ✅ — RTL turned out to be clean;
+   the tests lock it in
+9. ~~CI-01 vulnerability and secret scanning, CI-02 coverage floor~~ ✅
+10. ~~PRIV-01 data classification~~ ✅ — `docs/DATA_CLASSIFICATION.md`
 
 **Gate D — make rollout possible** (§46–50)
 10. Generalise the feature-flag mechanism beyond one feature (TD-01)
@@ -586,7 +604,7 @@ nothing, but nothing else matters if it fails.
 | SEC-03 | Signal implementation unreviewed | `core/crypto/signal.dart` | **UNVERIFIED** | Catastrophic | P0-3 |
 | SEC-04 | `/metrics` fail-closed, no identifying labels | `observability.py`, `test_observability.py` | **FACT** | — | Verified, no action |
 | SEC-05 | No sensitive data in any log call | 38 call sites read; `sms_gateway.py:24` | **FACT** | — | Verified, no action |
-| PRIV-01 | No data classification document | absence | **FACT** | Medium | Gate C |
+| PRIV-01 ✅ | No data classification document | absence | **FACT** | Medium | Gate C |
 | PRIV-02 ✅ | Deletion did not reach object storage — **confirmed defect**, `unsend_message` nulled the key without deleting the object | `tests/test_deletion_propagation.py` | **FACT** (was UNVERIFIED) | High | Fixed |
 | REL-01 ✅ | Outbox is in-memory, silently lossy | `ws_service.dart:42,68,164` | **FACT** | High | P0-2 |
 | REL-02 ✅ | One FCM token per user | `app/models/user.py:64` | **FACT** | High | P0-4 |
@@ -596,12 +614,12 @@ nothing, but nothing else matters if it fails.
 | DB-01 | No down-migrations | `alembic/versions/` | **FACT** | Medium | Gate D |
 | BE-01 ✅ | Stale comment claims a deleted mock exists | `requirements.txt:31` vs `test_key_directory.py:64` | **FACT** | Low | Quick win 1 |
 | DEP-01 | `pypdf2` deprecated, parses untrusted files | test output | **FACT** | Medium | Quick win 3 |
-| FL-01 | No RTL layout tests | absence | **FACT** | Medium | Gate C |
+| FL-01 ✅ | No RTL layout tests — **the code was already clean**; the tests lock it in | absence | **FACT** | Medium | Gate C |
 | FL-02 | Screen-state completeness unknown | no inventory | **UNVERIFIED** | Medium | Gate C |
-| CI-01 | No vulnerability / secret scanning / SAST | `ci.yml` | **FACT** | Medium | Gate C |
-| CI-02 | No coverage floor | `ci.yml` | **FACT** | Low | Gate C |
+| CI-01 ✅ | No vulnerability / secret scanning / SAST | `ci.yml` | **FACT** | Medium | Gate C |
+| CI-02 ✅ | No coverage floor — now 55% against an actual 59% | `ci.yml` | **FACT** | Low | Gate C |
 | CI-03 | No staging, `autoDeploy: true` to production | `render.yaml:44` | **FACT** | High | Gate D |
-| PERF-01 | No benchmarks of any kind | absence | **EVIDENCE NOT AVAILABLE** | Unknown | Gate C |
+| PERF-01 ◑ | No benchmarks of any kind — a 10k-message scale test now exists; **still no device profiling** | absence | **EVIDENCE NOT AVAILABLE** | Unknown | Gate C |
 | ARCH-01 | 12 of 15 named subsystems have zero code | name search across `app/`, `frontend/lib/` | **FACT** | — | Gate E |
 
 ---

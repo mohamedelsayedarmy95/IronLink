@@ -1044,3 +1044,84 @@ failure does not fail the retraction — the message is already deleted for both
 parties — and the key is kept so `SelfDestructWorker.reap_orphans` finishes the
 job. `ironlink_orphaned_attachments` reports what is outstanding; a number that
 does not return to zero means somebody's deletion has not happened.
+
+---
+
+## 17. Gate C — the testing floor (added 2026-08-17)
+
+### 17.1 The suite had no database
+
+Every backend test ran against fakes or source inspection. That is right for
+most of them — it keeps the suite fast and lets it assert on failure paths,
+since an unreachable Redis is easier to fake than to arrange.
+
+But a fake cannot answer what a journey asks: does a message survive a send, a
+retraction and a read back, through the real schema with the real constraints?
+Each step was covered in isolation. The bugs that live *between* two correct
+steps were not.
+
+`tests/test_journeys.py` covers send, resend-after-a-dropped-socket,
+retraction, the retraction window, sender-only authority, and directional
+blocking. Postgres, not SQLite — the models use `postgresql.UUID` and `JSONB`,
+and a SQLite stand-in would accept what the real database rejects.
+
+Skipped without `TEST_DATABASE_URL`, so a developer with no local Postgres
+still gets the other 400. CI runs a `postgres:16` service, so they always run
+somewhere.
+
+### 17.2 Arabic layout — the finding was half wrong
+
+`test/rtl_layout_test.dart`. The audit said RTL was untested, which was true.
+It implied RTL was broken, which was not: **zero** hardcoded directional
+paddings, alignments, or text alignments across `lib/`.
+
+So the tests lock that in rather than fix anything. The static half matters
+more than the widget half, because the directional bugs that count never throw
+— `EdgeInsets.only(left: 16)` renders perfectly in both directions and is
+wrong in one of them, with the gap on the far side of the screen.
+
+Widgets are pumped at 320px and at 2x text scale, the two ways a row that fits
+becomes a row that does not.
+
+### 17.3 Scale
+
+`test/scale_test.dart`, ten thousand messages. Budgets are deliberately loose:
+they catch a **complexity** regression — an indexed query going to full scan —
+not a 20% slowdown. A tight threshold on a shared CI runner fails for reasons
+unrelated to the change that triggered it, which is how a suite loses its
+credibility.
+
+### 17.4 Failure injection
+
+`tests/test_failure_modes.py`. A dead Postgres and a dead Redis are exercised
+against the real readiness endpoint, including that it returns a **dependency
+name and never the exception text** — a DSN in an unauthenticated error
+response publishes host, port and sometimes credentials.
+
+### 17.5 CI
+
+- **Secret scanning blocks.** Full history (`fetch-depth: 0`); a credential is
+  either in the history or it is not, and there is no backlog to work through.
+- **Dependency audit does not block, yet.** `continue-on-error: true`
+  deliberately: the first run of a vulnerability scanner finds advisories in
+  transitive dependencies nobody can act on this week, and a red build that
+  cannot be fixed is one people learn to ignore. Remove the flag once the
+  backlog is zero.
+- **Coverage floor 55%,** against an actual 59%. Set to catch a collapse, not
+  to grade the suite.
+
+### 17.6 `docs/DATA_CLASSIFICATION.md`
+
+The policies existed, scattered across code comments, which meant they were
+enforced by whoever had read the right file. Now written down — including five
+things it admits: no retention limit on `audit_logs` or `user_sessions`, no
+account deletion, no way to hide online status, and what changes if
+`SERVER_SIDE_OCR_ENABLED` is ever turned on.
+
+### 17.7 Still open
+
+- **No device profiling.** The scale test runs on a desktop VM. Every
+  performance claim in `docs/SLO.md` remains `EVIDENCE NOT AVAILABLE`.
+- **Screen-state completeness (FL-02) is still unmeasured.** No inventory of
+  which screens handle loading / empty / error / offline / permission-denied.
+- **`WsStatus.outdated` still renders nowhere** — see §16.3.
