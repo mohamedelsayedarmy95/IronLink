@@ -229,6 +229,10 @@ async def _handle_frame(
                     media_mime_type=frame.get("media_mime"),
                     destruct_after_seconds=frame.get("destruct_after"),
                     client_ref=frame.get("client_ref"),
+                    # Parsed defensively like every other identifier from a
+                    # caller: a malformed reply target must be a message with
+                    # no quotation, not a rejected send.
+                    reply_to_id=_uuid_or_none(frame.get("reply_to")),
                 )
             except message_service.BlockedDelivery:
                 # Reported as an undeliverable message rather than as a block.
@@ -278,6 +282,7 @@ async def _handle_frame(
             "message_id": str(msg.id),
             "message_type": frame_type,
             "from": str(user_id),
+            "reply_to": str(msg.reply_to_id) if msg.reply_to_id else None,
             "content": frame.get("content"),
             "media_key": frame.get("media_key"),
             "media_mime": frame.get("media_mime"),

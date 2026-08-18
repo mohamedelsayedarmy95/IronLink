@@ -314,12 +314,14 @@ class WsService {
     required String to,
     required String content,
     required String clientRef,
+    String? replyTo,
   }) =>
       send({
         'type': 'text',
         'to': to,
         'content': content,
         'client_ref': clientRef,
+        if (replyTo != null) 'reply_to': replyTo,
       });
 
   void sendMedia({

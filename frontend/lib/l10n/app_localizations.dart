@@ -3078,6 +3078,60 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'النسخة دي بقت قديمة. حدّث التطبيق عشان تكمل.'**
   String get connectionOutdated;
+
+  /// No description provided for @replyToYou.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت'**
+  String get replyToYou;
+
+  /// No description provided for @replyToThem.
+  ///
+  /// In ar, this message translates to:
+  /// **'رد على'**
+  String get replyToThem;
+
+  /// No description provided for @replyUnavailableTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسالة الأصلية'**
+  String get replyUnavailableTitle;
+
+  /// No description provided for @replyUnavailableBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'مش موجودة على الجهاز ده'**
+  String get replyUnavailableBody;
+
+  /// No description provided for @replyOriginalDeleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسالة دي اتشالت'**
+  String get replyOriginalDeleted;
+
+  /// No description provided for @replyKindImage.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة'**
+  String get replyKindImage;
+
+  /// No description provided for @replyKindVoice.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسالة صوتية'**
+  String get replyKindVoice;
+
+  /// No description provided for @replyKindAttachment.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفق'**
+  String get replyKindAttachment;
+
+  /// No description provided for @replySwipeHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسحب الرسالة عشان ترد عليها'**
+  String get replySwipeHint;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

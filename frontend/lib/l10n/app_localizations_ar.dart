@@ -1687,4 +1687,31 @@ class LAr extends L {
   @override
   String get connectionOutdated =>
       'النسخة دي بقت قديمة. حدّث التطبيق عشان تكمل.';
+
+  @override
+  String get replyToYou => 'أنت';
+
+  @override
+  String get replyToThem => 'رد على';
+
+  @override
+  String get replyUnavailableTitle => 'الرسالة الأصلية';
+
+  @override
+  String get replyUnavailableBody => 'مش موجودة على الجهاز ده';
+
+  @override
+  String get replyOriginalDeleted => 'الرسالة دي اتشالت';
+
+  @override
+  String get replyKindImage => 'صورة';
+
+  @override
+  String get replyKindVoice => 'رسالة صوتية';
+
+  @override
+  String get replyKindAttachment => 'مرفق';
+
+  @override
+  String get replySwipeHint => 'اسحب الرسالة عشان ترد عليها';
 }

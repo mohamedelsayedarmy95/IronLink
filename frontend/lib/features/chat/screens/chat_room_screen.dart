@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/widgets/connection_banner.dart';
@@ -19,6 +20,7 @@ import '../chat_repository.dart';
 import '../local/message_store.dart';
 import '../widgets/ai_consent_sheet.dart';
 import '../widgets/attach_flow.dart';
+import '../widgets/reply_quote.dart';
 import '../widgets/encrypted_image.dart';
 import '../widgets/smart_replies.dart';
 import '../widgets/summary_banner.dart';
@@ -467,6 +469,11 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                   return const Center(
                       child: CircularProgressIndicator(color: IronColors.gold));
                 }
+                // One pass over the list, so a reply's quotation is a map
+                // lookup rather than a search. Built here because it is
+                // consumed by every bubble below.
+                final byId = {for (final m in state.messages) m.id: m};
+
                 return Column(
                   children: [
                     // AI Summary Banner
@@ -498,6 +505,13 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                           final message = state.messages[i];
                           return _MessageBubble(
                             message: message,
+                            // Resolved from the index built once above rather
+                            // than searched per bubble: thirty visible bubbles
+                            // each scanning the list is quadratic work on
+                            // every scroll frame.
+                            repliedTo: message.replyToId == null
+                                ? null
+                                : byId[message.replyToId],
                             conversationId: widget.peerId,
                             myId: widget.myId,
                             isSecret: widget.isSecret,
@@ -547,6 +561,20 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                     if (_blocked ?? false)
                       _BlockedBanner(onUnblock: _toggleBlock)
                     else
+                      // What you are answering, above what you are writing.
+                      // Dismissible, because picking the wrong message by a
+                      // stray swipe should cost one tap to undo.
+                      if (state.replyingToId != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                          child: ReplyQuote(
+                            original: byId[state.replyingToId],
+                            myId: widget.myId,
+                            onDismiss: () => context
+                                .read<ChatBloc>()
+                                .add(const ReplyTargetChanged(null)),
+                          ),
+                        ),
                       _InputBar(
                         encrypted: widget.encrypted,
                         controller: _input,
@@ -556,7 +584,9 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                         onSend: () {
                           final text = _input.text.trim();
                           if (text.isEmpty) return;
-                          context.read<ChatBloc>().add(TextSent(text));
+                          context
+                              .read<ChatBloc>()
+                              .add(TextSent(text, replyTo: state.replyingToId));
                           _input.clear();
                         },
                       ),
@@ -640,9 +670,18 @@ class _MessageBubble extends StatelessWidget {
     required this.onTranslatePressed,
     required this.onModeratePressed,
     required this.onReportPressed,
+    this.repliedTo,
   });
 
   final ChatMessage message;
+
+  /// The message this one answers, already resolved from this device's own
+  /// history — or null when this device does not have it.
+  ///
+  /// Resolved by the caller rather than looked up here, so the whole list is
+  /// indexed once per build instead of once per bubble. Thirty visible bubbles
+  /// each scanning the message list is quadratic work on every scroll frame.
+  final ChatMessage? repliedTo;
 
   /// Who this conversation is with, whose device this is, and whether the
   /// chat is ephemeral — everything the keyword pipeline needs to attribute
@@ -692,12 +731,37 @@ class _MessageBubble extends StatelessWidget {
     return Align(
       alignment:
           mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
-      child: GestureDetector(
-        // Available on the peer's messages too. Gating this on `mine` made
-        // reporting unreachable for exactly the messages worth reporting.
-        onLongPress:
-            message.deleted ? null : () => _showMessageOptions(context),
-        child: Container(
+      child: Dismissible(
+        // Swipe to reply — the gesture people already have muscle memory for
+        // from every other messenger, so it needs no discovery.
+        //
+        // `confirmDismiss` returning false is what makes this a swipe *action*
+        // rather than a dismissal: the bubble springs back and nothing leaves
+        // the list. A real dismissal here would delete a message by accident
+        // on the first mis-swipe.
+        key: ValueKey('swipe-${message.id}'),
+        direction: message.deleted
+            ? DismissDirection.none
+            : DismissDirection.startToEnd,
+        dismissThresholds: const {DismissDirection.startToEnd: 0.25},
+        confirmDismiss: (_) async {
+          context.read<ChatBloc>().add(ReplyTargetChanged(message.id));
+          HapticFeedback.selectionClick();
+          return false;
+        },
+        background: const Padding(
+          padding: EdgeInsetsDirectional.only(start: 20),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Icon(Icons.reply, size: 20, color: IronColors.accentText),
+          ),
+        ),
+        child: GestureDetector(
+          // Available on the peer's messages too. Gating this on `mine` made
+          // reporting unreachable for exactly the messages worth reporting.
+          onLongPress:
+              message.deleted ? null : () => _showMessageOptions(context),
+          child: Container(
           constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.75),
           margin: const EdgeInsets.only(bottom: 10),
@@ -725,6 +789,10 @@ class _MessageBubble extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // The quotation, above the reply itself. Absent on a message
+              // that answers nothing, which is most of them.
+              if (message.replyToId != null && !message.deleted)
+                ReplyQuote(original: repliedTo, myId: myId),
               if (message.deleted)
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -861,6 +929,7 @@ class _MessageBubble extends StatelessWidget {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),

@@ -38,6 +38,15 @@ class MessageOut(BaseModel):
     created_at: datetime
     deleted_for_everyone: bool
 
+    #: The message this one answers, or null.
+    #:
+    #: An id and nothing else. The server cannot send the quoted *text* because
+    #: it has never had it — `content_ciphertext` is ciphertext and there is no
+    #: key here. The client resolves the quotation from its own decrypted
+    #: history, and shows "message unavailable" when it cannot, which is the
+    #: honest answer on a fresh install rather than a silent blank.
+    reply_to_id: UUID | None = None
+
 
 @router.get("", response_model=list[ConversationOut])
 async def list_conversations(

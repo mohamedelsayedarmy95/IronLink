@@ -1704,4 +1704,31 @@ class LEn extends L {
   @override
   String get connectionOutdated =>
       'This version is too old. Update the app to continue.';
+
+  @override
+  String get replyToYou => 'You';
+
+  @override
+  String get replyToThem => 'Replying to';
+
+  @override
+  String get replyUnavailableTitle => 'Original message';
+
+  @override
+  String get replyUnavailableBody => 'Not available on this device';
+
+  @override
+  String get replyOriginalDeleted => 'This message was removed';
+
+  @override
+  String get replyKindImage => 'Photo';
+
+  @override
+  String get replyKindVoice => 'Voice note';
+
+  @override
+  String get replyKindAttachment => 'Attachment';
+
+  @override
+  String get replySwipeHint => 'Swipe a message to reply to it';
 }

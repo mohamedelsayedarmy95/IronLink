@@ -17,6 +17,7 @@ class ChatMessage {
     this.deleted = false,
     this.pending = false,
     this.failed = false,
+    this.replyToId,
     this.mediaKey,
     this.attachmentKey,
     this.encrypted = false,
@@ -70,6 +71,15 @@ class ChatMessage {
   /// sender has no way to detect.
   bool failed;
 
+  /// The message this one answers, by id.
+  ///
+  /// An id and never the quoted text. The server has never held the text —
+  /// it stores ciphertext and has no key — so the quotation is resolved from
+  /// this device's own decrypted history when the bubble is drawn. On a fresh
+  /// install the original is simply not here, and the bubble says so rather
+  /// than rendering an empty quote.
+  final String? replyToId;
+
   factory ChatMessage.fromJson(Map<String, dynamic> json,
       {required String myId}) {
     final status = json['status'] as String? ?? 'sent';
@@ -77,6 +87,7 @@ class ChatMessage {
       id: json['id'] as String,
       senderId: (json['sender_id'] ?? '') as String,
       content: json['content_ciphertext'] as String?,
+      replyToId: json['reply_to_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       isMine: json['sender_id'] == myId,
       kind: json['kind'] as String? ?? 'text',

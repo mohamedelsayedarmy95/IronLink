@@ -60,6 +60,7 @@ async def save_message(
     destruct_after_seconds: int | None = None,
     enforce_blocks: bool = True,
     client_ref: str | None = None,
+    reply_to_id: UUID | None = None,
 ) -> Message:
     # Enforced here rather than in the route, because this is the single
     # point every message passes through — REST and WebSocket both. A check
@@ -103,6 +104,7 @@ async def save_message(
         content_ciphertext=content_ciphertext,
         media_object_key=media_object_key,
         media_mime_type=media_mime_type,
+        reply_to_id=reply_to_id,
         status=MessageStatus.SENT,
         is_self_destruct=destruct_after_seconds is not None,
         destruct_after_seconds=destruct_after_seconds,

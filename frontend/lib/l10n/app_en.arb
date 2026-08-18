@@ -726,5 +726,14 @@
   "attachUnsupportedFormat": "This file is not a type we can strip hidden data from, so it was not sent. Photos and voice notes work normally.",
   "connectionOffline": "No connection. Your messages will send when you are back.",
   "connectionConnecting": "Reconnecting…",
-  "connectionOutdated": "This version is too old. Update the app to continue."
+  "connectionOutdated": "This version is too old. Update the app to continue.",
+  "replyToYou": "You",
+  "replyToThem": "Replying to",
+  "replyUnavailableTitle": "Original message",
+  "replyUnavailableBody": "Not available on this device",
+  "replyOriginalDeleted": "This message was removed",
+  "replyKindImage": "Photo",
+  "replyKindVoice": "Voice note",
+  "replyKindAttachment": "Attachment",
+  "replySwipeHint": "Swipe a message to reply to it"
 }

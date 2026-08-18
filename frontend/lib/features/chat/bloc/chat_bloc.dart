@@ -27,10 +27,22 @@ class ChatOpened extends ChatEvent {
 }
 
 class TextSent extends ChatEvent {
-  const TextSent(this.content);
+  const TextSent(this.content, {this.replyTo});
   final String content;
+
+  /// The message being answered, by id.
+  final String? replyTo;
+
   @override
-  List<Object?> get props => [content];
+  List<Object?> get props => [content, replyTo];
+}
+
+/// The user picked a message to reply to, or dismissed the composer preview.
+class ReplyTargetChanged extends ChatEvent {
+  const ReplyTargetChanged(this.messageId);
+  final String? messageId;
+  @override
+  List<Object?> get props => [messageId];
 }
 
 class MediaSent extends ChatEvent {
@@ -208,6 +220,7 @@ enum SecureChatError {
 class ChatRoomState extends Equatable {
   const ChatRoomState({
     this.messages = const [],
+    this.replyingToId,
     this.peerTyping = false,
     this.loading = true,
     this.error,
@@ -242,8 +255,17 @@ class ChatRoomState extends Equatable {
   /// it describes the last attempt, not a lasting condition.
   final SecureChatError? secureError;
 
+  /// The message the composer is currently answering, if any.
+  ///
+  /// Held as an id rather than a whole message so it cannot go stale: the
+  /// original may be edited, deleted, or retracted while the reply is being
+  /// typed, and the preview should follow whatever the history now says.
+  final String? replyingToId;
+
   ChatRoomState copyWith({
     List<ChatMessage>? messages,
+    String? replyingToId,
+    bool clearReplyingTo = false,
     bool? peerTyping,
     bool? loading,
     String? error,
@@ -259,6 +281,11 @@ class ChatRoomState extends Equatable {
   }) =>
       ChatRoomState(
         messages: messages ?? this.messages,
+        // `clearReplyingTo` rather than relying on a null argument: sending a
+        // reply must be able to clear the target, and `?? this.replyingToId`
+        // cannot express "set this to nothing".
+        replyingToId:
+            clearReplyingTo ? null : (replyingToId ?? this.replyingToId),
         peerTyping: peerTyping ?? this.peerTyping,
         loading: loading ?? this.loading,
         error: error,
@@ -276,13 +303,39 @@ class ChatRoomState extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [messages.length, _rev, peerTyping, loading, error, summary, summaryLoading, smartReplies, smartRepliesLoading, secureError];
+  List<Object?> get props => [
+        messages.length,
+        _rev,
+        replyingToId,
+        peerTyping,
+        loading,
+        error,
+        summary,
+        summaryLoading,
+        smartReplies,
+        smartRepliesLoading,
+        secureError,
+      ];
 
-  // Revision counter derived from mutable message fields so Equatable
-  // notices tick/deletion changes inside the list.
+  // Revision counter derived from mutable message fields so Equatable notices
+  // changes *inside* the list, which it otherwise cannot see: the list
+  // identity is unchanged when a message's tick moves.
+  //
+  // `failed` was missing from this fold and had to be added. Marking a message
+  // failed mutates it in place and emits a state whose props were therefore
+  // identical, so Equatable reported no change and the failure marker never
+  // rendered — the bubble sat there looking sent, which is precisely the lie
+  // the failed flag exists to prevent. A state field that the UI reads and
+  // this fold does not mention is invisible, and that is easy to miss because
+  // the bug looks like a rendering problem rather than an equality one.
   int get _rev => messages.fold(
-      0, (acc, m) => acc + m.tick.index + (m.deleted ? 100 : 0) + (m.pending ? 1000 : 0));
+      0,
+      (acc, m) =>
+          acc +
+          m.tick.index +
+          (m.deleted ? 100 : 0) +
+          (m.pending ? 1000 : 0) +
+          (m.failed ? 10000 : 0));
 }
 
 // ── Bloc ──────────────────────────────────────────────────────────────────────
@@ -314,6 +367,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
         super(const ChatRoomState()) {
     on<ChatOpened>(_onOpened);
     on<TextSent>(_onTextSent);
+    on<ReplyTargetChanged>(_onReplyTargetChanged);
     on<MediaSent>(_onMediaSent);
     on<TypingChanged>(_onTypingChanged);
     on<MessageUnsent>(_onUnsent);
@@ -479,6 +533,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     }
   }
 
+  void _onReplyTargetChanged(
+    ReplyTargetChanged e,
+    Emitter<ChatRoomState> emit,
+  ) {
+    emit(state.copyWith(
+      replyingToId: e.messageId,
+      clearReplyingTo: e.messageId == null,
+    ));
+  }
+
   void _onTextSent(TextSent e, Emitter<ChatRoomState> emit) async {
     final ref = 'ref_${++_refCounter}';
     String contentToSend = e.content;
@@ -516,11 +580,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       isMine: true,
       pending: true,
       encrypted: _encrypted,
+      replyToId: e.replyTo,
     );
-    _ws.sendText(to: peerId, content: contentToSend, clientRef: ref);
+    _ws.sendText(
+      to: peerId,
+      content: contentToSend,
+      clientRef: ref,
+      replyTo: e.replyTo,
+    );
     // Send typing_stop via HTTP when sending a message
     _repo.sendTyping(peerId, false);
-    emit(state.copyWith(messages: [...state.messages, optimistic]));
+    emit(state.copyWith(
+      messages: [...state.messages, optimistic],
+      clearReplyingTo: true,
+    ));
   }
 
   void _onMediaSent(MediaSent e, Emitter<ChatRoomState> emit) async {
