@@ -210,15 +210,22 @@ feature everything else depends on:
 | Tests | `PRESENT` | Unit + journey, green in CI |
 | Documentation | `PRESENT` | `HANDOVER.md` §§11–17 |
 | Migration Safety | `PRESENT` | Reversible migrations |
-| Rollback Strategy | **`ABSENT`** | **No feature flag.** Messaging cannot be disabled without a deploy |
+| Rollback Strategy | `PRESENT` | **Closed 2026-08-18.** `feature:messaging` in Redis kills it without a deploy; `docs/RUNBOOK.md` has the procedure |
 
-> **Computed status: `PARTIAL`.** Two `PARTIAL`s and one `ABSENT`. Per §0.1's
-> rule, a single `ABSENT` on an applicable layer caps status at `PARTIAL`
-> regardless of the other sixteen.
+> **Computed status at time of audit: `PARTIAL`.** Two `PARTIAL`s and one
+> `ABSENT`. Per §0.1, a single `ABSENT` caps status regardless of the other
+> sixteen.
+>
+> **Recomputed 2026-08-18: `PARTIAL`, on one remaining `PARTIAL`.** The
+> `ABSENT` is closed — every shipped capability now has a runtime kill switch.
+> What still caps it is Encryption, which stays `PARTIAL` until RISK-01 is
+> reviewed externally, and UI, which stays `PARTIAL` until the offline and
+> permission-denied states in §23.4 exist.
 >
 > This is the scorecard doing its job. Nobody would have called core messaging
-> "partial" by judgement; the computation says so because it cannot be turned
-> off without a deploy, and that is a true and consequential gap.
+> "partial" by judgement; the computation said so because it could not be
+> turned off without a deploy, and that was true and consequential — and it is
+> now the thing that got fixed first.
 
 ---
 
@@ -237,7 +244,7 @@ Still open and unchanged:
 | **PERF-01** | No profiling on any real device, ever | `EVIDENCE NOT AVAILABLE` | Unknown |
 | **CI-03** | No staging; `autoDeploy: true` to the only environment | `FACT` (`render.yaml:44`) | High |
 | **REL-04** | Message ordering guarantees undocumented and untested | `UNVERIFIED` | Medium |
-| **TD-01** | Feature flags exist for exactly one feature | `FACT` | High — see §3.1 |
+| ~~**TD-01**~~ ✅ | Feature flags exist for exactly one feature | resolved 2026-08-18 | Eleven capabilities now have runtime kill switches |
 | **TD-02** | No ADRs | `FACT` | Medium |
 
 ---

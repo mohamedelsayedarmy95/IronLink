@@ -20,6 +20,7 @@ from app.api.routes import (
     chats,
     communities,
     contacts,
+    features,
     moderation,
     group_entry,
     group_messages,
@@ -87,6 +88,10 @@ app.include_router(admin.router, prefix=settings.API_PREFIX)
 app.include_router(ocr.router, prefix=settings.API_PREFIX)
 app.include_router(receipts.router, prefix=settings.API_PREFIX)
 app.include_router(keys.router, prefix=settings.API_PREFIX)
+# Deliberately unauthenticated and identical for every caller — see the module
+# docstring. A kill switch that requires a session cannot disable a broken
+# sign-in screen.
+app.include_router(features.router, prefix=settings.API_PREFIX)
 app.include_router(channels.router, prefix=settings.API_PREFIX)
 app.include_router(communities.router, prefix=settings.API_PREFIX)
 app.include_router(ai.router, prefix=settings.API_PREFIX)

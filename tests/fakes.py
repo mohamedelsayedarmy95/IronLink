@@ -56,6 +56,15 @@ class FakeRedis:
     async def get(self, key):
         return self.store.get(key)
 
+    async def mget(self, keys):
+        """Redis returns None for every key it does not hold, in order.
+
+        Order matters more than it looks: feature-flag resolution zips this
+        against its registry, so a fake that dropped misses would silently
+        pair each flag with the wrong override.
+        """
+        return [self.store.get(k) for k in keys]
+
     async def getdel(self, key):
         return self.store.pop(key, None)
 

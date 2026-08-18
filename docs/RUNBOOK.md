@@ -186,6 +186,68 @@ If it is concentrated on one route and a deploy preceded it, roll back.
 
 ---
 
+## Killing a feature
+
+**When:** a shipped capability is actively harming users and a fix is not
+minutes away. This is the lever that did not exist until 2026-08-18, when nine
+shipped capabilities could only be disabled by deploying — which on the free
+tier means minutes of downtime and a cold start, at exactly the moment you can
+least afford them.
+
+The switch lives in Redis, so it takes effect without a deploy.
+
+```bash
+redis-cli SET feature:messaging "general:killed"
+```
+
+Clients pick it up within a minute — `/features` is cached for 60 seconds.
+
+**To undo:**
+```bash
+redis-cli DEL feature:messaging
+```
+Deleting the key restores the compiled default. Setting it back to `general`
+would work too, but deleting is better: it leaves no override to be puzzled over
+later.
+
+**To narrow a rollout instead of killing it:**
+```bash
+redis-cli SET feature:ai_features "limited:10"
+```
+
+| Flag key | What it turns off |
+|---|---|
+| `messaging` | Direct encrypted messaging |
+| `group_messaging` | Group messaging |
+| `attachments` | Encrypted attachment upload and download |
+| `voice_notes` | Voice notes |
+| `contact_discovery` | Salted-hash contact discovery |
+| `controlled_group_entry` | Join requests, forms, entry audit |
+| `security_center` | IronShield |
+| `keyword_alert` | IronWatch |
+| `scam_intelligence` | Scam and link warnings in the bubble |
+| `communities` | Communities and channels (already BETA) |
+| `ai_features` | Summarise, translate, smart reply |
+
+**Three things to know before you rely on this.**
+
+**A kill does not reach a device that is offline.** It arrives when the device
+next reaches the server. There is no push channel for flags, deliberately —
+that would be a second mechanism to keep correct.
+
+**A killed feature stays killed even when the flag service is unreachable.**
+The client caches the last state it saw, and the fallback rule only applies to
+flags it has never resolved. So a kill survives the server going down after it.
+
+**The reverse is also true and is the important half.** A feature at `general`
+that the client cannot resolve stays *on*. That is deliberate: the alternative
+makes this system a bigger outage risk than everything it protects, since one
+unreachable endpoint would disable messaging for every user. If you need a
+feature off for someone whose device cannot reach the server, you cannot do it
+from here, and nothing else can either.
+
+---
+
 ## Rolling back
 
 Render redeploys a previous commit from the dashboard. What needs thinking

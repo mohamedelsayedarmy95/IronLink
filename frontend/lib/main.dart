@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/api_client.dart';
+import 'core/crypto/secret_store.dart';
+import 'core/feature_flags.dart';
 import 'core/outbox_store.dart';
 import 'core/media_service.dart';
 import 'core/push_service.dart';
@@ -50,6 +52,12 @@ void main() async {
     store = const NullMessageStore();
   }
 
+  // Feature flags, loaded before the first frame so a killed capability is
+  // never briefly visible. `load()` reads the cache first and refreshes in the
+  // background, so a bad connection costs nothing at launch.
+  final features = FeatureFlags(ApiClient(), store: SecureSecretStore());
+  await features.load();
+
   // The unsent-message queue. Opened here rather than lazily, because a
   // failure to open it must not be discovered at the moment the user sends
   // something — openOutboxStore falls back to memory, which is the behaviour
@@ -90,6 +98,7 @@ void main() async {
   runApp(MilAcademyApp(
     store: store,
     outbox: outbox,
+    features: features,
     alerts: alerts,
     alertBloc: alertBloc,
     keywordAlerts: keywordAlerts,
@@ -103,11 +112,13 @@ class MilAcademyApp extends StatelessWidget {
     required this.alerts,
     required this.alertBloc,
     required this.outbox,
+    required this.features,
     this.keywordAlerts,
   });
 
   final MessageStore store;
   final OutboxStore outbox;
+  final FeatureFlags features;
   final AlertStore alerts;
   final AlertBloc alertBloc;
 
@@ -120,6 +131,7 @@ class MilAcademyApp extends StatelessWidget {
       providers: [
         RepositoryProvider(create: (_) => ApiClient()),
         RepositoryProvider<MessageStore>.value(value: store),
+        RepositoryProvider<FeatureFlags>.value(value: features),
         RepositoryProvider(
             create: (ctx) => AuthRepository(ctx.read<ApiClient>())),
         RepositoryProvider(
