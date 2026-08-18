@@ -1677,4 +1677,14 @@ class LAr extends L {
   @override
   String get attachUnsupportedFormat =>
       'الملف ده مش من نوع نقدر ننضّفه من البيانات المخفية، فمابعتناهوش. الصور والتسجيلات الصوتية شغالة عادي.';
+
+  @override
+  String get connectionOffline => 'مافيش اتصال. رسايلك هتتبعت أول ما ترجع.';
+
+  @override
+  String get connectionConnecting => 'بيحاول يتصل…';
+
+  @override
+  String get connectionOutdated =>
+      'النسخة دي بقت قديمة. حدّث التطبيق عشان تكمل.';
 }

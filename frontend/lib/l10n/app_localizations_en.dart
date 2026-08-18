@@ -1693,4 +1693,15 @@ class LEn extends L {
   @override
   String get attachUnsupportedFormat =>
       'This file is not a type we can strip hidden data from, so it was not sent. Photos and voice notes work normally.';
+
+  @override
+  String get connectionOffline =>
+      'No connection. Your messages will send when you are back.';
+
+  @override
+  String get connectionConnecting => 'Reconnecting…';
+
+  @override
+  String get connectionOutdated =>
+      'This version is too old. Update the app to continue.';
 }

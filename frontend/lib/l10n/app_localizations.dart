@@ -3060,6 +3060,24 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'الملف ده مش من نوع نقدر ننضّفه من البيانات المخفية، فمابعتناهوش. الصور والتسجيلات الصوتية شغالة عادي.'**
   String get attachUnsupportedFormat;
+
+  /// No description provided for @connectionOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'مافيش اتصال. رسايلك هتتبعت أول ما ترجع.'**
+  String get connectionOffline;
+
+  /// No description provided for @connectionConnecting.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيحاول يتصل…'**
+  String get connectionConnecting;
+
+  /// No description provided for @connectionOutdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'النسخة دي بقت قديمة. حدّث التطبيق عشان تكمل.'**
+  String get connectionOutdated;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

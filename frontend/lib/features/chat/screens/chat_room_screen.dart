@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/widgets/connection_banner.dart';
 import '../../../core/api_client.dart';
 import '../../../core/crypto/signal.dart';
 import '../../../core/env.dart';
@@ -446,6 +447,10 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
       ),
       body: Column(
         children: [
+          // Inside the conversation too, and not only on the home screen: this
+          // is where somebody is actively waiting for a message to send, and
+          // the one place where not knowing costs them something immediately.
+          ConnectionBanner(ws: context.read<WsService>()),
           // The Smart Alert ticker, anchored below the app bar and above the
           // messages — never over the compose bar (§5.2.1). Draws nothing
           // when there is nothing outstanding.

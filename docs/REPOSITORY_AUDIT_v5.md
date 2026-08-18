@@ -193,7 +193,7 @@ feature everything else depends on:
 
 | Layer | Score | Evidence |
 |---|---|---|
-| UI | `PARTIAL` | Loading, empty, error and offline exist; **Permission Denied, Locked and Retry are not distinguished** — see §23 |
+| UI | `PARTIAL` | Loading, empty, error and **offline** now exist; **Permission Denied, Locked and Retry are not distinguished** — see §23 |
 | State | `PRESENT` | `chat_bloc.dart` — explicit states, including `failed` since Gate B |
 | Domain Logic | `PRESENT` | `signal.dart`, `message_service.py` — testable units |
 | Local Persistence | `PRESENT` | `message_store.dart`; survives restart, verified by `ws_service_test.dart` restart test |
@@ -384,17 +384,25 @@ across all 22 screens:
 | Loading | 16 / 22 | Missing on `auth_screen`, `splash_screen`, `contacts_permission_screen`, `form_builder_screen`, `home_screen`, `alert_center_screen` — several legitimately have nothing to load |
 | Empty | 17 / 22 | Good coverage; `IronEmptyState` is a shared component |
 | Error | 15 / 22 | `chats_list_screen`, `message_search_screen`, `community_list_screen`, `groups_screen`, `alert_center_screen` have **no error state** |
-| Offline | ~0 / 22 | **`WsStatus` has no consumer outside the transport.** No screen distinguishes cached from live data |
+| Offline | ✅ **Closed 2026-08-18** | `ConnectionBanner` on the home screen and inside every conversation. Waits 2s before speaking, so an ordinary network handover is never mentioned |
 | Permission Denied | 1 / 22 | Only `contacts_permission_screen` |
 | Retry | Partial | Pull-to-refresh on lists; no explicit retry affordance after a failure |
 | Partial | 1 / 22 | Keyword alert processing only |
 | Locked | 0 / 22 | No plan/verification gating exists yet |
 | Processing | 2 / 22 | Keyword alert, media upload |
 
-> **FL-02 is now measured rather than unknown.** The headline gap is **Offline**:
-> zero screens distinguish live from cached data, and `WsStatus.outdated` — added
-> in Gate B so an outdated client stops reconnecting — renders nowhere, so a user
-> whose build the server refuses is simply told nothing.
+> **FL-02 is now measured rather than unknown.** The headline gap was
+> **Offline**: zero screens distinguished live from cached data, and
+> `WsStatus.outdated` — added in Gate B so an outdated client stops
+> reconnecting — rendered nowhere, so a user whose build the server refuses was
+> told nothing at all.
+>
+> **Closed 2026-08-18.** `ConnectionBanner` covers both. The design point worth
+> keeping: it waits two seconds before saying anything, because a phone
+> reconnects constantly and a banner that fires on every handover makes a
+> working app feel broken and trains people to ignore it by the time it means
+> something. An outdated build is the exception and is reported at once, since
+> the transport has stopped retrying and there is nothing to wait out.
 
 ---
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/widgets/connection_banner.dart';
 import '../../core/api_client.dart';
 import '../../core/crypto/group_signal.dart';
 import '../../core/crypto/key_repository.dart';
@@ -342,6 +343,9 @@ class _HomeScreenState extends State<_HomeView> {
       // until tapped (server-side ack).
       body: Column(
         children: [
+          // Above everything, because the question it answers — "is what I am
+          // looking at current?" — applies to every list below it.
+          ConnectionBanner(ws: context.read<WsService>()),
           // News Ticker for OCR alerts
           const SmartAlertTicker(),
           Expanded(
