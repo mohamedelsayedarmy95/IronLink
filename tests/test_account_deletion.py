@@ -25,6 +25,20 @@ from app.models.user import UserStatus
 from app.services import account_deletion, message_service
 
 
+def _expire(db) -> None:
+    """Forces the next read to hit the database rather than the identity map.
+
+    The journey fixture builds its session with `expire_on_commit=False`, which
+    is right for the other tests and wrong for these: two of them passed
+    nothing and failed on stale in-memory objects that still held the values
+    the cascade had already changed underneath them.
+
+    What these tests are actually about is what the foreign keys did, and that
+    answer is in the database. This makes them read it.
+    """
+    db.expire_all()
+
+
 class TestWhatIsRetained:
     """These need no database — they are about the reasoning."""
 
@@ -89,6 +103,7 @@ class TestDeletionJourney:
         alice_id = alice.id
 
         await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         assert await db.get(User, alice_id) is None
 
@@ -115,6 +130,7 @@ class TestDeletionJourney:
         message_id = msg.id
 
         await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         surviving = await db.get(Message, message_id)
         assert surviving is not None
@@ -140,6 +156,7 @@ class TestDeletionJourney:
         message_id = msg.id
 
         await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         assert await db.get(Message, message_id) is None
 
@@ -155,6 +172,7 @@ class TestDeletionJourney:
         await db.flush()
 
         result = await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         assert "platform_ban" in result["retained"]
         ban = await db.scalar(select(PlatformBan))
@@ -171,6 +189,7 @@ class TestDeletionJourney:
         await db.flush()
 
         await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         ban = await db.scalar(select(PlatformBan))
         assert phone not in (ban.phone_hash or "")
@@ -186,6 +205,7 @@ class TestDeletionJourney:
         await db.flush()
 
         await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         assert await account_deletion.is_phone_banned(db, phone) is True
         assert await account_deletion.is_phone_banned(db, "+201999999999") is False
@@ -197,6 +217,7 @@ class TestDeletionJourney:
         alice = await self._person(db, "Alice")
 
         result = await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         assert "platform_ban" not in result["retained"]
         assert await db.scalar(select(PlatformBan)) is None
@@ -211,6 +232,7 @@ class TestDeletionJourney:
         alice = await self._person(db, "Alice")
 
         await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         entry = await db.scalar(
             select(AuditLog).where(AuditLog.action == "account.deleted")
@@ -232,6 +254,7 @@ class TestDeletionJourney:
         await db.flush()
 
         await account_deletion.delete_account(db, alice)
+        _expire(db)
 
         entry = await db.scalar(
             select(AuditLog).where(AuditLog.action == "group.member_removed")
