@@ -274,9 +274,19 @@ class TestBlocking:
             )
 
     @pytest.mark.asyncio
-    async def test_blocking_is_directional(self, db) -> None:
-        # Bob blocking Alice must not stop Bob messaging Alice. Getting this
-        # backwards would silently mute the person who did the blocking.
+    async def test_a_block_stops_both_directions(self, db) -> None:
+        """Bob blocking Alice also stops Bob messaging Alice.
+
+        This test was originally written the other way round — asserting that
+        blocking is directional — and it failed, which is the whole point of
+        running a journey against real code. The enforcement is symmetric on
+        purpose, and `_blocked_between` says so.
+
+        The reason is that one-way enforcement produces a conversation the
+        blocked party cannot answer: Bob keeps messaging, Alice's replies never
+        arrive, and neither of them is told why. Requiring an unblock before
+        Bob can speak again keeps the state legible to both.
+        """
         from app.models import UserBlock
 
         alice = await _person(db, "Alice")
@@ -284,13 +294,22 @@ class TestBlocking:
         db.add(UserBlock(blocker_id=bob.id, blocked_id=alice.id))
         await db.flush()
 
-        msg = await message_service.save_message(
-            db,
-            sender_id=bob.id,
-            recipient_id=alice.id,
-            group_id=None,
-            message_type="text",
-            content_ciphertext="envelope-1",
-            client_ref="ref-1",
-        )
-        assert msg.id is not None
+        with pytest.raises(message_service.BlockedDelivery):
+            await message_service.save_message(
+                db,
+                sender_id=bob.id,
+                recipient_id=alice.id,
+                group_id=None,
+                message_type="text",
+                content_ciphertext="envelope-1",
+                client_ref="ref-1",
+            )
+
+    @pytest.mark.asyncio
+    async def test_the_error_says_nothing_about_who_blocked_whom(self) -> None:
+        # Telling a sender they were blocked turns a quiet boundary into a
+        # confrontation, which is the outcome blocking exists to avoid. The
+        # exception carries no direction and no detail.
+        error = message_service.BlockedDelivery()
+        assert str(error) == ""
+        assert not error.args
