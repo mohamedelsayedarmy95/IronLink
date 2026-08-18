@@ -36,19 +36,23 @@ from app.config import settings
 from app.core import observability
 from app.core.database import AsyncSessionLocal
 from app.core.redis import close_redis, redis_sessions
+from app.services.retention_worker import RetentionWorker
 from app.services.self_destruct_worker import SelfDestructWorker
 
 _self_destruct = SelfDestructWorker()
+_retention = RetentionWorker()
 _log = structlog.get_logger("infra")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _self_destruct.start()
+    _retention.start()
     # Start OCR alert listener
     asyncio.create_task(manager.listen_ocr_alerts())
     yield
     await _self_destruct.stop()
+    await _retention.stop()
     await close_redis()
 
 

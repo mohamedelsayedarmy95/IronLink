@@ -127,15 +127,24 @@ only describes what works is a marketing page.
    in plain words that it happened. Nobody who was not banned leaves anything
    behind.
 
-2. **No retention limit on `audit_logs`.** It grows forever and holds actor
-   ids — though an account deletion now anonymises its own entries, clearing
-   both `actor_id` and `ip_address`. The standard requires retention limits per
-   data type, enforced. This one has none.
+2. ~~**No retention limit on `audit_logs`.**~~ **Closed 2026-08-18.** 365 days,
+   enforced daily by `app/services/retention_worker.py`. Long enough for an
+   annual security review and for an investigation that begins months after the
+   event — which is the usual case, since breaches are typically found late.
+   An account deletion also anonymises that account's own entries immediately,
+   clearing `actor_id` and `ip_address`.
 
-3. **No retention limit on `user_sessions`.** Revoked and expired rows are kept
-   indefinitely, and they carry IP addresses and approximate locations. There
-   is a good reason to keep some history — it is what makes a "new device"
-   alert possible — and no reason to keep it forever.
+3. ~~**No retention limit on `user_sessions`.**~~ **Closed 2026-08-18.** 90 days
+   for revoked or expired rows; a live session is never swept. Three months is
+   enough history for "this is a new device" to mean something, and beyond it
+   the row is not security signal but a record of where somebody signed in from.
+
+   Two coordinate columns were removed entirely rather than given a limit.
+   `geo_lat` and `geo_lon` were `NUMERIC(7,4)` — about eleven metres, which is
+   building precision — under a docstring promising "city-level, not GPS".
+   Nothing had ever written to them. A column that exists is a column something
+   eventually fills, so migration 0012 dropped them and made the policy
+   structural instead of aspirational.
 
 4. ~~**Account deletion is not implemented.**~~ **Closed 2026-08-18.**
    `DELETE /auth/me` erases the account, re-authenticated with a fresh phone

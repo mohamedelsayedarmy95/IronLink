@@ -18,8 +18,24 @@ class UserSession(Base):
     """Records every authenticated session.
 
     Stored for security auditing and anomalous-access detection.
-    Approximate coordinates (city-level, not GPS) are stored — sufficient for
-    geo-anomaly detection without pinpointing user location.
+
+    This used to promise "approximate coordinates (city-level, not GPS)". The
+    columns holding them were NUMERIC(7,4) — roughly eleven metres, which is
+    building precision rather than city — and nothing ever wrote to them. The
+    paragraph described a policy about data that was never collected, guarding
+    columns that would have accepted GPS without complaint. Migration 0012
+    removed them.
+
+    `geo_country` and `geo_city` remain because the session API returns them.
+    They are also never populated today, which is stated here rather than left
+    for someone to discover from an always-null field.
+
+    RETENTION
+
+    Revoked and expired rows are swept after SESSION_RETENTION_DAYS. They carry
+    an IP address and a user agent, so keeping them forever would be an
+    indefinite record of where somebody signed in from. Live sessions are never
+    swept — see app/services/retention_worker.py.
 
     Fable5-Enhancement: ws_connection_id links the DB session to the in-memory
     Redis WebSocket registry so an admin can force-disconnect a specific device
@@ -86,8 +102,6 @@ class UserSession(Base):
     # City-level geo; resolved from IP at login time via GeoIP2 (no GPS stored)
     geo_country: Mapped[str | None] = mapped_column(String(2), nullable=True)   # ISO 3166-1
     geo_city: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    geo_lat: Mapped[float | None] = mapped_column(Numeric(7, 4), nullable=True)
-    geo_lon: Mapped[float | None] = mapped_column(Numeric(7, 4), nullable=True)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
     last_active_at: Mapped[datetime | None] = mapped_column(

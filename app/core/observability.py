@@ -200,6 +200,19 @@ self_destruct_wiped = Counter(
     "Expired messages wiped since this process started.",
 )
 
+retention_deleted = Counter(
+    "ironlink_retention_deleted_total",
+    "Records removed by the retention sweeper, by table. A sudden spike is "
+    "the only warning that a sweeper has started deleting more than it should.",
+    ("table",),
+)
+
+retention_failures = Counter(
+    "ironlink_retention_failures_total",
+    "Retention sweeps that raised. A rising count means data is outliving its "
+    "stated limit, which is a privacy failure rather than a slow job.",
+)
+
 orphaned_attachments = Gauge(
     "ironlink_orphaned_attachments",
     "Attachment bodies whose message was deleted but whose object storage "

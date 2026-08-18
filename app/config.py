@@ -174,6 +174,22 @@ class Settings(BaseSettings):
     # false and the endpoints refuse regardless of who agreed.
     AI_FEATURES_ENABLED: bool = True
 
+    # ── Retention ─────────────────────────────────────────────────────────────
+    # Enforced daily by app/services/retention_worker.py. Zero disables a
+    # sweep — checked explicitly, so it cannot be confused with a cutoff of
+    # "older than right now".
+    #
+    # 365 days for audit logs: long enough for a full annual security review
+    # and for an investigation that begins months after the event, which is the
+    # usual case since breaches are typically found late. Short enough that the
+    # record of who did what is not permanent.
+    AUDIT_LOG_RETENTION_DAYS: int = 365
+
+    # 90 days for finished sessions, and only revoked or expired ones. Enough
+    # history that "this is a new device" means something; beyond it the row is
+    # not security signal but a record of where somebody signed in from.
+    SESSION_RETENTION_DAYS: int = 90
+
     # ── Observability ─────────────────────────────────────────────────────────
     # Bearer token required to scrape /metrics. Empty means the endpoint does
     # not exist at all — 404, not 401, so an unauthenticated caller cannot even
