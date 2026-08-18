@@ -1,5 +1,16 @@
 > ## Provenance
 >
+> **SUPERSEDED 2026-08-18 by v5.0.** The governing charter is now
+> `IronLink-Principal-Architect-Master-Execution-System-v5.0`, whose §58 states
+> that where this document and the repository disagree about *current state* the
+> repository wins, and where it and a proposed implementation disagree about
+> *required behaviour* the charter wins. v5.0 preserves every v4.0 rule and
+> v4.0 preserved v3.0's; nothing here is withdrawn. This document is kept
+> because §58 forbids silent deletion, and because it is the standard the
+> Smart Keyword Alert and IronShield work was actually done under.
+>
+> The audit v5.0 requires is `REPOSITORY_AUDIT_v5.md`.
+
 > **Recorded into the repository on 2026-08-17**, verbatim, from
 > `doc & prompts/IRONLINK_MASTER_PROMPT_v3.md`. That working folder was deleted
 > afterwards. This header is the only addition.

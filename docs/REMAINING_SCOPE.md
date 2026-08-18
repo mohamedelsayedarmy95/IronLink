@@ -3,6 +3,11 @@
 Everything named across the four prompts, checked against the code on
 2026-08-18 rather than recalled. Where a row says "done", a path proves it.
 
+> **Updated 2026-08-18 by `REPOSITORY_AUDIT_v5.md`.** Two claims below were
+> carried from the v4 audit and are wrong: IronWatch is `INTEGRATED` rather than
+> partial, and all ten migrations do have real down-migrations. v5 §0 corrects
+> both with evidence. The counts here are otherwise unchanged.
+
 **The short answer: 8 of the 20 roadmap features are built, 12 are not, and the
 12 are the larger half.** The engineering foundation is finished — Gates A, B
 and C are closed — so what remains is almost entirely product surface rather
