@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -180,10 +181,17 @@ class GroupAuditLog(Base):
     )
     action: Mapped[str] = mapped_column(String(50), nullable=False)
 
-    performed_by_id: Mapped[uuid.UUID] = mapped_column(
+    #: Null once that person deletes their account.
+    #:
+    #: SET NULL to match `target_user_id` below, which always had it. This
+    #: column was CASCADE, and the inconsistency was not deliberate: a group's
+    #: audit trail exists so its *other* members can see who admitted whom and
+    #: who removed whom, and an admin deleting their account would have erased
+    #: their own entries from everyone else's record.
+    performed_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
     target_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -252,18 +260,52 @@ class PlatformBan(Base):
 
     __tablename__ = "platform_bans"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    #: Null once the banned account is deleted — see `phone_hash`.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
-    banned_by_id: Mapped[uuid.UUID] = mapped_column(
+
+    #: Null once the admin who issued it deletes their own account.
+    #:
+    #: SET NULL rather than CASCADE because an admin leaving must not silently
+    #: unban everyone they ever acted against.
+    banned_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
+
+    #: Salted SHA-256 of the banned phone number, written at deletion time.
+    #:
+    #: Without it, evading a ban was one step: delete the account, register the
+    #: same number again. A ban a banned person can undo is decorative.
+    #:
+    #: The hash and not the number, with the salt in configuration rather than
+    #: in this table — the same construction `user_phone_index` uses, and for
+    #: the same reason: a database dump alone must not be brute-forceable
+    #: against the small space of phone numbers.
+    phone_hash: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+
     reason: Mapped[str] = mapped_column(Text, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("user_id", name="uq_platform_ban_user"),
+        # Partial, because Postgres treats NULLs as distinct: without the
+        # predicate a plain unique constraint would permit any number of
+        # orphaned rows and enforce nothing.
+        Index(
+            "uq_platform_ban_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("user_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_platform_ban_phone",
+            "phone_hash",
+            unique=True,
+            postgresql_where=text("phone_hash IS NOT NULL"),
+        ),
     )

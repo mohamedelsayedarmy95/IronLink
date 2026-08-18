@@ -116,23 +116,39 @@ reasonably want to hide, and there is no setting for that today.
 Written as gaps rather than omitted, because a classification document that
 only describes what works is a marketing page.
 
-1. **No retention limit on `audit_logs`.** It grows forever and holds actor
-   ids. The standard requires retention limits per data type, enforced. This
-   one has none.
+1. **One retention survives account deletion, deliberately.** A platform ban is
+   kept as a salted SHA-256 of the phone number, with the account identifier
+   dropped. Without it, evading a ban is one step — delete, register the same
+   number again — and a ban a banned person can undo is decorative.
 
-2. **No retention limit on `user_sessions`.** Revoked and expired rows are kept
+   Privacy outranks abuse prevention in the hierarchy, and the resolution is
+   not to skip the retention but to make it minimal and honest: a hash, no
+   identifier, no name, no history, and the deletion response tells the user
+   in plain words that it happened. Nobody who was not banned leaves anything
+   behind.
+
+2. **No retention limit on `audit_logs`.** It grows forever and holds actor
+   ids — though an account deletion now anonymises its own entries, clearing
+   both `actor_id` and `ip_address`. The standard requires retention limits per
+   data type, enforced. This one has none.
+
+3. **No retention limit on `user_sessions`.** Revoked and expired rows are kept
    indefinitely, and they carry IP addresses and approximate locations. There
    is a good reason to keep some history — it is what makes a "new device"
    alert possible — and no reason to keep it forever.
 
-3. **Account deletion is not implemented.** There is no endpoint that removes a
-   user and everything referencing them. Message retraction propagates
-   correctly; a whole account does not, because the operation does not exist.
+4. ~~**Account deletion is not implemented.**~~ **Closed 2026-08-18.**
+   `DELETE /auth/me` erases the account, re-authenticated with a fresh phone
+   token rather than a session token — deletion is the one irreversible action
+   here, and a bearer token is exactly what a stolen phone already has. No
+   grace period: someone deleting an account on this product is often doing it
+   because they are at risk, and holding their data for a month in case they
+   reconsider is the opposite of what they asked for.
 
-4. **Online status cannot be hidden.** It is PUBLIC to contacts with no way to
+5. **Online status cannot be hidden.** It is PUBLIC to contacts with no way to
    opt out, which is a privacy setting most comparable products have.
 
-5. **The keyword watchlist reaches Redis on the server-side path**, which is
+6. **The keyword watchlist reaches Redis on the server-side path**, which is
    disabled by default (`SERVER_SIDE_OCR_ENABLED = False`). While it is off,
    the watchlist never leaves the device. If it is ever turned on, this row
    changes from "device only" to "server holds the user's watchlist", and that

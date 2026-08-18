@@ -268,7 +268,8 @@ and reports the rights posture.
 ### 22.2 Data rights posture
 
 ```
-FACT: There is no account-deletion endpoint.
+FACT (at time of audit): There is no account-deletion endpoint. Implemented
+      the same day — see above.
 SOURCE: grep over app/api/routes/*.py for @router.delete returns ten routes —
         sessions, channels, communities, contacts/delete-all, group entry,
         groups, moderation. None deletes a user.
@@ -277,7 +278,7 @@ VERIFIED: 2026-08-18
 
 | Right | State | Evidence |
 |---|---|---|
-| **Erasure (account)** | ❌ **Not implemented** | No endpoint exists |
+| **Erasure (account)** | ✅ **Done 2026-08-18** | `DELETE /auth/me` — `app/services/account_deletion.py` |
 | Erasure (contacts) | ✅ | `contacts.py:399` — `/delete-all` |
 | Erasure (messages) | ✅ | `unsend_message` + `reap_orphans`, propagates to object storage since Gate B |
 | Erasure (sessions) | ✅ | `auth.py:720` |

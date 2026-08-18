@@ -43,6 +43,18 @@ class VerifyIn(BaseModel):
         return v
 
 
+class DeleteAccountIn(BaseModel):
+    """A fresh phone-verification token for `DELETE /auth/me`.
+
+    Deletion is the one irreversible action in the product, and a bearer token
+    is exactly what someone holding a borrowed or stolen phone already has. So
+    the caller has to prove they can receive an SMS on the number right now,
+    not merely that they were signed in at some point.
+    """
+
+    id_token: str
+
+
 class FirebaseVerifyIn(BaseModel):
     # phone_number is deliberately NOT taken from the client — it's read out of
     # the verified Firebase ID token server-side, so a caller can't claim a

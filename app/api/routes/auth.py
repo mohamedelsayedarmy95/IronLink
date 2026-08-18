@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.api.schemas import (
+    DeleteAccountIn,
     FirebaseRegisterIn,
     FirebaseVerifyIn,
     RefreshIn,
@@ -45,7 +46,7 @@ from app.models.audit_log import AuditAction
 from app.models.user import UserRole, UserStatus
 
 logger = structlog.get_logger("auth")
-from app.services import push_service
+from app.services import account_deletion, push_service
 from app.services.otp_service import OtpService
 from app.services.sms_gateway import SmsGateway
 
@@ -315,6 +316,22 @@ async def register_firebase(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Verification failed. Request a new code and try again.",
+        )
+
+    # A ban survives the account it was placed on, keyed on a salted hash of
+    # the number — see app/services/account_deletion.py. Checked here because a
+    # retained ban that registration ignores is a record of something nothing
+    # enforces, and evading it would be exactly the one step the retention
+    # exists to prevent: delete, register the same number again.
+    #
+    # The refusal is deliberately not specific. Telling someone which of "you
+    # are banned" and "this number is taken" applies would let anyone probe for
+    # who has been banned.
+    if await account_deletion.is_phone_banned(db, phone_number):
+        logger.warning("registration_refused", reason="banned_phone")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This number cannot be registered. Contact your administrator.",
         )
 
     existing = await db.scalar(
@@ -768,3 +785,60 @@ def _classify_device(user_agent: str) -> str:
     if any(k in ua for k in ("windows", "macintosh", "linux")):
         return "desktop"
     return "unknown"
+
+@router.delete("/me", status_code=status.HTTP_200_OK)
+async def delete_my_account(
+    body: DeleteAccountIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    """Erases the caller's account.
+
+    RE-AUTHENTICATION, NOT A GRACE PERIOD
+
+    A bearer token is not enough. Deletion is the one irreversible action in
+    the product, and a session token is exactly what an attacker holding a
+    borrowed or stolen phone has. So the caller must present a *fresh* Firebase
+    phone-verification token: they have to be able to receive an SMS on the
+    number right now.
+
+    The alternative protection — a thirty-day recovery window — is common and
+    is wrong for this product. Someone deleting an account here is often doing
+    it because they are at risk, and "we kept everything for a month in case
+    you change your mind" is the opposite of what they asked for.
+
+    WHAT COMES BACK
+
+    A list of what was retained. Today that is a platform ban, if one exists,
+    kept as a salted hash of the phone number so it cannot be evaded by
+    deleting and re-registering. The user is told, in the response and in the
+    interface, because a retention someone is told about is a policy and the
+    same retention unmentioned is a broken promise.
+    """
+    generic_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Verification failed. Sign in again and retry.",
+    )
+
+    if not push_service.ensure_initialized():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone verification is temporarily unavailable.",
+        )
+
+    from firebase_admin import auth as firebase_auth
+
+    try:
+        decoded = firebase_auth.verify_id_token(body.id_token)
+    except Exception as exc:
+        logger.warning("account_delete_token_rejected", error=str(exc))
+        raise generic_error
+
+    # The token must belong to *this* account. Without this check a valid token
+    # for any number would delete whichever account the bearer token named,
+    # which turns two weak proofs into no proof at all.
+    if decoded.get("phone_number") != user.phone_number:
+        logger.warning("account_delete_token_mismatch", user_id=str(user.id))
+        raise generic_error
+
+    return await account_deletion.delete_account(db, user)
