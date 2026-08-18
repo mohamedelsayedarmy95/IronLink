@@ -108,7 +108,23 @@ jobs:
       # works from a downgraded state, which is what an actual rollback and
       # roll-forward would do.
       #
-      # This runs against the same throwaway Postgres the journey tests use.
+      # A *separate* database on the same server, and that is not fussiness.
+      #
+      # The journey-test fixture builds its schema with create_all, which leaves
+      # the tables in place with no alembic_version row. Alembic then tries to
+      # run 0001 against a database that already has every table and fails with
+      # "relation groups already exists". The first run of this step failed
+      # exactly that way.
+      #
+      # create_all and alembic cannot share a database. Giving the round-trip
+      # its own also means it exercises migrations against a genuinely empty
+      # database, which is what a fresh production deploy does, and makes the
+      # step independent of whether pytest ran before it.
+      - name: Create a database for the migration round-trip
+        env:
+          PGPASSWORD: ci
+        run: psql -h localhost -U postgres -c 'CREATE DATABASE ironlink_migrations'
+
       - name: Migrations round-trip (upgrade, downgrade to base, upgrade)
         env:
           # Alembic builds its URL from these via app.config, and its env.py
@@ -117,7 +133,7 @@ jobs:
           POSTGRES_PORT: '5432'
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: ci
-          POSTGRES_DB: ironlink_test
+          POSTGRES_DB: ironlink_migrations
           # The config validator refuses to start without these two. Test
           # values; nothing here is a credential for anything real.
           DB_ENCRYPTION_KEY: ci_encryption_key_at_least_32_chars_long
