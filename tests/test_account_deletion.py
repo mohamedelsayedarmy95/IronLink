@@ -117,11 +117,15 @@ class TestDeletionJourney:
         """
         alice = await self._person(db, "Alice")
         bob = await self._person(db, "Bob")
+        # Held as plain values, because `_expire` below detaches every loaded
+        # object and reading an attribute off one afterwards would attempt a
+        # synchronous lazy load from inside async code.
+        bob_id = bob.id
 
         msg = await message_service.save_message(
             db,
             sender_id=alice.id,
-            recipient_id=bob.id,
+            recipient_id=bob_id,
             group_id=None,
             message_type="text",
             content_ciphertext="envelope",
@@ -135,7 +139,7 @@ class TestDeletionJourney:
         surviving = await db.get(Message, message_id)
         assert surviving is not None
         assert surviving.sender_id is None
-        assert surviving.recipient_id == bob.id
+        assert surviving.recipient_id == bob_id
 
     @pytest.mark.asyncio
     async def test_their_own_inbox_goes(self, db) -> None:
