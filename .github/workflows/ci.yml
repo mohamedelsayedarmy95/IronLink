@@ -134,10 +134,20 @@ jobs:
       # This one does block. There is no backlog to work through — either a
       # credential is in the history or it is not — and a leaked key is not
       # something to merge past and tidy up later.
+      # Configured by .gitleaks.toml, which carries one narrowly scoped
+      # allowlist entry with its justification written next to it.
+      #
+      # Comments are off. The action tries to write its findings onto the pull
+      # request, the default token cannot, and the resulting "Resource not
+      # accessible by integration" warning reads like a scan failure while
+      # saying nothing about whether anything leaked. The findings are in the
+      # job summary and the SARIF artifact either way.
       - name: Scan for committed secrets
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+          GITLEAKS_CONFIG: .gitleaks.toml
 
   backend-image:
     name: Backend (image builds)
