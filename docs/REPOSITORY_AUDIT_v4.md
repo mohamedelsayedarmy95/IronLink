@@ -79,6 +79,12 @@ FastAPI (12,087 LOC, 17 route modules, 15 models)
 service, free-tier Postgres and Redis. Migrations run at container start from
 `docker-entrypoint.sh` because the free tier has no pre-deploy hook.
 
+> **WRONG — corrected 2026-08-18 in `REPOSITORY_AUDIT_v5.md` §0.3.** The
+> paragraph below is kept because §58 forbids silent deletion. `pubspec.yaml:25`
+> declares `libsignal_protocol_dart: ^0.8.2` and `signal.dart:5` imports it;
+> this repository implements no cryptographic primitive. The grep behind this
+> claim was run and its result misread.
+
 **FACT** — The crypto dependency set is `pointycastle ^4.0.0` and `crypto
 ^3.0.7` (`frontend/pubspec.yaml:32,35`). There is no `libsignal` binding; the
 protocol is implemented in Dart in this repository.

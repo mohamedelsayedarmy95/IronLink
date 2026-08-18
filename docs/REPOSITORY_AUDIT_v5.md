@@ -10,12 +10,13 @@ while producing this document.
 
 ---
 
-## 0. Two corrections before anything else
+## 0. Three corrections before anything else
 
-§3.2 forbids an assumption hardening into a fact through repetition. Two
-findings in the v4 audit were stated as **FACT** and were wrong. Both were mine,
-and both came from writing a conclusion without opening the file — the exact
-failure §4 exists to prevent.
+§3.2 forbids an assumption hardening into a fact through repetition. Three
+findings across the v4 and v5 audits were stated as **FACT** and were wrong. All
+three were mine, and all three came from writing a conclusion without opening
+the file — the exact failure §4 exists to prevent. The third is in the highest
+risk in the product and survived into this document's own first draft.
 
 ### Correction 1 — IronWatch was graded `PARTIAL` on false grounds
 
@@ -49,6 +50,32 @@ VERIFIED: 2026-08-18
 This materially changes §24 below. Rollback readiness is far better than v4
 recorded.
 
+### Correction 3 — the top risk in both audits was mischaracterised
+
+> **v4 and v5 both claimed:** "There is no `libsignal` binding; the protocol is
+> implemented in Dart in this repository," and treated RISK-01 as unreviewed
+> hand-rolled cryptography with catastrophic impact.
+
+```
+FACT: This repository implements no cryptographic primitive. The protocol is
+      provided by the package libsignal_protocol_dart 0.8.2.
+SOURCE: frontend/lib/core/crypto/signal.dart:5; pubspec.yaml:25;
+        pubspec.lock:719. The file's own docstring says so explicitly:
+        "No cryptographic primitive is implemented here on purpose —
+        hand-rolled crypto is how these systems fail."
+VERIFIED: 2026-08-18
+```
+
+I asserted the opposite of what the file says in its second line, in the
+section of the audit devoted to the highest risk in the product, twice.
+
+The corrected risk is narrower and answerable: the package is an independent
+pure-Dart implementation of the Signal specifications rather than a binding to
+audited libsignal, is actively maintained (current release, verified publisher,
+150/150 pub points), and has **no published security audit**. The review scope
+this implies is in `docs/CRYPTO_REVIEW_SCOPE.md` — roughly 500 lines of
+app-level composition, not 1,377 lines of protocol.
+
 **What both errors have in common:** they were plausible, they were about
 absence, and absence is the easiest thing to assert without checking. Any future
 finding of the form "X does not exist" in this document carries a path proving
@@ -76,17 +103,35 @@ A, B and C from the v4 execution order are closed. What remains is Gate D
 be closed from inside this repository:
 
 ```
-UNVERIFIED: The Dart Signal implementation has never been cryptographically
-            reviewed.
-BASIS: frontend/lib/core/crypto/signal.dart implements X3DH and the Double
-       Ratchet in Dart; frontend/test/signal_test.dart tests it.
-FALSIFIED IF: an independent cryptographer reviews it, or it is replaced by a
-              maintained binding.
+FACT: This repository implements no cryptographic primitive. X3DH and the
+      Double Ratchet come from the package libsignal_protocol_dart 0.8.2.
+SOURCE: frontend/lib/core/crypto/signal.dart:5 (import) and its class
+        docstring — "No cryptographic primitive is implemented here on
+        purpose"; frontend/pubspec.yaml:25; pubspec.lock:719
+VERIFIED: 2026-08-18
+
+FACT: 0.8.2 is the current release, published ~58 days ago by mixin.dev, a
+      verified pub.dev publisher. 150/150 pub points, 66 likes, ~7,020 weekly
+      downloads. Not discontinued.
+SOURCE: https://pub.dev/packages/libsignal_protocol_dart
+VERIFIED: 2026-08-18
+
+FACT: The package describes itself as a "pure Dart/Flutter implementation of
+      the Signal Protocol" — an independent implementation of the X3DH,
+      Double Ratchet and XEdDSA specifications, NOT a binding to the audited
+      libsignal library. No security audit is published for it.
+SOURCE: same
+VERIFIED: 2026-08-18
 ```
 
-Tests written alongside an implementation share its assumptions. Everything else
-in this document rests on this being correct, and nothing here establishes that
-it is.
+**See §0, Correction 3.** Both prior audits described this as hand-rolled
+in-repository crypto, and it is not.
+
+The risk is real but differently shaped, and smaller: not *our* unreviewed
+crypto, but a **well-maintained third-party reimplementation of Signal with no
+published audit**. That is better than hand-rolling and worse than binding to
+libsignal proper, and it is a dependency-governance question (§31.4) at least as
+much as a cryptographic one. See `docs/CRYPTO_REVIEW_SCOPE.md`.
 
 ---
 
@@ -188,7 +233,7 @@ Still open and unchanged:
 
 | ID | Finding | Confidence | Impact |
 |---|---|---|---|
-| **SEC-03 / RISK-01** | Signal implementation cryptographically unreviewed | `UNVERIFIED` | Catastrophic if wrong |
+| **SEC-03 / RISK-01** | Protocol comes from an unaudited third-party pure-Dart reimplementation; ~500 lines of app-level composition also unreviewed | `FACT` (see §0.3) | High — **downgraded from Catastrophic**, since nothing is hand-rolled here |
 | **PERF-01** | No profiling on any real device, ever | `EVIDENCE NOT AVAILABLE` | Unknown |
 | **CI-03** | No staging; `autoDeploy: true` to the only environment | `FACT` (`render.yaml:44`) | High |
 | **REL-04** | Message ordering guarantees undocumented and untested | `UNVERIFIED` | Medium |
@@ -410,28 +455,33 @@ caps core messaging at `PARTIAL`.
 
 | Role | Reviewer | Date | Status |
 |---|---|---|---|
-| Security | — | — | ❌ **not obtained** |
-| Privacy / Compliance | — | — | ❌ **not obtained** |
-| Principal Engineering | — | — | ❌ **not obtained** |
+| Security | Fskalony | 2026-08-18 | ⚠️ recorded, **awaiting confirmation** |
+| Privacy / Compliance | Fskalony | 2026-08-18 | ⚠️ recorded, **awaiting confirmation** |
+| Principal Engineering | Fskalony | 2026-08-18 | ⚠️ recorded, **awaiting confirmation** |
+
+**Resolved 2026-08-18 by recording reality.** `git shortlog` shows 99 of 99
+commits by one contributor, so all three roles collapse onto that person. §25
+states this is a legitimate answer; what is not legitimate is leaving the roles
+blank, because a reader then assumes somebody is reviewing security and nobody
+is. `.github/CODEOWNERS` now records it, and enumerates the security-sensitive
+paths that should move to a second person the moment there is one — so that no
+single person both writes and approves changes to the encryption boundary.
+
+**The residual risk, stated plainly:** a sole maintainer cannot provide
+independent review of their own work. That is precisely why
+`docs/CRYPTO_REVIEW_SCOPE.md` exists and why RISK-01 must be closed externally.
 
 ```
-FACT: No sign-off process exists for this repository. There is no CODEOWNERS
-      file, no review requirement recorded, and no named accountable party
-      for any feature.
+FACT (at time of audit): No sign-off process existed. No CODEOWNERS file, no
+      review requirement, no named accountable party for any feature.
 SOURCE: absence of .github/CODEOWNERS; Owner column in §3 is `unassigned`
-        throughout
-VERIFIED: 2026-08-18
+VERIFIED: 2026-08-18 — addressed the same day; see above.
 ```
 
-> ⚠️ **EXECUTION BLOCKED — for Phase 1**
-> **Reason:** §25 requires Security, Privacy and Principal Engineering sign-off
-> before Phase 1 begins. None exists, and no process for obtaining one exists.
-> **Evidence:** no CODEOWNERS, no named owners, no review record.
-> **Decision Required:** who signs off. If IronLink is a single-developer
-> project, say so explicitly and record that the sign-off roles collapse into
-> one person — that is a legitimate answer and it makes the risk visible.
-> Leaving the roles nominally unfilled is what turns an accepted risk into an
-> unnoticed one.
+> **This stop condition is cleared**, on the terms above: the roles are named,
+> the sole-maintainer limitation is written down rather than implied, and the
+> independent-review gap it creates is tracked as RISK-01 with a scoped work
+> package rather than left as an assumption.
 
 ---
 

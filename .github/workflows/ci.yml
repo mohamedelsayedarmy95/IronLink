@@ -96,6 +96,37 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -q --cov=app --cov-report=term-missing --cov-fail-under=55
 
+      # Every migration declares a downgrade, and until this step none had ever
+      # been executed — not in CI, not anywhere. An untested downgrade is a
+      # plan, not a capability, and the difference only becomes apparent during
+      # a rollback, which is the worst moment to find out.
+      #
+      # A full round trip: head, then all the way back to base, then head
+      # again. Going to base rather than one step back is what catches a
+      # downgrade that drops a table another migration's downgrade still
+      # expects. Returning to head afterwards proves the upgrade path still
+      # works from a downgraded state, which is what an actual rollback and
+      # roll-forward would do.
+      #
+      # This runs against the same throwaway Postgres the journey tests use.
+      - name: Migrations round-trip (upgrade, downgrade to base, upgrade)
+        env:
+          # Alembic builds its URL from these via app.config, and its env.py
+          # deliberately uses the asyncpg driver — see the comment there.
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ironlink_test
+          # The config validator refuses to start without these two. Test
+          # values; nothing here is a credential for anything real.
+          DB_ENCRYPTION_KEY: ci_encryption_key_at_least_32_chars_long
+          SECRET_KEY: ci_secret_key_for_jwt_signing_in_tests_only_xxxxxxxx
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+
   security:
     name: Security (dependencies + secrets)
     runs-on: ubuntu-latest

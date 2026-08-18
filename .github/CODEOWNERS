@@ -1,0 +1,36 @@
+# Code owners.
+#
+# The v5.0 charter (§25) requires named Security, Privacy/Compliance and
+# Principal Engineering sign-off before Phase 1 work begins, and §5 asks who is
+# accountable for each feature. Neither existed, so every row of the audit's
+# Feature Reality Matrix read `unassigned`.
+#
+# The honest answer is that this repository has one contributor — 99 of 99
+# commits — and that all three roles collapse onto that person. §25 states
+# explicitly that this is a legitimate answer. What is not legitimate is
+# leaving the roles nominally unfilled, because that turns an accepted risk
+# into an unnoticed one: a reader assumes somebody is reviewing security, and
+# nobody is.
+#
+# So this file records reality rather than an aspiration. When a second
+# contributor joins, the security-sensitive paths below should move to them, so
+# that no single person both writes and approves changes to the encryption
+# boundary.
+
+* @Fskalony
+
+# ── Security-sensitive paths ────────────────────────────────────────────────
+#
+# Listed separately not because the owner differs today, but so that the set is
+# already enumerated when it can. These are the paths where a self-approved
+# change carries the most risk.
+
+/frontend/lib/core/crypto/       @Fskalony
+/frontend/lib/core/media/        @Fskalony
+/app/core/security.py            @Fskalony
+/app/core/observability.py       @Fskalony
+/app/api/deps.py                 @Fskalony
+/app/api/routes/auth.py          @Fskalony
+/alembic/versions/               @Fskalony
+/.github/workflows/              @Fskalony
+/.gitleaks.toml                  @Fskalony
