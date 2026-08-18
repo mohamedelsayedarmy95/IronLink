@@ -18,8 +18,31 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.ironlink.app"
+        // A second copy of the app, side by side, for two-party testing.
+        //
+        // Android isolates data by package, so a build with a different
+        // applicationId installs alongside the real one with its own session,
+        // its own Signal keys and its own message store — which is what
+        // testing a conversation needs, and what a single install cannot give.
+        //
+        // `com.example.ironlink` is not arbitrary: google-services.json already
+        // registers it as a second Firebase client, so the test copy signs in
+        // with no console changes and no second Firebase project.
+        //
+        // Off by default. Nothing about a normal build changes, and the flag
+        // has to be passed explicitly:
+        //
+        //   flutter build apk --release -Pandroid.injected.testInstance=true
+        //
+        // Never ship a build made with this. It is a different application id,
+        // so an update would install beside the real app rather than over it.
+        val testInstance = project.findProperty("testInstance") == "true"
+        applicationId = if (testInstance) "com.example.ironlink" else "com.ironlink.app"
+        // Both copies carry the same visible name. Renaming one would need
+        // AGP's resValues feature turned on for the whole project, which is a
+        // real change to the shipped build for a cosmetic gain in a test
+        // affordance. They are told apart by package, which is how anything
+        // driving them refers to them anyway.
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
