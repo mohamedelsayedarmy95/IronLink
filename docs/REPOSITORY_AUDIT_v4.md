@@ -107,7 +107,7 @@ Status vocabulary per v4.0 §5.
 | Self-destructing messages | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `INTEGRATED` |
 | Controlled group entry | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `INTEGRATED` |
 | **IronShield** (security centre) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `INTEGRATED` |
-| **IronWatch** (keyword alert) | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | `PARTIAL` — on-device by design; 48h history and per-chat scoping absent |
+| **IronWatch** (keyword alert) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `INTEGRATED` — **corrected 2026-08-18, see below** |
 | Scam intelligence | ✅ | ✅ | n/a | n/a | ✅ | ✅ | `INTEGRATED` (on-device only) |
 | Link safety | ✅ | ✅ | n/a | n/a | ✅ | ✅ | `INTEGRATED` |
 | Observability | n/a | ✅ | ✅ | n/a | ✅ | ✅ | `INTEGRATED` |
@@ -119,6 +119,30 @@ Status vocabulary per v4.0 §5.
 | PDF attachments | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | `UI_ONLY` — "coming soon" snackbar, `attach_flow.dart:89` |
 | Voice meetings / calls | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Not present |
 | IronVault, IronDocs, IronSearch, IronMemory, IronFlow, IronMesh, IronCanvas, IronProof, IronGhost, IronLegacy | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Not started — **zero code files each** |
+
+> ### Correction — IronWatch, 2026-08-18
+>
+> The matrix above originally graded IronWatch `PARTIAL` on the grounds that
+> "48h history and per-chat scoping" were absent. **Both claims were wrong**,
+> and the error was mine: I recorded them without checking the code, which is
+> the exact failure §4 of the master prompt exists to prevent.
+>
+> What is actually there:
+>
+> | Spec requirement | Where |
+> |---|---|
+> | 48h history | `keyword_alert/domain/keyword_alert.dart:319` — `retentionWindow = Duration(hours: 48)` |
+> | Per-chat keywords | `alert_store.dart:56` — `conversation_scope` column, with two indexes on it |
+> | Acknowledgement flow | `keyword_alert.dart:59` — `AlertStatus.acknowledged`, one-way |
+> | Confidence threshold | `alert_bloc.dart:165` — `>= 0.85` |
+> | False-positive control | `alert_store.dart:308` — rolling 24h soft cap per rule |
+> | Local / cloud modes | `ocr/ocr_mode.dart` — `OcrModeOutcome.local` / `.cloud`, never silent |
+>
+> The `Duration(hours: 24)` occurrences that could look like a shortened
+> retention window are the **daily rate cap**, which is a different mechanism
+> and documented as one.
+>
+> IronWatch is `INTEGRATED` against its specification.
 
 ---
 
