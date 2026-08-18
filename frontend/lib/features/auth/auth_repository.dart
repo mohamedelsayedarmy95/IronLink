@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/api_client.dart';
+import '../../core/secure_storage.dart';
 
 /// Semantic error outcomes from the auth flow. The repository/bloc layer
 /// stays UI-agnostic — it has no BuildContext to localize a message with —
@@ -50,6 +53,15 @@ class AuthUser {
         role: json['role'] as String,
         avatarUrl: json['avatar_url'] as String?,
       );
+
+  /// The same shape the server sends, so one parser serves both.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'full_name': fullName,
+        'username': username,
+        'role': role,
+        'avatar_url': avatarUrl,
+      };
 }
 
 class AuthRepository {
@@ -213,6 +225,34 @@ class AuthRepository {
   /// because "not signed in" is a normal state at launch and not an error to
   /// report. Tokens that the server refuses are cleared, so a stale pair does
   /// not sit there failing every request.
+  static const _profileKey = 'auth_profile_v1';
+
+  /// Who is signed in, or null if nobody is.
+  ///
+  /// THE BUG THIS SHAPE USED TO CAUSE
+  ///
+  /// There are three possible answers — signed in, not signed in, and "cannot
+  /// check right now" — and a nullable return can only carry two. A network
+  /// failure collapsed into null, which the splash screen reads as "not signed
+  /// in", so **losing the network signed the user out of the interface.**
+  ///
+  /// The tokens were kept, and the code said so in a comment: "a network
+  /// failure is not proof the session is gone". It then returned null anyway,
+  /// because there was nothing else to return.
+  ///
+  /// Found by pulling the network on a real phone. Every unit test passes
+  /// either way, because the bug is not in this function's logic — it is in
+  /// what the caller can distinguish.
+  ///
+  /// It defeated the whole offline-first design at the front door: the cached
+  /// conversations, the durable outbox, and the banner promising "your
+  /// messages will send when you are back" were all behind a sign-in wall that
+  /// appeared precisely when the network went away.
+  ///
+  /// So a verified profile is cached, and an unreachable server returns the
+  /// cached one. The session is still assumed valid — which it is, until the
+  /// server says otherwise, and the moment it does say 401 the tokens and the
+  /// cache are both cleared.
   Future<AuthUser?> restoreSession() async {
     try {
       final token = await _client.accessToken;
@@ -222,23 +262,61 @@ class AuthRepository {
         '/auth/me',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      return AuthUser.fromJson(res.data!);
+      final user = AuthUser.fromJson(res.data!);
+      await _cacheProfile(user);
+      return user;
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       if (status == 401 || status == 403) {
         // Refused, so it will keep being refused. Cleared rather than left
-        // to fail every subsequent request.
+        // to fail every subsequent request — and the cached profile goes with
+        // the tokens, or an expired session would still open the app.
         await _client.clearTokens();
+        await _clearProfile();
         return null;
       }
-      // A network failure is not proof the session is gone, so the tokens
-      // stay and the next launch tries again.
-      return null;
+      // Unreachable, not rejected. The tokens are as valid as they were a
+      // moment ago, so the app opens on the cached identity and the
+      // connection banner tells the truth about being offline.
+      return _cachedProfile();
     } catch (_) {
       // Anything else — no keystore on this platform, storage unreadable.
       // Failing to answer "is there a session" must never stop the app from
       // starting; the welcome screen is a safe answer.
       return null;
+    }
+  }
+
+  Future<void> _cacheProfile(AuthUser user) async {
+    try {
+      await ironSecureStorage.write(
+        key: _profileKey,
+        value: jsonEncode(user.toJson()),
+      );
+    } catch (err) {
+      // Not fatal. The consequence of failing to cache is the old behaviour
+      // for this one account — a sign-in screen when offline — not a crash.
+      debugPrint('[auth] could not cache profile: $err');
+    }
+  }
+
+  Future<AuthUser?> _cachedProfile() async {
+    try {
+      final raw = await ironSecureStorage.read(key: _profileKey);
+      if (raw == null) return null;
+      return AuthUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (err) {
+      debugPrint('[auth] cached profile unreadable: $err');
+      return null;
+    }
+  }
+
+  Future<void> _clearProfile() async {
+    try {
+      await ironSecureStorage.delete(key: _profileKey);
+    } catch (_) {
+      // Nothing useful to do; the tokens are already gone, so the cache
+      // cannot be used to open the app.
     }
   }
 
