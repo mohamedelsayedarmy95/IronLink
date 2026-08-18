@@ -12,7 +12,12 @@ from app.core import observability
 from app.core.database import AsyncSessionLocal
 from app.core.redis import redis_pubsub, redis_sessions
 from app.models import User
-from app.services import group_message_service, message_service, push_service
+from app.services import (
+    group_message_service,
+    message_service,
+    push_service,
+    reaction_service,
+)
 from app.services.message_service import UnsendDenied
 from app.services.ws_manager import ConnectionManager
 
@@ -288,6 +293,76 @@ async def _handle_frame(
             "media_mime": frame.get("media_mime"),
             "created_at": msg.created_at.isoformat(),
         })
+        return
+
+    # ── Reactions ─────────────────────────────────────────────────────────────
+    #
+    # Carries the target id and an encrypted emoji. The server stores a
+    # reaction it cannot read: it learns that somebody reacted to something,
+    # which the conversation graph already told it, and not what they said.
+    if frame_type == "reaction":
+        target = _uuid_or_none(frame.get("target"))
+        if target is None:
+            await _reject(websocket, frame, "reaction needs a valid 'target'")
+            return
+
+        to = _uuid_or_none(frame.get("to"))
+        group_id = _uuid_or_none(frame.get("group"))
+        if to is None and group_id is None:
+            await _reject(websocket, frame, "reaction needs 'to' or 'group'")
+            return
+
+        async with AsyncSessionLocal() as db:
+            try:
+                reaction = await reaction_service.set_reaction(
+                    db,
+                    sender_id=user_id,
+                    target_id=target,
+                    recipient_id=to,
+                    group_id=group_id,
+                    # An absent or empty content clears the reaction, which is
+                    # how removing one is expressed — there is no separate
+                    # "unreact" frame to keep in step with this one.
+                    content_ciphertext=frame.get("content"),
+                    client_ref=frame.get("client_ref"),
+                )
+            except reaction_service.ReactionTargetMissing:
+                await _reject(websocket, frame, "that message is no longer available")
+                return
+            except message_service.BlockedDelivery:
+                await _reject(
+                    websocket, frame, "This message could not be delivered."
+                )
+                return
+
+        await websocket.send_json({
+            "type": "ack",
+            "client_ref": frame.get("client_ref"),
+            "message_id": str(reaction.id) if reaction else None,
+            "created_at": reaction.created_at.isoformat() if reaction else None,
+        })
+
+        event = {
+            "type": "reaction",
+            "target": str(target),
+            "from": str(user_id),
+            # Null means the reaction was withdrawn. The recipient needs to be
+            # told that as explicitly as it is told about a new one, or a
+            # removed reaction would linger on every other device.
+            "content": frame.get("content") or None,
+            "message_id": str(reaction.id) if reaction else None,
+        }
+        if group_id is not None:
+            async with AsyncSessionLocal() as db:
+                recipients = await group_message_service.member_ids(db, group_id)
+            for member in recipients:
+                if member != user_id:
+                    await publish(member, event)
+        elif to is not None:
+            await publish(to, event)
+        # Echoed to the sender's other devices, so a reaction made on a phone
+        # shows on a tablet.
+        await publish(user_id, event)
         return
 
     # ── Group messages ────────────────────────────────────────────────────────

@@ -37,6 +37,29 @@ class TextSent extends ChatEvent {
   List<Object?> get props => [content, replyTo];
 }
 
+/// The user tapped an emoji on a message, or tapped the same one again to
+/// take it back.
+class ReactionToggled extends ChatEvent {
+  const ReactionToggled(this.messageId, this.emoji);
+  final String messageId;
+
+  /// Null clears this device's reaction.
+  final String? emoji;
+
+  @override
+  List<Object?> get props => [messageId, emoji];
+}
+
+/// A reaction arrived from another device or another person.
+class _ReactionReceived extends ChatEvent {
+  const _ReactionReceived(this.targetId, this.senderId, this.emoji);
+  final String targetId;
+  final String senderId;
+  final String? emoji;
+  @override
+  List<Object?> get props => [targetId, senderId, emoji];
+}
+
 /// The user picked a message to reply to, or dismissed the composer preview.
 class ReplyTargetChanged extends ChatEvent {
   const ReplyTargetChanged(this.messageId);
@@ -335,7 +358,13 @@ class ChatRoomState extends Equatable {
           m.tick.index +
           (m.deleted ? 100 : 0) +
           (m.pending ? 1000 : 0) +
-          (m.failed ? 10000 : 0));
+          (m.failed ? 10000 : 0) +
+          // Reactions mutate the message in place, so they are invisible to
+          // Equatable unless they are folded in here — the same trap that hid
+          // the failed marker. The emoji themselves are included, not just the
+          // count, or swapping one reaction for another would not redraw.
+          m.reactions.entries.fold<int>(
+              0, (a, e) => a + e.key.hashCode ^ e.value.hashCode));
 }
 
 // ── Bloc ──────────────────────────────────────────────────────────────────────
@@ -368,6 +397,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     on<ChatOpened>(_onOpened);
     on<TextSent>(_onTextSent);
     on<ReplyTargetChanged>(_onReplyTargetChanged);
+    on<ReactionToggled>(_onReactionToggled);
+    on<_ReactionReceived>(_onReactionReceived);
     on<MediaSent>(_onMediaSent);
     on<TypingChanged>(_onTypingChanged);
     on<MessageUnsent>(_onUnsent);
@@ -531,6 +562,79 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       // conversation the device can already display.
       emit(state.copyWith(loading: false, error: err.toString()));
     }
+  }
+
+  void _onReactionToggled(ReactionToggled e, Emitter<ChatRoomState> emit) {
+    final existing = _reactionOf(e.messageId, myId);
+    // Tapping the same emoji again withdraws it, which is the gesture people
+    // expect and means the picker needs no separate "remove" affordance.
+    final next = existing == e.emoji ? null : e.emoji;
+
+    _applyReaction(e.messageId, myId, next, emit);
+    _ws.sendReaction(
+      target: e.messageId,
+      to: peerId,
+      content: next,
+      clientRef: 'rx_${++_refCounter}',
+    );
+  }
+
+  void _onReactionReceived(_ReactionReceived e, Emitter<ChatRoomState> emit) {
+    _applyReaction(e.targetId, e.senderId, e.emoji, emit);
+  }
+
+  /// Decrypts a reaction's payload, or returns null.
+  ///
+  /// An emoji goes through the same ratchet a message body does — it is
+  /// content, and "somebody laughed at this" is exactly the inference a
+  /// metadata-only adversary wants. A failure yields null, which reads as
+  /// "no reaction" rather than rendering ciphertext as an emoji.
+  Future<String?> _decryptOrNull(String? payload) async {
+    if (payload == null || payload.isEmpty) return null;
+    if (!_encrypted || !SignalService.isEnvelope(payload)) return payload;
+    try {
+      return await _signalService.decrypt(payload, peerId);
+    } on DuplicateMessageException {
+      // Already processed. A reaction is idempotent by nature — the same
+      // person reacting the same way twice is one reaction — so there is
+      // nothing to drop and nothing to apply.
+      return null;
+    } catch (err) {
+      debugPrint('[signal] reaction decrypt failed: $err');
+      return null;
+    }
+  }
+
+  String? _reactionOf(String messageId, String who) {
+    for (final m in state.messages) {
+      if (m.id == messageId) return m.reactions[who];
+    }
+    return null;
+  }
+
+  /// Folds one reaction onto its target and emits.
+  ///
+  /// A reaction for a message this device does not have is dropped rather than
+  /// held: it would be waiting for a message that may never be fetched, and a
+  /// pending-reaction store is a cache nobody would ever invalidate.
+  void _applyReaction(
+    String targetId,
+    String who,
+    String? emoji,
+    Emitter<ChatRoomState> emit,
+  ) {
+    var changed = false;
+    for (final m in state.messages) {
+      if (m.id != targetId) continue;
+      if (emoji == null) {
+        changed = m.reactions.remove(who) != null;
+      } else {
+        changed = m.reactions[who] != emoji;
+        m.reactions[who] = emoji;
+      }
+      break;
+    }
+    if (changed) emit(state.copyWith(messages: [...state.messages]));
   }
 
   void _onReplyTargetChanged(
@@ -705,6 +809,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   Future<void> _onFrame(_FrameReceived e, Emitter<ChatRoomState> emit) async {
     final f = e.frame;
     switch (f['type']) {
+      case 'reaction':
+        add(_ReactionReceived(
+          f['target'] as String,
+          f['from'] as String,
+          // The emoji arrives encrypted like any other content, so it is
+          // decrypted on the way in — the same path a message body takes.
+          await _decryptOrNull(f['content'] as String?),
+        ));
+        return;
       case 'ack':
         final ref = f['client_ref'] as String?;
         final updated = [

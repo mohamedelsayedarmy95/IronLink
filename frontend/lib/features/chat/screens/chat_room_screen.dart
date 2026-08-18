@@ -20,6 +20,7 @@ import '../chat_repository.dart';
 import '../local/message_store.dart';
 import '../widgets/ai_consent_sheet.dart';
 import '../widgets/attach_flow.dart';
+import '../widgets/reaction_bar.dart';
 import '../widgets/reply_quote.dart';
 import '../widgets/encrypted_image.dart';
 import '../widgets/smart_replies.dart';
@@ -928,6 +929,16 @@ class _MessageBubble extends StatelessWidget {
                   ],
                 ],
               ),
+              // Under the message and inside the bubble, so a reaction is
+              // plainly attached to what it reacts to rather than floating
+              // between two of them.
+              ReactionBar(
+                reactions: message.reactions,
+                myId: myId,
+                onToggle: (emoji) => context
+                    .read<ChatBloc>()
+                    .add(ReactionToggled(message.id, emoji)),
+              ),
             ],
           ),
           ),
@@ -938,16 +949,28 @@ class _MessageBubble extends StatelessWidget {
 
   void _showMessageOptions(BuildContext context) {
     final t = L.of(context);
+    final bloc = context.read<ChatBloc>();
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: IronColors.navySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // First, and before any destructive option. Reacting is the most
+            // common reason to hold a message and the least consequential, so
+            // it should not be reached past "delete" and "report".
+            ReactionPicker(
+              selected: message.reactions[myId],
+              onPick: (emoji) {
+                bloc.add(ReactionToggled(message.id, emoji));
+                Navigator.pop(sheetContext);
+              },
+            ),
+            const Divider(height: 1, color: IronColors.navyDeep),
             ListTile(
               leading: const Icon(IronIcons.translate, color: IronColors.gold),
               title: Text(t.translate),

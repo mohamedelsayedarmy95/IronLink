@@ -12,6 +12,8 @@ from app.api.deps import get_current_user
 from app.api.routes.websocket import manager
 from app.core.database import get_db
 from app.models import Message, User
+from app.models.message import MessageType
+from app.services import reaction_service
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -152,6 +154,12 @@ async def message_history(
                 and_(Message.sender_id == peer_id, Message.recipient_id == user.id),
             ),
             Message.is_destructed.is_(False),
+            # Reactions are messages, and they must not consume the page
+            # budget: a message with twenty reactions would push nineteen real
+            # messages off a page of fifty, and the conversation would appear
+            # to have gaps that are not there. They are fetched below, for
+            # exactly the messages this page returned.
+            Message.message_type != MessageType.REACTION.value,
         )
         .order_by(desc(Message.created_at))
         .limit(limit)
@@ -161,4 +169,11 @@ async def message_history(
 
     messages = list((await db.scalars(q)).all())
     messages.reverse()   # chronological for the client
-    return [MessageOut.model_validate(m) for m in messages]
+
+    # Appended to the same list rather than returned in a separate field, so
+    # the response shape is unchanged for a client that predates reactions —
+    # it sees message_type values it does not recognise and ignores them,
+    # which is what an older build should do with a newer server.
+    reactions = await reaction_service.for_messages(db, [m.id for m in messages])
+
+    return [MessageOut.model_validate(m) for m in messages + reactions]

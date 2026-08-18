@@ -35,6 +35,23 @@ class MessageType(str, Enum):
     LOCATION = "location"
     SYSTEM = "system"
 
+    #: A reaction to another message.
+    #:
+    #: Modelled as a message rather than as its own table, deliberately. A
+    #: reaction is *content* — an emoji says something about what was said —
+    #: so it has to be encrypted, and reusing this path means it travels
+    #: through the Signal session or the group's sender key that already
+    #: exists, with the idempotency, fan-out and retraction that come with
+    #: them. Inventing a new table would have meant inventing a new
+    #: cryptographic path alongside it, which is the last thing to do while
+    #: the existing one is still awaiting review (RISK-01).
+    #:
+    #: `reply_to_id` names the message being reacted to. `content_ciphertext`
+    #: holds the emoji, encrypted, so the server stores a reaction it cannot
+    #: read: it knows that somebody reacted to something, which it already
+    #: knew from the conversation graph, and not what they said.
+    REACTION = "reaction"
+
 
 class MessageStatus(str, Enum):
     SENT = "sent"

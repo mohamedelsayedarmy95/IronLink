@@ -23,7 +23,8 @@ class ChatMessage {
     this.encrypted = false,
     this.duration,
     this.waveform,
-  });
+    Map<String, String>? reactions,
+  }) : reactions = reactions ?? <String, String>{};
 
   final String id;
   final String senderId;
@@ -79,6 +80,16 @@ class ChatMessage {
   /// install the original is simply not here, and the bubble says so rather
   /// than rendering an empty quote.
   final String? replyToId;
+
+  /// Who reacted to this message, and with what: sender id → emoji.
+  ///
+  /// Mutable and aggregated on the device. A reaction arrives as its own
+  /// encrypted message and is folded onto its target here, so the server never
+  /// holds a count or a total — it holds individual reactions it cannot read.
+  ///
+  /// One entry per person: reacting again replaces, which is what most people
+  /// expect and what keeps the aggregate legible.
+  final Map<String, String> reactions;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json,
       {required String myId}) {

@@ -310,6 +310,26 @@ class WsService {
 
   // ── Typed helpers ──────────────────────────────────────────────────────────
 
+  /// Sets, changes, or clears this device's reaction to one message.
+  ///
+  /// A null [content] clears it. There is no separate "unreact" frame, so
+  /// there is no second code path that could drift out of step with this one.
+  void sendReaction({
+    required String target,
+    String? to,
+    String? group,
+    String? content,
+    required String clientRef,
+  }) =>
+      send({
+        'type': 'reaction',
+        'target': target,
+        if (to != null) 'to': to,
+        if (group != null) 'group': group,
+        if (content != null) 'content': content,
+        'client_ref': clientRef,
+      });
+
   void sendText({
     required String to,
     required String content,
