@@ -1,5 +1,6 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import '../theme.dart';
 
 /// A glassmorphism card with blurred background and subtle border.
 class GlassCard extends StatelessWidget {
@@ -50,12 +51,6 @@ class GlassCard extends StatelessWidget {
             ? Colors.white.withOpacity(0.1)
             : Colors.white.withOpacity(0.8))
         : backgroundColor;
-    final borderColor = border ??
-        Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.2)
-              : Colors.white.withOpacity(0.3),
-        );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),

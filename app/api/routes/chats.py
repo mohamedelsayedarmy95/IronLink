@@ -12,6 +12,8 @@ from app.api.deps import get_current_user
 from app.api.routes.websocket import manager
 from app.core.database import get_db
 from app.models import Message, User
+from app.models.message import MessageType
+from app.services import reaction_service
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -37,6 +39,15 @@ class MessageOut(BaseModel):
     status: str
     created_at: datetime
     deleted_for_everyone: bool
+
+    #: The message this one answers, or null.
+    #:
+    #: An id and nothing else. The server cannot send the quoted *text* because
+    #: it has never had it — `content_ciphertext` is ciphertext and there is no
+    #: key here. The client resolves the quotation from its own decrypted
+    #: history, and shows "message unavailable" when it cannot, which is the
+    #: honest answer on a fresh install rather than a silent blank.
+    reply_to_id: UUID | None = None
 
 
 @router.get("", response_model=list[ConversationOut])
@@ -91,9 +102,26 @@ async def list_conversations(
             )
         ) or 0
 
+        # No preview from the server, ever.
+        #
+        # This used to return `content_ciphertext[:20]`, and a twenty-character
+        # fragment of a Signal envelope cannot be decrypted by anybody —
+        # including the recipient it was sent to. The conversation list was
+        # rendering that fragment as though it were text.
+        #
+        # It is not a leak; the fragment is as useless to an attacker as it is
+        # to the user. It is a preview that was designed against a model where
+        # the server could read messages, and never revisited when it could
+        # not. The client holds the decrypted history and renders the preview
+        # from there.
+        #
+        # The message *kind* is still worth sending: it lets the list show
+        # "photo" or "voice note" for a conversation the device has no local
+        # copy of, which is the one case the client cannot cover itself.
         preview = None
         if last_msg is not None and not last_msg.deleted_for_everyone:
-            preview = (last_msg.content_ciphertext or f"[{last_msg.message_type}]")[:20]
+            if last_msg.message_type != "text":
+                preview = f"[{last_msg.message_type}]"
 
         out.append(ConversationOut(
             peer_id=peer.id,
@@ -126,6 +154,12 @@ async def message_history(
                 and_(Message.sender_id == peer_id, Message.recipient_id == user.id),
             ),
             Message.is_destructed.is_(False),
+            # Reactions are messages, and they must not consume the page
+            # budget: a message with twenty reactions would push nineteen real
+            # messages off a page of fifty, and the conversation would appear
+            # to have gaps that are not there. They are fetched below, for
+            # exactly the messages this page returned.
+            Message.message_type != MessageType.REACTION.value,
         )
         .order_by(desc(Message.created_at))
         .limit(limit)
@@ -135,4 +169,11 @@ async def message_history(
 
     messages = list((await db.scalars(q)).all())
     messages.reverse()   # chronological for the client
-    return [MessageOut.model_validate(m) for m in messages]
+
+    # Appended to the same list rather than returned in a separate field, so
+    # the response shape is unchanged for a client that predates reactions —
+    # it sees message_type values it does not recognise and ignores them,
+    # which is what an older build should do with a newer server.
+    reactions = await reaction_service.for_messages(db, [m.id for m in messages])
+
+    return [MessageOut.model_validate(m) for m in messages + reactions]

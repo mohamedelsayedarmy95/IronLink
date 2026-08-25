@@ -14,6 +14,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -33,6 +34,23 @@ class MessageType(str, Enum):
     FILE = "file"
     LOCATION = "location"
     SYSTEM = "system"
+
+    #: A reaction to another message.
+    #:
+    #: Modelled as a message rather than as its own table, deliberately. A
+    #: reaction is *content* — an emoji says something about what was said —
+    #: so it has to be encrypted, and reusing this path means it travels
+    #: through the Signal session or the group's sender key that already
+    #: exists, with the idempotency, fan-out and retraction that come with
+    #: them. Inventing a new table would have meant inventing a new
+    #: cryptographic path alongside it, which is the last thing to do while
+    #: the existing one is still awaiting review (RISK-01).
+    #:
+    #: `reply_to_id` names the message being reacted to. `content_ciphertext`
+    #: holds the emoji, encrypted, so the server stores a reaction it cannot
+    #: read: it knows that somebody reacted to something, which it already
+    #: knew from the conversation graph, and not what they said.
+    REACTION = "reaction"
 
 
 class MessageStatus(str, Enum):
@@ -83,6 +101,21 @@ class Message(Base):
     message_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default=MessageType.TEXT
     )
+    #: The sender's own id for this message, used to make delivery idempotent.
+    #:
+    #: A client that loses the socket after the server stored a message but
+    #: before the ack arrived has no way to know which happened, so it resends
+    #: on reconnect — that is the correct behaviour for a client, and it is
+    #: why the server has to be the one that refuses to store it twice.
+    #: Without this the resend became a second message, and the recipient saw
+    #: the same thing said twice.
+    #:
+    #: Unique per sender rather than globally: two people can independently
+    #: generate "ref_3".
+    client_ref: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+
     content_ciphertext: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -166,6 +199,15 @@ class Message(Base):
     #   2. Fetch group messages with pagination                    → ix_msg_group_conv
     #   3. Cleanup worker: find expired self-destruct messages     → ix_msg_destruct
     __table_args__ = (
+        # One message per (sender, client_ref). Partial, because client_ref is
+        # optional: older clients and server-generated messages have none, and
+        # they must not all collide on NULL.
+        Index(
+            "uq_msg_sender_client_ref",
+            "sender_id", "client_ref",
+            unique=True,
+            postgresql_where=text("client_ref IS NOT NULL"),
+        ),
         Index(
             "ix_msg_dm_conv",
             "sender_id", "recipient_id", "created_at",

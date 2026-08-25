@@ -1,58 +1,78 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../../../core/api_client.dart';
+import '../../../core/env.dart';
+import '../../../core/theme.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../l10n/app_localizations.dart';
 import '../bloc/channel_bloc.dart';
 import '../widgets/channel_card.dart';
+import '../../../core/icons.dart';
 
 class ChannelListScreen extends StatelessWidget {
-  const ChannelListScreen({Key? key}) : super(key: key);
+  const ChannelListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     return Scaffold(
+      backgroundColor: IronColors.navyDeep,
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.channels),
+        backgroundColor: IronColors.navySurface,
+        elevation: 0,
+        shape: const Border(bottom: BorderSide(color: IronColors.navyBorder)),
+        title: Text(
+          t.channelsTitle,
+          style: const TextStyle(color: IronColors.gold, fontWeight: FontWeight.w700),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: AppLocalizations.of(context)!.createChannel,
+            icon: const Icon(IronIcons.add, color: IronColors.gold),
+            tooltip: t.createChannel,
             onPressed: () {
-              // Navigate to create channel screen
-              // TODO: Implement create channel screen
+              // TODO: create-channel screen not built yet.
             },
           ),
         ],
       ),
       body: BlocProvider(
         create: (_) => ChannelBloc(
-          baseUrl: 'http://localhost:8000', // TODO: Get from config
-          token: '', // TODO: Get token from auth state
+          baseUrl: Env.apiBaseUrl,
+          api: context.read<ApiClient>(),
         )..add(ChannelFetchStarted()),
         child: BlocBuilder<ChannelBloc, ChannelState>(
           builder: (context, state) {
             if (state is ChannelLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                  child: CircularProgressIndicator(color: IronColors.gold));
             } else if (state is ChannelFetchFailure) {
-              return Center(
-                child: Text(state.error),
+              // state.error holds raw transport text; the user sees a cause
+              // they can act on instead.
+              return IronErrorState(
+                title: t.channelsLoadFailedTitle,
+                message: t.failureServer,
+                retryLabel: t.retry,
+                onRetry: () =>
+                    context.read<ChannelBloc>().add(ChannelFetchStarted()),
               );
             } else if (state is ChannelFetchSuccess) {
               final channels = state.channels;
               if (channels.isEmpty) {
-                return Center(
-                  child: Text(AppLocalizations.of(context)!.noChannelsFound),
+                return IronEmptyState(
+                  title: t.noChannelsYet,
+                  message: t.noChannelsYetHint,
+                  rings: 4,
                 );
               }
-              return ListView.builder(
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
                 itemCount: channels.length,
-                itemBuilder: (context, index) {
-                  final channel = channels[index];
-                  return ChannelCard(channel: channel);
-                },
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) =>
+                    ChannelCard(channel: channels[index]),
               );
-            } else {
-              return const Container();
             }
+            return const SizedBox.shrink();
           },
         ),
       ),

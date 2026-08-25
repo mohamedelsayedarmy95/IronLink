@@ -19,6 +19,7 @@ from app.models import (
 )
 from app.models.audit_log import AuditAction
 from app.models.group import GroupRole, JoinRequestStatus
+from app.services import group_message_service
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -36,6 +37,11 @@ class GroupOut(BaseModel):
     join_approval_required: bool
     member_count: int = 0
     my_role: str | None = None
+
+    #: Membership version. A client compares this against the epoch its
+    #: sender key was minted for and rotates when they differ — which is
+    #: what stops a removed member reading anything further.
+    members_epoch: int = 1
 
 
 class MemberOut(BaseModel):
@@ -183,6 +189,82 @@ async def group_members(
     ]
 
 
+@router.delete(
+    "/{group_id}/members/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+async def leave_group(
+    group_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Leave a group.
+
+    An owner cannot simply walk out: a group with no owner has nobody who
+    can manage members or wind it up, so ownership has to be handed over
+    first.
+    """
+    member = await _membership(db, group_id, user.id)
+    if member is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not a member")
+    if member.role == GroupRole.OWNER:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "transfer ownership before leaving",
+        )
+
+    await db.delete(member)
+    # Remaining senders rotate, so nothing said after this point is readable
+    # with the keys this member is walking away with.
+    await group_message_service.bump_epoch(db, group_id)
+    await db.commit()
+
+
+@router.delete(
+    "/{group_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+async def remove_member(
+    group_id: UUID,
+    user_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Remove someone from a group."""
+    actor = await _require_admin_member(db, group_id, user.id)
+
+    target = await _membership(db, group_id, user_id)
+    if target is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not a member")
+    if target.user_id == actor.user_id:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "use leave to remove yourself",
+        )
+    # An owner outranks every admin; without this, one admin could remove
+    # the person who appointed them.
+    if target.role == GroupRole.OWNER:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "the owner cannot be removed"
+        )
+
+    await db.delete(target)
+    db.add(AuditLog(
+        actor_id=user.id,
+        actor_role=user.role,
+        action=AuditAction.GROUP_MEMBER_REMOVED,
+        resource_type="group",
+        resource_id=str(group_id),
+        metadata_={"removed_member": str(user_id)},
+        success=True,
+    ))
+    # Removing the row does not remove their access — see bump_epoch.
+    await group_message_service.bump_epoch(db, group_id)
+    await db.commit()
+
+
 @router.post("/{group_id}/join", response_model=JoinRequestOut, status_code=status.HTTP_201_CREATED)
 async def request_join(
     group_id: UUID,
@@ -211,6 +293,10 @@ async def request_join(
             group_id=group_id, user_id=user.id,
             role=GroupRole.MEMBER, joined_at=datetime.now(timezone.utc),
         ))
+        # Tells existing members to mint a new sender key, so the arrival
+        # gets one. Without it a new member sits in the group unable to read
+        # anything, with nothing indicating why.
+        await group_message_service.bump_epoch(db, group_id)
 
     req = existing or GroupJoinRequest(group_id=group_id, user_id=user.id)
     req.message = body.message
@@ -282,6 +368,7 @@ async def decide_request(
             metadata_={"new_member": str(req.user_id)},
             success=True,
         ))
+        await group_message_service.bump_epoch(db, group_id)
     await db.commit()
     await db.refresh(req)
     return JoinRequestOut.model_validate(req)

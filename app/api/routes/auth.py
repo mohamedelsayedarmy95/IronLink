@@ -5,13 +5,21 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.api.schemas import (
+    DeleteAccountIn,
+    FirebaseRegisterIn,
+    FirebaseVerifyIn,
+    RefreshIn,
+    RefreshOut,
+    RegisterOut,
     RequestOtpIn,
     RequestOtpOut,
+    SecurityEventOut,
     SessionOut,
     UserOut,
     VerifyIn,
@@ -21,15 +29,24 @@ from app.api.schemas import (
 from app.config import settings
 from app.core.database import get_db
 from app.core.redis import redis_otp, redis_sessions
+import structlog
+
 from app.core.security import (
+    constant_time_compare,
     create_access_token,
+    decode_access_token,
     generate_refresh_token,
+    hash_military_id,
+    hash_password,
     hash_refresh_token,
     verify_military_id,
 )
 from app.models import AuditLog, User, UserSession
 from app.models.audit_log import AuditAction
-from app.models.user import UserStatus
+from app.models.user import UserRole, UserStatus
+
+logger = structlog.get_logger("auth")
+from app.services import account_deletion, push_service
 from app.services.otp_service import OtpService
 from app.services.sms_gateway import SmsGateway
 
@@ -82,13 +99,46 @@ async def request_otp(
 
     user = await db.scalar(select(User).where(User.phone_number == body.phone_number))
 
+    # Dev bypass: provision unknown numbers so the app is reachable without an
+    # SMS provider or a registration endpoint. Gated in config; see _dev_user.
+    if settings.DEV_AUTH_BYPASS and user is None:
+        user = await _provision_dev_user(db, body.phone_number)
+
     # Fable5-Enhancement: the response is IDENTICAL whether the user exists or not,
     # and takes a comparable code path — no user-enumeration oracle via timing or body.
     if user is not None and user.status == UserStatus.ACTIVE:
         code = await OtpService(redis_otp).issue(user.id)
-        await SmsGateway().send_otp(body.phone_number, code)
+        if settings.DEV_AUTH_BYPASS:
+            # No SMS provider exists, and SmsGateway raises outside development.
+            # The code is not logged — DEV_OTP_CODE is what /auth/verify accepts.
+            logger.warning("dev_auth_bypass_otp_skipped", phone=body.phone_number[:5] + "****")
+        else:
+            await SmsGateway().send_otp(body.phone_number, code)
 
     return RequestOtpOut(retry_after_seconds=retry_after)
+
+
+async def _provision_dev_user(db: AsyncSession, phone_number: str) -> User:
+    """Create a throwaway ACTIVE user for the dev bypass.
+
+    hashed_military_id and hashed_password are NOT NULL, so they get random
+    values rather than a shared constant — the bypass skips both checks anyway,
+    and a predictable hash would still be a real credential if the bypass were
+    ever switched off with these rows left behind.
+    """
+    user = User(
+        phone_number=phone_number,
+        full_name=f"Dev User {phone_number[-4:]}",
+        hashed_military_id=hash_military_id(secrets.token_hex(16)),
+        hashed_password=hash_password(secrets.token_hex(16)),
+        status=UserStatus.ACTIVE,
+        role=UserRole.SOLDIER,
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+    logger.warning("dev_auth_bypass_user_provisioned", user_id=str(user.id))
+    return user
 
 
 @router.post("/verify", response_model=VerifyOut)
@@ -113,11 +163,19 @@ async def verify(
     if user.expiry_date is not None and user.expiry_date < datetime.now(timezone.utc).date():
         raise generic_error
 
-    # 1. OTP — consumed on success, burned after max attempts
-    otp_ok = await OtpService(redis_otp).verify(user.id, body.otp_code)
+    if settings.DEV_AUTH_BYPASS:
+        # Fixed code, no military-ID check. constant_time_compare keeps the
+        # comparison uniform even here, so the bypass path does not become a
+        # timing oracle if someone leaves it on by mistake.
+        otp_ok = constant_time_compare(body.otp_code, settings.DEV_OTP_CODE)
+        mil_ok = True
+        logger.warning("dev_auth_bypass_verify", user_id=str(user.id), accepted=otp_ok)
+    else:
+        # 1. OTP — consumed on success, burned after max attempts
+        otp_ok = await OtpService(redis_otp).verify(user.id, body.otp_code)
 
-    # 2. Military ID against the bcrypt hash
-    mil_ok = verify_military_id(body.military_id, user.hashed_military_id)
+        # 2. Military ID against the bcrypt hash
+        mil_ok = verify_military_id(body.military_id, user.hashed_military_id)
 
     if not (otp_ok and mil_ok):
         db.add(AuditLog(
@@ -132,22 +190,237 @@ async def verify(
         await db.commit()
         raise generic_error
 
+    return await _issue_login(db, user, body.device_fingerprint, ip, user_agent)
+
+
+@router.post("/verify-firebase", response_model=VerifyOut)
+async def verify_firebase(
+    body: FirebaseVerifyIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> VerifyOut:
+    """Firebase Phone Auth path: the client verifies phone ownership with
+    Firebase client-side (SMS code) and hands us the resulting ID token. We
+    verify it server-side — never trust a client-supplied phone number — then
+    still require the military ID as the app's own second factor, exactly like
+    /verify. This replaces OTP delivery, not the military-ID check."""
+    ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")[:512]
+
+    generic_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Verification failed. Check your code and credentials.",
+    )
+
+    if not push_service.ensure_initialized():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone verification is temporarily unavailable.",
+        )
+
+    from firebase_admin import auth as firebase_auth
+
+    try:
+        decoded = firebase_auth.verify_id_token(body.id_token)
+    except Exception as exc:
+        # Expired, revoked, malformed, wrong-project — all collapse to the same
+        # generic 401 so the failure mode can't be used to fingerprint the cause.
+        logger.warning("firebase_id_token_rejected", error=str(exc))
+        raise generic_error
+
+    phone_number = decoded.get("phone_number")
+    if not phone_number:
+        # A Firebase ID token from a different sign-in method (no phone claim).
+        logger.warning("firebase_id_token_missing_phone", uid=decoded.get("uid"))
+        raise generic_error
+
+    user = await db.scalar(select(User).where(User.phone_number == phone_number))
+
+    # Told plainly rather than folded into the generic failure. The caller has
+    # just proved they control this number, so "your code is wrong" would be
+    # both false and impossible to act on — they would retry the SMS forever.
+    if user is not None and user.status == UserStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account is waiting for approval.",
+        )
+
+    if user is None or user.status != UserStatus.ACTIVE:
+        raise generic_error
+
+    if user.expiry_date is not None and user.expiry_date < datetime.now(timezone.utc).date():
+        raise generic_error
+
+    mil_ok = verify_military_id(body.military_id, user.hashed_military_id)
+    if not mil_ok:
+        db.add(AuditLog(
+            actor_id=user.id,
+            actor_role=user.role,
+            action=AuditAction.LOGIN_FAILED,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=False,
+            error_code="firebase_mid_mismatch",
+        ))
+        await db.commit()
+        raise generic_error
+
+    return await _issue_login(db, user, body.device_fingerprint, ip, user_agent)
+
+
+@router.post("/register-firebase", response_model=RegisterOut)
+async def register_firebase(
+    body: FirebaseRegisterIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> RegisterOut:
+    """Register a new account from a verified phone number.
+
+    This is what makes the app usable by anyone with a real number, instead
+    of only by accounts seeded by hand.
+
+    The number is read out of the Firebase ID token, never from the request
+    body, so registering requires actually controlling the number. The
+    military ID is *set* here — it is the account's second factor from now
+    on, not evidence of anything by itself.
+    """
+    ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")[:512]
+
+    if not settings.SELF_REGISTRATION_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is closed. Contact your administrator.",
+        )
+
+    if not push_service.ensure_initialized():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone verification is temporarily unavailable.",
+        )
+
+    from firebase_admin import auth as firebase_auth
+
+    try:
+        decoded = firebase_auth.verify_id_token(body.id_token)
+    except Exception as exc:
+        logger.warning("firebase_id_token_rejected", error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Verification failed. Request a new code and try again.",
+        ) from None
+
+    phone_number = decoded.get("phone_number")
+    if not phone_number:
+        logger.warning("firebase_id_token_missing_phone", uid=decoded.get("uid"))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Verification failed. Request a new code and try again.",
+        )
+
+    # A ban survives the account it was placed on, keyed on a salted hash of
+    # the number — see app/services/account_deletion.py. Checked here because a
+    # retained ban that registration ignores is a record of something nothing
+    # enforces, and evading it would be exactly the one step the retention
+    # exists to prevent: delete, register the same number again.
+    #
+    # The refusal is deliberately not specific. Telling someone which of "you
+    # are banned" and "this number is taken" applies would let anyone probe for
+    # who has been banned.
+    if await account_deletion.is_phone_banned(db, phone_number):
+        logger.warning("registration_refused", reason="banned_phone")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This number cannot be registered. Contact your administrator.",
+        )
+
+    existing = await db.scalar(
+        select(User).where(User.phone_number == phone_number)
+    )
+    if existing is not None:
+        # Says the number is taken rather than pretending to register it.
+        # This is not an enumeration leak worth hiding: the caller has just
+        # proved they control this number, so they are entitled to know
+        # whether it already has an account.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This number already has an account. Sign in instead.",
+        )
+
+    approved = settings.SELF_REGISTRATION_AUTO_APPROVE
+    user = User(
+        phone_number=phone_number,
+        full_name=body.full_name,
+        hashed_military_id=hash_military_id(body.military_id),
+        # Never used on this path — Firebase proves the phone, the military ID
+        # is the second factor — but the column is NOT NULL, and a shared
+        # constant here would be a real credential if password login were ever
+        # switched on.
+        hashed_password=hash_password(secrets.token_hex(32)),
+        status=UserStatus.ACTIVE if approved else UserStatus.PENDING,
+        role=UserRole.SOLDIER,
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+
+    db.add(AuditLog(
+        actor_id=user.id,
+        actor_role=user.role,
+        action=AuditAction.LOGIN_SUCCESS if approved else AuditAction.LOGIN_FAILED,
+        ip_address=ip,
+        user_agent=user_agent,
+        success=approved,
+        error_code=None if approved else "registration_pending_approval",
+    ))
+    await db.commit()
+
+    logger.info(
+        "self_registration",
+        user_id=str(user.id),
+        approved=approved,
+    )
+
+    if not approved:
+        return RegisterOut(approved=False)
+
+    return RegisterOut(
+        approved=True,
+        session=await _issue_login(
+            db, user, body.device_fingerprint, ip, user_agent
+        ),
+    )
+
+
+async def _issue_login(
+    db: AsyncSession,
+    user: User,
+    device_fingerprint: str,
+    ip: str,
+    user_agent: str,
+) -> VerifyOut:
+    """Shared by /verify and /verify-firebase once credentials are confirmed:
+    rotate token_version, open a session, and audit-log the login."""
     # Fable5-Enhancement: device fingerprint change is NOT a hard block (users
     # legitimately change phones) but IS recorded as a security event so the
     # admin dashboard can flag anomalous device migrations.
     fingerprint_changed = (
         user.device_fingerprint is not None
-        and user.device_fingerprint != body.device_fingerprint
+        and user.device_fingerprint != device_fingerprint
     )
-    user.device_fingerprint = body.device_fingerprint
-
-    # 3. Rotate token_version — invalidates ALL previously issued tokens
-    user.token_version += 1
+    user.device_fingerprint = device_fingerprint
     user.last_seen_at = datetime.now(timezone.utc)
 
-    access_token = create_access_token(user.id, user.token_version, user.role)
-    refresh_token = generate_refresh_token()
+    # token_version is deliberately NOT bumped here.
+    #
+    # It used to be, which invalidated every other device's token on each
+    # sign-in — so adding a tablet silently signed you out on your phone.
+    # That contradicted this file's own remote-kick design, where "other
+    # devices of the same user are untouched". Per-device revocation is now
+    # the session's job (see get_current_user); token_version stays as the
+    # account-wide lever for a compromise.
 
+    refresh_token = generate_refresh_token()
     session = UserSession(
         user_id=user.id,
         refresh_token_hash=hash_refresh_token(refresh_token),
@@ -157,6 +430,13 @@ async def verify(
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
     db.add(session)
+    # Flushed before minting: the token carries the session id, so the row
+    # has to exist first.
+    await db.flush()
+
+    access_token = create_access_token(
+        user.id, user.token_version, user.role, session.id
+    )
 
     db.add(AuditLog(
         actor_id=user.id,
@@ -197,6 +477,165 @@ async def verify(
 WS_TICKET_TTL_SECONDS = 30
 
 
+@router.post("/refresh", response_model=RefreshOut)
+async def refresh_access_token(
+    body: RefreshIn,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> RefreshOut:
+    """Exchange a refresh token for a new access token.
+
+    This endpoint did not exist. Access tokens live an hour, so without it
+    every user was signed out after sixty minutes and had to redo SMS
+    verification — the refresh token was generated, hashed, stored on both
+    sides, and then never used by anything.
+
+    The refresh token is rotated on each use rather than reused. That makes a
+    stolen one usable at most once, and it makes the theft detectable: if a
+    token that has already been exchanged is presented again, either the
+    thief or the legitimate device is replaying it, and there is no way to
+    tell which. The session is revoked, which signs that device out and
+    forces a fresh login. Being signed out is a smaller harm than an attacker
+    holding a renewable session.
+    """
+    ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")[:512]
+
+    invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Session expired. Sign in again.",
+    )
+
+    now = datetime.now(timezone.utc)
+    token_hash = hash_refresh_token(body.refresh_token)
+
+    session = await db.scalar(
+        select(UserSession).where(UserSession.refresh_token_hash == token_hash)
+    )
+
+    if session is None:
+        # Not the live token. If it is the one this session just replaced,
+        # somebody is replaying an already-exchanged token — either a thief
+        # or the real device, and there is no way to tell which. The session
+        # is revoked, which costs one re-login and denies an attacker a
+        # renewable foothold.
+        replayed = await db.scalar(
+            select(UserSession).where(
+                UserSession.previous_refresh_token_hash == token_hash,
+                UserSession.revoked_at.is_(None),
+            )
+        )
+        if replayed is not None:
+            replayed.revoked_at = now
+            db.add(AuditLog(
+                actor_id=replayed.user_id,
+                action=AuditAction.SESSION_REVOKED,
+                resource_type="user_session",
+                resource_id=str(replayed.id),
+                ip_address=ip,
+                user_agent=user_agent,
+                success=False,
+                error_code="refresh_token_reuse",
+            ))
+            await db.commit()
+            logger.warning(
+                "refresh_token_reuse", session_id=str(replayed.id)
+            )
+        raise invalid
+
+    expires_at = session.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if session.revoked_at is not None or expires_at <= now:
+        raise invalid
+
+    user = await db.scalar(select(User).where(User.id == session.user_id))
+    if user is None or user.status != UserStatus.ACTIVE:
+        raise invalid
+
+    new_refresh = generate_refresh_token()
+    session.previous_refresh_token_hash = session.refresh_token_hash
+    session.refresh_token_hash = hash_refresh_token(new_refresh)
+    session.last_active_at = now
+    # Sliding expiry: a device in daily use should not be signed out on the
+    # seventh day for no reason.
+    session.expires_at = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    user.last_seen_at = now
+    await db.commit()
+
+    return RefreshOut(
+        access_token=create_access_token(
+            user.id, user.token_version, user.role, session.id
+        ),
+        refresh_token=new_refresh,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
+@router.post(
+    "/logout", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
+async def logout(
+    request: Request,
+    creds: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Sign out this device.
+
+    Revokes only the session the caller is holding, which is now meaningful:
+    the access token names its session, so this takes effect on the very next
+    request rather than whenever the token happened to expire.
+
+    Other devices are untouched — signing out of a phone should not sign you
+    out of a tablet. Use token_version for the account-wide case.
+
+    The client is responsible for erasing local state (message cache, Signal
+    keys); the server cannot reach it. See SignOutService on the client.
+    """
+    ip = request.client.host if request.client else "unknown"
+
+    payload = decode_access_token(creds.credentials) if creds else None
+    session_id = UUID(payload["sid"]) if payload and "sid" in payload else None
+    if session_id is None:
+        return
+
+    session = await db.scalar(
+        select(UserSession).where(
+            UserSession.id == session_id,
+            UserSession.user_id == user.id,
+            UserSession.revoked_at.is_(None),
+        )
+    )
+    if session is None:
+        # Already gone. Signing out twice is not an error worth reporting.
+        return
+
+    session.revoked_at = datetime.now(timezone.utc)
+    db.add(AuditLog(
+        actor_id=user.id,
+        actor_role=user.role,
+        action=AuditAction.SESSION_REVOKED,
+        resource_type="user_session",
+        resource_id=str(session.id),
+        ip_address=ip,
+        success=True,
+        metadata_={"reason": "user_signed_out"},
+    ))
+    await db.commit()
+
+
+@router.get("/me", response_model=UserOut)
+async def me(user: User = Depends(get_current_user)) -> UserOut:
+    """The signed-in user, for restoring a session on launch.
+
+    Without this the app has no way to tell a stored token that still works
+    from one that does not, so it cannot safely skip the login screen — which
+    is why it was asking for an SMS code on every single launch.
+    """
+    return UserOut.model_validate(user)
+
+
 @router.post("/ws-ticket", response_model=WsTicketOut)
 async def create_ws_ticket(user: User = Depends(get_current_user)) -> WsTicketOut:
     ticket = secrets.token_urlsafe(32)
@@ -213,6 +652,69 @@ async def create_ws_ticket(user: User = Depends(get_current_user)) -> WsTicketOu
 
 
 # ── Multi-device session management ──────────────────────────────────────────
+
+@router.get("/security-events", response_model=list[SecurityEventOut])
+async def security_events(
+    limit: int = 30,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[SecurityEventOut]:
+    """This account's recent security history — IronShield's activity feed.
+
+    WHAT THIS DELIBERATELY CANNOT RETURN
+
+    Only events whose actor is the caller, and only from a fixed list of
+    auth-related actions. Not "audit rows about this user": an admin action
+    *on* an account is a different thing from the account's own history, and
+    conflating them would turn a personal security screen into a leak of
+    moderation activity.
+
+    The projection is narrower still — action, time, IP, device class. No
+    resource ids, no descriptions, no before/after state. AuditLog rows can
+    carry all of those for other event types, and a security feed that
+    returned the row wholesale would eventually surface one.
+
+    Sorting is newest-first because the question this answers is "did
+    something just happen", not "what is my history".
+    """
+    watched = [
+        AuditAction.LOGIN_SUCCESS,
+        AuditAction.LOGIN_FAILED,
+        AuditAction.LOGOUT,
+        AuditAction.SESSION_REVOKED,
+        AuditAction.DEVICE_FINGERPRINT_CHANGED,
+        AuditAction.SUSPICIOUS_LOGIN,
+        AuditAction.MFA_FAILED,
+        AuditAction.RATE_LIMIT_HIT,
+        AuditAction.FORCE_DISCONNECT,
+    ]
+
+    rows = (await db.scalars(
+        select(AuditLog)
+        .where(
+            AuditLog.actor_id == user.id,
+            AuditLog.action.in_([a.value for a in watched]),
+            # An event the caller did not cause is not their security history.
+            AuditLog.impersonator_id.is_(None),
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(max(1, min(limit, 100)))
+    )).all()
+
+    return [
+        SecurityEventOut(
+            action=row.action,
+            created_at=row.created_at,
+            ip_address=row.ip_address,
+            device_type=_classify_device(row.user_agent),
+            success=row.success,
+            # Written at login time by _issue_login, which is the only place
+            # that knows what the previous fingerprint was.
+            new_device=bool((row.metadata_ or {}).get("fingerprint_changed")),
+        )
+        for row in rows
+    ]
+
 
 @router.get("/sessions", response_model=list[SessionOut])
 async def list_sessions(
@@ -232,7 +734,7 @@ async def list_sessions(
     return [SessionOut.model_validate(s) for s in sessions]
 
 
-@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def revoke_session(
     session_id: UUID,
     user: User = Depends(get_current_user),
@@ -283,3 +785,60 @@ def _classify_device(user_agent: str) -> str:
     if any(k in ua for k in ("windows", "macintosh", "linux")):
         return "desktop"
     return "unknown"
+
+@router.delete("/me", status_code=status.HTTP_200_OK)
+async def delete_my_account(
+    body: DeleteAccountIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    """Erases the caller's account.
+
+    RE-AUTHENTICATION, NOT A GRACE PERIOD
+
+    A bearer token is not enough. Deletion is the one irreversible action in
+    the product, and a session token is exactly what an attacker holding a
+    borrowed or stolen phone has. So the caller must present a *fresh* Firebase
+    phone-verification token: they have to be able to receive an SMS on the
+    number right now.
+
+    The alternative protection — a thirty-day recovery window — is common and
+    is wrong for this product. Someone deleting an account here is often doing
+    it because they are at risk, and "we kept everything for a month in case
+    you change your mind" is the opposite of what they asked for.
+
+    WHAT COMES BACK
+
+    A list of what was retained. Today that is a platform ban, if one exists,
+    kept as a salted hash of the phone number so it cannot be evaded by
+    deleting and re-registering. The user is told, in the response and in the
+    interface, because a retention someone is told about is a policy and the
+    same retention unmentioned is a broken promise.
+    """
+    generic_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Verification failed. Sign in again and retry.",
+    )
+
+    if not push_service.ensure_initialized():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone verification is temporarily unavailable.",
+        )
+
+    from firebase_admin import auth as firebase_auth
+
+    try:
+        decoded = firebase_auth.verify_id_token(body.id_token)
+    except Exception as exc:
+        logger.warning("account_delete_token_rejected", error=str(exc))
+        raise generic_error
+
+    # The token must belong to *this* account. Without this check a valid token
+    # for any number would delete whichever account the bearer token named,
+    # which turns two weak proofs into no proof at all.
+    if decoded.get("phone_number") != user.phone_number:
+        logger.warning("account_delete_token_mismatch", user_id=str(user.id))
+        raise generic_error
+
+    return await account_deletion.delete_account(db, user)

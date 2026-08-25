@@ -1,0 +1,51 @@
+{
+  "_comment": [
+    "PLACEHOLDER FOR CI ONLY. Every value here is fake.",
+    "",
+    "The real google-services.json is gitignored, so a CI runner has no Firebase",
+    "configuration and the Google Services Gradle plugin refuses to configure the",
+    "project at all: 'File google-services.json is missing.' That blocked the",
+    "Android build job outright, which meant the entire native surface of this app",
+    "stayed unverified for want of a config file.",
+    "",
+    "The workflow copies this into place before building. What that verifies is",
+    "real: Gradle configuration, Kotlin and Java compilation, every native plugin,",
+    "R8 shrinking, and asset bundling. What it cannot verify is anything that talks",
+    "to Firebase, because none of these identifiers exist.",
+    "",
+    "Which is why the CI job does not publish the APK it builds. An artifact with",
+    "this file baked in would look like a working build and fail at sign-in, and",
+    "someone would spend an afternoon on it. Build the shippable APK where the real",
+    "config lives.",
+    "",
+    "package_name must match applicationId in app/build.gradle.kts or the plugin",
+    "rejects the file. That is the one value here that is not arbitrary."
+  ],
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "ironlink-ci-placeholder",
+    "storage_bucket": "ironlink-ci-placeholder.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "com.ironlink.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaPLACEHOLDER0000000000000000000000000"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

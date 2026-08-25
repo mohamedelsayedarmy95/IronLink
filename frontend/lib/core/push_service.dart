@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api_client.dart';
-import 'env.dart';
 
 /// FCM wiring: token registration + notification-tap routing.
 ///
@@ -28,19 +27,11 @@ class PushService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    try {
-      await Firebase.initializeApp(
-        options: FirebaseOptions(
-          apiKey: Env.firebaseApiKey,
-          appId: Env.firebaseAppId,
-          messagingSenderId: Env.firebaseMessagingSenderId,
-          projectId: Env.firebaseProjectId,
-        ),
-      );
-    } catch (_) {
-      // No Firebase config yet (local dev) — push silently disabled.
-      return;
-    }
+    // Firebase itself is initialized once in main() — Phone Auth on the login
+    // screen needs it before this ever runs (it only runs post-login). If
+    // that init failed (no config in local dev), Firebase.apps is empty and
+    // push stays silently disabled.
+    if (Firebase.apps.isEmpty) return;
 
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission(

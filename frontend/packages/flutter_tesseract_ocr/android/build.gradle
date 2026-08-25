@@ -1,0 +1,78 @@
+// Vendored from flutter_tesseract_ocr 0.4.31. See ../VENDORING.md for why.
+//
+// WHAT CHANGED FROM UPSTREAM, AND WHY EACH CHANGE WAS NECESSARY
+//
+// 1. The `buildscript` block is gone. Upstream declared its own
+//    `classpath 'com.android.tools.build:gradle:7.1.2'`, which fights the
+//    root project's AGP 9.0.1. A Flutter plugin does not need to resolve its
+//    own Android Gradle Plugin; the app's build supplies it.
+//
+// 2. `jcenter()` is gone. **This was the actual blocker.** Gradle removed the
+//    method outright and JCenter shut down in 2021, so the upstream script
+//    could not even be *evaluated*:
+//
+//        Could not find method jcenter() for arguments []
+//
+//    Every downstream error — including the "kotlin-android plugin requires one
+//    of the Android Gradle plugins" that looked like an AGP incompatibility —
+//    was a consequence of evaluation dying here.
+//
+// 3. `flatDir` is gone, and so is the AAR. Upstream reached into this project
+//    from `rootProject.allprojects` to add a flat-directory repository to every
+//    module in the consuming app, then pulled the AAR out of it.
+//
+//    Replacing that with a plain `files('libs/x.aar')` dependency does not work
+//    either — AGP builds this plugin as an AAR and refuses:
+//
+//        Direct local .aar file dependencies are not supported when building an
+//        AAR. The resulting AAR would be broken because the classes and Android
+//        resources from any local .aar file dependencies would not be packaged.
+//
+//    Which is precisely the restriction upstream's flatDir hack existed to dodge,
+//    and it is a real one: the nested AAR's contents genuinely would be dropped.
+//
+//    So the AAR is unpacked into the two things AGP supports natively — a jar of
+//    classes, and .so files under src/main/jniLibs, which the packager picks up
+//    for each ABI on its own. Same bytes, supported layout, no workaround.
+//
+// 4. `compileSdkVersion`/`minSdkVersion` became `compileSdk`/`minSdk`, the
+//    non-deprecated spellings, and the values follow the app rather than being
+//    pinned here — a plugin pinning compileSdk 34 under an app targeting later
+//    is how "duplicate class" and manifest-merger surprises start.
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'io.paratoner.flutter_tesseract_ocr'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 21
+    }
+
+    // The upstream package ships a prebuilt AAR containing .so files for four
+    // ABIs. Nothing here strips or re-signs them.
+    lint {
+        disable 'InvalidPackage'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Tesseract4Android's Java classes. A jar is a supported local dependency
+    // where a nested AAR is not.
+    //
+    // Not fetched from a remote: Tesseract4Android is not on Maven Central, and
+    // the alternative is JitPack, which builds arbitrary GitHub repositories on
+    // demand. For a product whose premise is a trustworthy channel, a fixed
+    // artifact whose hash is recorded in VENDORING.md is the better of two
+    // imperfect options.
+    implementation files('libs/tesseract4android.jar')
+
+    // The native libraries that jar calls into live in src/main/jniLibs and are
+    // packaged automatically, per ABI. They are not declared here because they
+    // are not dependencies — they are resources of this module.
+}

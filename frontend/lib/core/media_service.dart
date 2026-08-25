@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import 'api_client.dart';
+import 'crypto/attachment_crypto.dart';
+import 'media/metadata_scrubber.dart';
 
 class UploadResult {
   const UploadResult({
@@ -26,13 +28,103 @@ class UploadResult {
 /// [resumeUploadId] asks the server which chunks it already has and sends
 /// only the missing ones.
 class MediaService {
-  MediaService(this._api);
+  MediaService(this._api, [AttachmentCrypto? crypto, MetadataScrubber? scrub])
+      : _crypto = crypto ?? AttachmentCrypto(),
+        _scrub = scrub ?? const MetadataScrubber();
 
   final ApiClient _api;
+  final AttachmentCrypto _crypto;
+  final MetadataScrubber _scrub;
+
+  /// Reads a file and removes its identifying metadata.
+  ///
+  /// This sits here, in the one place both upload paths pass through, rather
+  /// than at the four call sites that pick files. A privacy guarantee enforced
+  /// at the call sites is a guarantee that lasts until somebody adds a fifth,
+  /// and the fifth one is the one that ships a photograph's GPS coordinates.
+  ///
+  /// It throws for a format it does not know how to strip. That is deliberate:
+  /// a scrubber that quietly passes unknown formats through would do nothing
+  /// on the first format nobody tested, and would give no sign of it. Today
+  /// every reachable path sends JPEG, PNG, or MP4 audio; when PDF attachments
+  /// ship they will have to be handled here before they can be sent at all.
+  Future<Uint8List> _readScrubbed(File file) async =>
+      _scrub.scrub(await file.readAsBytes());
+
+  /// What an encrypted body declares itself as, matching the server's
+  /// ENCRYPTED_MIME_TYPE. The real type travels inside the envelope.
+  static const encryptedMimeType = 'application/octet-stream';
 
   Future<Options> _auth() async {
     final token = await _api.accessToken;
     return Options(headers: {'Authorization': 'Bearer $token'});
+  }
+
+  /// Encrypts [file] and uploads the ciphertext.
+  ///
+  /// Returns the key material, which the caller must place inside the Signal
+  /// envelope. It is never sent to the server — doing so would make the
+  /// stored object readable and defeat the entire exercise.
+  Future<({UploadResult upload, AttachmentKey key})> uploadEncrypted(
+    File file, {
+    required String mimeType,
+    void Function(double progress)? onProgress,
+  }) async {
+    final plaintext = await _readScrubbed(file);
+    final material = _crypto.newKey(
+      mimeType: mimeType,
+      sizeBytes: plaintext.length,
+    );
+    final ciphertext = _crypto.encrypt(plaintext, material);
+
+    final result = await _uploadBytes(
+      ciphertext,
+      filename: file.uri.pathSegments.last,
+      // The server is told only that it holds opaque bytes. Declaring the
+      // real type here would leak it from the storage metadata, and would
+      // also send the object through image re-compression, which would
+      // destroy the ciphertext.
+      mimeType: encryptedMimeType,
+      encrypted: true,
+      onProgress: onProgress,
+    );
+    return (upload: result, key: material);
+  }
+
+  /// Downloads an unencrypted attachment's bytes.
+  ///
+  /// Goes through the presigned URL rather than an API route: there is no
+  /// endpoint that streams object bodies, and adding one would push every
+  /// byte of every attachment through the API instance.
+  Future<Uint8List> download(String mediaKey) async {
+    final url = await viewUrl(mediaKey);
+    final res = await Dio().get<List<int>>(
+      url,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(res.data ?? const []);
+  }
+
+  /// Downloads an encrypted attachment and returns its plaintext bytes.
+  ///
+  /// Throws [AttachmentTampered] if the authentication tag does not verify,
+  /// which means the stored bytes are not what the sender produced.
+  Future<Uint8List> downloadDecrypted(
+    String mediaKey,
+    AttachmentKey material,
+  ) async {
+    final url = await viewUrl(mediaKey);
+    // A bare Dio instance: the presigned URL carries its own authorisation,
+    // and attaching our bearer token to a request aimed at object storage
+    // would hand the token to a third-party host.
+    final res = await Dio().get<List<int>>(
+      url,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return _crypto.decrypt(
+      Uint8List.fromList(res.data ?? const []),
+      material,
+    );
   }
 
   Future<UploadResult> upload(
@@ -40,8 +132,24 @@ class MediaService {
     required String mimeType,
     String? resumeUploadId,
     void Function(double progress)? onProgress,
+  }) async =>
+      _uploadBytes(
+        await _readScrubbed(file),
+        filename: file.uri.pathSegments.last,
+        mimeType: mimeType,
+        encrypted: false,
+        resumeUploadId: resumeUploadId,
+        onProgress: onProgress,
+      );
+
+  Future<UploadResult> _uploadBytes(
+    Uint8List bytes, {
+    required String filename,
+    required String mimeType,
+    required bool encrypted,
+    String? resumeUploadId,
+    void Function(double progress)? onProgress,
   }) async {
-    final bytes = await file.readAsBytes();
     final auth = await _auth();
 
     String uploadId;
@@ -65,9 +173,10 @@ class MediaService {
       final init = await _api.dio.post<Map<String, dynamic>>(
         '/media/upload/init',
         data: {
-          'filename': file.uri.pathSegments.last,
+          'filename': filename,
           'mime_type': mimeType,
           'total_size': bytes.length,
+          'encrypted': encrypted,
         },
         options: auth,
       );

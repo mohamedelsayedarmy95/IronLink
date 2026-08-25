@@ -1,9 +1,17 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme.dart';
+import '../../../core/widgets/iron_button.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../home/home_screen.dart';
+import '../auth_repository.dart';
 import 'auth_screen.dart';
 
-/// Screen 1 — deep-navy background, gold fade-in brand, single "ابدأ" CTA.
+/// Welcome screen. Restraint is the point: one mark, one promise, one action.
+/// The previous pass leaned on a pulsing cyan halo and four feature badges,
+/// which read as a product arguing for itself rather than one that's sure.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -15,23 +23,63 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1800),
-  )..forward();
-
-  late final Animation<double> _logoFade = CurvedAnimation(
-    parent: _controller,
-    curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    duration: const Duration(milliseconds: 900),
   );
 
-  late final Animation<double> _buttonFade = CurvedAnimation(
+  late final Animation<double> _markFade = CurvedAnimation(
     parent: _controller,
-    curve: const Interval(0.55, 1.0, curve: Curves.easeOut),
+    curve: const Interval(0.0, 0.6, curve: IronMotion.entranceCurve),
   );
 
-  late final Animation<Offset> _logoRise = Tween(
-    begin: const Offset(0, 0.15),
+  late final Animation<double> _copyFade = CurvedAnimation(
+    parent: _controller,
+    curve: const Interval(0.25, 0.8, curve: IronMotion.entranceCurve),
+  );
+
+  late final Animation<double> _actionFade = CurvedAnimation(
+    parent: _controller,
+    curve: const Interval(0.5, 1.0, curve: IronMotion.entranceCurve),
+  );
+
+  late final Animation<Offset> _markRise = Tween(
+    begin: const Offset(0, 0.06),
     end: Offset.zero,
-  ).animate(_logoFade);
+  ).animate(_markFade);
+
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    // Users who ask for reduced motion get the final frame, not a fade.
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _controller.value = 1.0;
+    } else {
+      _controller.forward();
+    }
+    _restoreSession();
+  }
+
+  /// Sends an already-signed-in user straight to their conversations.
+  ///
+  /// Without this the app asked for an SMS code on every launch, because
+  /// nothing ever looked at the token it had stored.
+  ///
+  /// The buttons stay live while this runs rather than showing a spinner: the
+  /// check can take as long as a cold server takes to answer, and a welcome
+  /// screen that sits disabled for that long looks broken. If the user starts
+  /// signing in first, _goToAuth replaces this route, so `mounted` is false
+  /// here and nothing yanks them back.
+  Future<void> _restoreSession() async {
+    final user = await context.read<AuthRepository>().restoreSession();
+    if (!mounted || user == null) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+      (_) => false,
+    );
+  }
 
   @override
   void dispose() {
@@ -39,85 +87,149 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  void _goToAuth() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: IronMotion.page,
+        reverseTransitionDuration: IronMotion.exit,
+        pageBuilder: (_, __, ___) => const AuthScreen(),
+        transitionsBuilder: (_, anim, __, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: anim, curve: IronMotion.pageCurve),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  /// Debug-only: skips Firebase and the backend exchange entirely so UI work
+  /// can continue while server config is still being wired up. Never compiled
+  /// into a release build.
+  void _enterAsGuest() {
+    const guest = AuthUser(
+      id: 'dev-guest',
+      fullName: 'Dev Guest',
+      username: 'dev_guest',
+      role: 'member',
+    );
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const HomeScreen(user: guest)),
+      (_) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
+
     return Scaffold(
+      backgroundColor: IronColors.backgroundPrimary,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.symmetric(horizontal: IronSpacing.lg),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(flex: 2),
+              const Spacer(flex: 3),
               SlideTransition(
-                position: _logoRise,
+                position: _markRise,
                 child: FadeTransition(
-                  opacity: _logoFade,
+                  opacity: _markFade,
                   child: Column(
                     children: [
-                      // Gold laurel shield mark
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: MilColors.gold, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: MilColors.gold.withValues(alpha: 0.25),
-                              blurRadius: 40,
-                              spreadRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.shield_outlined,
-                          size: 56,
-                          color: MilColors.gold,
-                        ),
+                      Image.asset(
+                        'assets/icons/logo_mark.png',
+                        width: 104,
+                        height: 104,
+                        fit: BoxFit.contain,
+                        // Brand mark; the wordmark beneath already names it.
+                        excludeFromSemantics: true,
                       ),
-                      const SizedBox(height: 28),
-                      const Text(
-                        'IronLink',
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          color: MilColors.gold,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'منظومة التراسل المؤمَّنة',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: MilColors.textLo,
-                          letterSpacing: 1,
-                        ),
+                      const SizedBox(height: IronSpacing.lg),
+                      Text(
+                        'IRONLINK',
+                        textAlign: TextAlign.center,
+                        style: IronTypography.displayLarge(
+                          color: IronColors.textPrimary,
+                        ).copyWith(letterSpacing: 6),
                       ),
                     ],
                   ),
                 ),
               ),
-              const Spacer(flex: 3),
+              const SizedBox(height: IronSpacing.sm),
               FadeTransition(
-                opacity: _buttonFade,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacement(
-                    PageRouteBuilder(
-                      transitionDuration: const Duration(milliseconds: 450),
-                      pageBuilder: (_, anim, __) => FadeTransition(
-                        opacity: anim,
-                        child: const AuthScreen(),
-                      ),
-                    ),
-                  ),
-                  child: const Text('ابدأ'),
+                opacity: _copyFade,
+                child: Text(
+                  t.authTagline,
+                  textAlign: TextAlign.center,
+                  style:
+                      IronTypography.bodyMedium(color: IronColors.textSecondary),
                 ),
               ),
+              const Spacer(flex: 2),
+              FadeTransition(
+                opacity: _copyFade,
+                child: Text(
+                  t.authSubtitle,
+                  textAlign: TextAlign.center,
+                  style: IronTypography.headlineMedium(
+                      color: IronColors.textPrimary),
+                ),
+              ),
+              const Spacer(flex: 3),
+              FadeTransition(
+                opacity: _actionFade,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    IronButton(label: t.getStarted, onPressed: _goToAuth),
+                    const SizedBox(height: IronSpacing.xs),
+                    IronButton(
+                      label: t.signIn,
+                      variant: IronButtonVariant.ghost,
+                      onPressed: _goToAuth,
+                    ),
+                    if (kDebugMode) ...[
+                      const SizedBox(height: IronSpacing.xs),
+                      const _DevBadgeDivider(),
+                      const SizedBox(height: IronSpacing.xs),
+                      IronButton(
+                        label: t.devGuestLogin,
+                        variant: IronButtonVariant.secondary,
+                        onPressed: _enterAsGuest,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: IronSpacing.lg),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Marks the debug-only affordance below it as not part of the product, so a
+/// screenshot of a debug build can't be mistaken for a real sign-in path.
+class _DevBadgeDivider extends StatelessWidget {
+  const _DevBadgeDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: IronColors.borderSubtle)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: IronSpacing.sm),
+          child: Text(
+            'DEBUG BUILD',
+            style: IronTypography.labelSmall(color: IronColors.semanticWarning),
+          ),
+        ),
+        const Expanded(child: Divider(color: IronColors.borderSubtle)),
+      ],
     );
   }
 }

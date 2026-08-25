@@ -1,0 +1,739 @@
+{
+  "@@locale": "en",
+  "authTagline": "Private · Secure · Limitless",
+  "authSubtitle": "The Trusted Messaging System",
+  "featureE2EE": "End-to-end encryption",
+  "featureVerifiedIdentity": "Verified identity",
+  "featurePrivacyByDesign": "Privacy by design",
+  "featureDeviceSecurity": "Secure on every device",
+  "getStarted": "Get Started",
+  "alreadyHaveAccount": "Already have an account? ",
+  "signIn": "Sign in",
+  "devGuestLogin": "Guest login (no server)",
+  "secureSignInTitle": "Secure Sign-In",
+  "phoneStepSubtitle": "Enter your unit-registered phone number",
+  "otpStepSubtitle": "Enter the verification code sent to you by SMS",
+  "militaryIdStepSubtitle": "Enter your military ID to finish verification",
+  "phoneNumberLabel": "Phone number",
+  "otpCodeLabel": "Verification code",
+  "sendVerificationCode": "Send verification code",
+  "resendCode": "Resend code",
+  "resendCodeCountdown": "Resend in {seconds}s",
+  "@resendCodeCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "militaryIdHint": "Military ID",
+  "showPassword": "Show",
+  "hidePassword": "Hide",
+  "confirmSignIn": "Confirm sign-in",
+  "e2eeNotice": "Your details are end-to-end encrypted — the server can't read them.",
+  "errorFirebaseTokenFailed": "Couldn't get a verification token from Firebase",
+  "errorNetwork": "Couldn't reach the server — check your connection",
+  "errorUnexpected": "Something went wrong",
+  "errorInvalidPhone": "Invalid phone number",
+  "errorTooManyRequests": "Too many attempts — try again later",
+  "errorInvalidCode": "Incorrect verification code",
+  "errorSessionExpired": "Code expired — resend it",
+  "errorPhoneVerificationFailed": "Something went wrong verifying your phone",
+  "noChatsYet": "No conversations yet",
+  "noChatsYetHint": "Start a secure conversation with one of your contacts.",
+  "onlineNow": "Online now",
+  "startSecretChat": "Start secret chat",
+  "secretChatComingSoon": "Secret chat enabled (arriving in a future update)",
+  "messageDeleted": "This message was deleted",
+  "translate": "Translate",
+  "reportMessage": "Report message",
+  "deleteForEveryone": "Delete for everyone",
+  "deleteForEveryoneHint": "Available for 5 minutes after sending",
+  "typingIndicator": "{name} is typing",
+  "@typingIndicator": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "attach": "Attach",
+  "messageHint": "Type a message…",
+  "send": "Send",
+  "notInAnyGroupYet": "You're not a member of any group yet",
+  "notInAnyGroupYetHint": "Create a group or join one to coordinate with your team.",
+  "groupMembersTitle": "{name} — {count} members",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "announcementChannelReadOnly": "Announcement channel — read only",
+  "memberCount": "{count} members",
+  "@memberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleOwner": "Group owner",
+  "roleAdmin": "Admin",
+  "roleModerator": "Moderator",
+  "roleObserver": "Observer — read only",
+  "roleMember": "Member",
+  "channelsTitle": "Channels",
+  "createChannel": "Create channel",
+  "noChannelsYet": "No channels yet",
+  "noChannelsYetHint": "Subscribe to a channel to receive official announcements.",
+  "channelsLoadFailedTitle": "Couldn't load channels",
+  "subscriberCount": "{count} subscribers",
+  "@subscriberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ocrKeywordsTitle": "OCR Keywords",
+  "ocrKeywordsDescription": "You'll be alerted automatically if any of these words appear in scanned (OCR) text inside an image or document.",
+  "newKeywordLabel": "New keyword",
+  "newKeywordHint": "Type a keyword and add it",
+  "noKeywordsYet": "No keywords added yet",
+  "add": "Add",
+  "ocrKeywordExists": "That keyword is already in your list.",
+  "ocrKeywordsEmptyHint": "Add a word to be alerted whenever it appears in a scanned image or document.",
+  "retry": "Retry",
+  "delete": "Delete",
+  "ocrLoadFailedTitle": "Couldn't load keywords",
+  "ocrAddFailed": "That keyword wasn't added. Try again.",
+  "ocrRemoveFailed": "That keyword wasn't removed. Try again.",
+  "failureOffline": "You appear to be offline. Check your connection and try again.",
+  "failureTimeout": "The server is taking longer than usual. Try again in a moment.",
+  "failureServer": "We can't reach the server right now. Try again shortly.",
+  "failureUnauthorized": "Your session has expired. Please sign in again.",
+  "failureRejected": "That request couldn't be completed. Check the details and try again.",
+  "failureInsecure": "The connection's security couldn't be verified. Nothing was sent.",
+  "failureUnknown": "Something went wrong. Please try again.",
+  "tabChats": "Chats",
+  "tabGroups": "Groups",
+  "tabBroadcasts": "Broadcasts",
+  "tabSettings": "Settings",
+  "comingSoon": "Coming soon",
+  "releaseToCancel": "Release to cancel",
+  "dragToCancel": "← Slide to cancel",
+  "voiceUploadFailed": "Failed to upload the voice message",
+  "uploadFailed": "That attachment didn't upload. Try again.",
+  "attachGallery": "Gallery",
+  "attachCamera": "Camera",
+  "attachDocument": "PDF document",
+  "attachPdfComingSoon": "Picking PDF files isn't available yet.",
+  "captionHint": "Add a caption…",
+  "ocrAlertFound": "The keyword \"{keyword}\" was found in an uploaded file.",
+  "@ocrAlertFound": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "acknowledged": "Got it",
+  "completeVerificationForm": "Complete Verification Form",
+  "joinRequestFor": "Join request: {group}",
+  "@joinRequestFor": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "completeFormBelow": "Please complete the form below.",
+  "submitRequest": "Submit request",
+  "resubmit": "Resubmit",
+  "requestToJoin": "Request to Join",
+  "cancelRequest": "Cancel request",
+  "requestAgain": "Request again",
+  "requiredFieldsProgress": "{filled} of {total} required fields completed",
+  "@requiredFieldsProgress": {
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "draftRestored": "Your previous answers were restored",
+  "formAnswersEncrypted": "Your answers are encrypted in transit and at rest.",
+  "formLoadFailedTitle": "Couldn't load the form",
+  "noFormRequired": "No form required",
+  "noFormRequiredHint": "This group doesn't ask for any extra information. Send your request directly.",
+  "selectAnOption": "Select an option",
+  "selectADate": "Select a date",
+  "noFileSelected": "No file selected",
+  "fieldTypeUnsupported": "This field isn't supported in this version. Update the app to complete it.",
+  "statusPending": "Pending",
+  "statusApproved": "Approved",
+  "statusRejected": "Rejected",
+  "statusMoreInfo": "Needs info",
+  "statusExpired": "Expired",
+  "joinRequestsTitle": "Join Requests",
+  "tabPending": "Pending",
+  "tabExpired": "Expired",
+  "tabHistory": "History",
+  "select": "Select",
+  "cancel": "Cancel",
+  "approve": "Approve",
+  "reject": "Reject",
+  "approveAll": "Accept All",
+  "rejectAll": "Reject All",
+  "approveSelected": "Approve ({count})",
+  "@approveSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectSelected": "Reject ({count})",
+  "@rejectSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approveAllTitle": "Accept all requests",
+  "rejectAllTitle": "Reject all requests",
+  "approveAllConfirm": "Are you sure you want to accept all {count} pending requests?",
+  "@approveAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectAllConfirm": "Are you sure you want to reject all {count} pending requests? This cannot be undone.",
+  "@rejectAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkResult": "Successfully processed {count} requests",
+  "@bulkResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectRequestTitle": "Reject request",
+  "rejectionReasonOptional": "Reason for rejection (optional)",
+  "rejectionReasonLabel": "Reason",
+  "noAnswersSubmitted": "No answers submitted",
+  "requestsLoadFailedTitle": "Couldn't load requests",
+  "noPendingRequests": "No pending join requests",
+  "noPendingRequestsHint": "Your group is secure. New requests will appear here.",
+  "nothingHere": "Nothing here",
+  "nothingHereHint": "No requests with this status yet.",
+  "minutesAgo": "{count}m ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{count}h ago",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "{count}d ago",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "entrySettingsTitle": "Entry Settings",
+  "joinModeSection": "Join mode",
+  "modeOpen": "Open",
+  "modeOpenHint": "Anyone joins instantly, no approval needed.",
+  "modeInviteOnly": "Invite only",
+  "modeInviteOnlyHint": "Only people with an invite link can join.",
+  "modeRequestApproval": "Request + approval",
+  "modeRequestApprovalHint": "Applicants complete a verification form and await approval.",
+  "verificationFormSection": "Verification form",
+  "noFormAttached": "No form attached",
+  "noFormAttachedHint": "The group is gated but asks nothing. Create a form.",
+  "fieldCount": "{count} fields",
+  "@fieldCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestHandlingSection": "Request handling",
+  "requestExpiryTitle": "Request expiry",
+  "requestExpiryHint": "Requests with no decision within this window expire automatically.",
+  "expiryNever": "Never",
+  "expiryDays": "{count} days",
+  "@expiryDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allowRejoinTitle": "Allow re-applying",
+  "allowRejoinHint": "A rejected applicant may submit a new request.",
+  "saveChanges": "Save changes",
+  "settingsSaved": "Settings saved",
+  "formBuilderTitle": "Form Builder",
+  "formBuilderEmptyTitle": "No fields added yet",
+  "formBuilderEmptyHint": "Add the fields an applicant must complete before joining.",
+  "addField": "Add field",
+  "saveAndActivate": "Save & activate",
+  "previewForm": "Preview",
+  "editForm": "Edit",
+  "previewNotice": "This is exactly what the applicant will see.",
+  "formNameLabel": "Form name",
+  "formNameHint": "e.g. Unit verification",
+  "formNeedsName": "Give the form a name",
+  "formNeedsFields": "Add at least one field",
+  "fieldNumber": "Field {number}",
+  "@fieldNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "fieldNeedsLabel": "This field needs a label",
+  "fieldNeedsOptions": "Add at least one option",
+  "untitledField": "Untitled field",
+  "chooseFieldType": "Choose a field type",
+  "fieldLabelLabel": "Question",
+  "fieldLabelHint": "e.g. Full name in Arabic",
+  "fieldPlaceholderLabel": "Placeholder (optional)",
+  "fieldHelperLabel": "Helper text (optional)",
+  "fieldRequiredLabel": "Required field",
+  "fieldOptionsLabel": "Options",
+  "addOptionHint": "Add an option",
+  "optionExists": "That option already exists",
+  "done": "Done",
+  "fieldTypeTextShort": "Short text",
+  "fieldTypeTextLong": "Long text",
+  "fieldTypeNumber": "Number",
+  "fieldTypeSelectSingle": "Single select",
+  "fieldTypeSelectMulti": "Multi select",
+  "fieldTypeDate": "Date",
+  "fieldTypePhone": "Phone number",
+  "fieldTypeFile": "File",
+  "fieldTypeImage": "Image",
+  "fieldTypeCheckbox": "Checkbox",
+  "fieldTypeUrl": "URL",
+  "fieldTypeEmail": "Email",
+  "auditLogTitle": "Audit Log",
+  "auditLogEmpty": "No activities recorded yet",
+  "auditLogEmptyHint": "Every sensitive action on this group will appear here.",
+  "auditLogLoadFailedTitle": "Couldn't load the audit log",
+  "loadMore": "Load more",
+  "filterAll": "All",
+  "filterApprovals": "Approvals",
+  "filterRejections": "Rejections",
+  "filterBans": "Bans",
+  "filterSettings": "Settings",
+  "auditApproved": "Approved join request",
+  "auditRejected": "Rejected join request",
+  "auditMoreInfo": "Requested more information",
+  "auditBulkApproved": "Bulk approved {count} requests",
+  "@auditBulkApproved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBulkRejected": "Bulk rejected {count} requests",
+  "@auditBulkRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBanned": "Banned a member",
+  "auditUnbanned": "Lifted a ban",
+  "auditRemoved": "Removed a member",
+  "auditJoinModeChanged": "Changed the join mode",
+  "auditFormUpdated": "Updated the verification form",
+  "auditModeratorAssigned": "Assigned a moderator",
+  "auditReopened": "Reopened a request",
+  "auditExported": "Exported the audit log",
+  "uploading": "Uploading…",
+  "fileAttached": "File attached",
+  "choose": "Choose",
+  "replace": "Replace",
+  "amendRequest": "Amend request",
+  "cancelRequestTitle": "Cancel request",
+  "cancelRequestConfirm": "Your request and answers will be deleted. You can apply again later.",
+  "keepRequest": "Keep it",
+  "groupRequiresApproval": "This group requires admin approval before joining.",
+  "statusPendingBody": "Your request is being reviewed by the admin.",
+  "statusApprovedBody": "You have been approved! You can now participate in the group.",
+  "statusRejectedBody": "Your request was not approved.",
+  "statusMoreInfoBody": "The admin needs more information. Please amend your request.",
+  "statusExpiredBody": "Your request has expired. You can submit a new request.",
+  "contactsTitle": "Contacts",
+  "findContactsTitle": "Find your contacts",
+  "findContactsHeadline": "Find people you know",
+  "findContactsBody": "We match your address book against IronLink members without ever learning your numbers.",
+  "contactsPointHashedTitle": "Hashed on your device",
+  "contactsPointHashedBody": "Each number becomes a cryptographic fingerprint before it leaves your phone.",
+  "contactsPointNoNumbersTitle": "Numbers are never sent",
+  "contactsPointNoNumbersBody": "The server receives fingerprints only, and cannot recover a number from one.",
+  "contactsPointReversibleTitle": "Reversible at any time",
+  "contactsPointReversibleBody": "You can delete everything we matched in a single tap.",
+  "contactsDeniedHint": "Without access we can't suggest people you know. You can enable it later in system settings.",
+  "allowContactAccess": "Allow access",
+  "notNow": "Not now",
+  "contactSyncOff": "Sync is off",
+  "contactSyncOffHint": "Turn it on to discover people you know on IronLink.",
+  "enableContactSync": "Turn on sync",
+  "syncNow": "Sync now",
+  "syncFoundNew": "Found {count} new contacts",
+  "@syncFoundNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncNoNewContacts": "No new contacts",
+  "noContactsFound": "Nobody found yet",
+  "noContactsFoundHint": "None of your contacts are on IronLink right now.",
+  "contactsLoadFailedTitle": "Couldn't load contacts",
+  "onIronLink": "On IronLink ({count})",
+  "@onIronLink": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeNew": "New",
+  "contactPrivacyTitle": "Contact privacy",
+  "whoCanFindMe": "Who can find me by phone number",
+  "discoverEveryone": "Everyone",
+  "discoverEveryoneHint": "Anyone with your number can discover you.",
+  "discoverMutual": "People I know",
+  "discoverMutualHint": "Only people who have your number and whose numbers you have.",
+  "discoverNobody": "Nobody",
+  "discoverNobodyHint": "Nobody can find you by phone number.",
+  "storedHashesNotice": "We hold {count} fingerprints, and no phone numbers.",
+  "@storedHashesNotice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteContactData": "Delete contact data",
+  "deleteContactDataTitle": "Delete everything",
+  "deleteContactDataConfirm": "All fingerprints and matches are permanently deleted, and you disappear from other people's discovery lists.",
+  "deleteEverything": "Delete all",
+  "contactDataDeleted": "Contact data deleted",
+  "blockUser": "Block user",
+  "unblockUser": "Unblock",
+  "blockUserTitle": "Block {name}?",
+  "@blockUserTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockUserBody": "They will not be able to message you, and you will not be able to message them. They are not told that you blocked them.",
+  "blockedUsers": "Blocked users",
+  "blockedUsersEmpty": "You have not blocked anyone",
+  "blockedUsersEmptyHint": "People you block will appear here, and you can undo it at any time.",
+  "blockedOn": "Blocked {date}",
+  "@blockedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "userBlocked": "{name} is blocked",
+  "@userBlocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userUnblocked": "{name} is unblocked",
+  "@userUnblocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedBannerTitle": "You blocked this person",
+  "blockedBannerBody": "Unblock them to send and receive messages again.",
+  "reportUser": "Report user",
+  "reportTitle": "Report",
+  "reportReasonQuestion": "What is wrong?",
+  "reportDetails": "Anything else we should know (optional)",
+  "reportSubmit": "Send report",
+  "reportSubmitted": "Report sent",
+  "reportSubmittedBody": "A reviewer will look at it. You can also block this person so they cannot contact you meanwhile.",
+  "reportAlsoBlock": "Block them as well",
+  "reportAlreadySent": "You have already reported this message",
+  "reportEvidenceNotice": "A copy of the reported message is attached, so it stays available even if it is deleted.",
+  "reasonSpam": "Spam",
+  "reasonHarassment": "Harassment or abuse",
+  "reasonImpersonation": "Pretending to be someone else",
+  "reasonScam": "Scam or fraud",
+  "reasonIllegalContent": "Illegal content",
+  "reasonLeakedClassified": "Classified material",
+  "reasonOther": "Something else",
+  "analyzeContent": "Analyse content",
+  "myReports": "Reports I sent",
+  "reportStatusOpen": "Under review",
+  "reportStatusReviewing": "Being reviewed",
+  "reportStatusActioned": "Action taken",
+  "reportStatusDismissed": "No action taken",
+  "searchMessages": "Search messages",
+  "searchMessagesTitle": "Search messages",
+  "searchMessagesHint": "Search in this conversation",
+  "searchMessagesOnDeviceNotice": "Search runs on this device only. Messages are encrypted, so the server cannot read them — results cover what this device has downloaded.",
+  "searchNoResults": "Nothing found",
+  "searchNoResultsHint": "Try a shorter word, or a different spelling.",
+  "searchResultCount": "{count, plural, =0{No results} =1{1 result} other{{count} results}}",
+  "@searchResultCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secureIdentityChanged": "This person's security code changed. The message was not sent.",
+  "secureIdentityChangedBody": "This happens when they reinstall the app — and it is also what an impersonation looks like. Confirm with them through another channel before continuing.",
+  "secureAcceptNewIdentity": "I verified it — continue",
+  "securePeerHasNoKeys": "This person cannot receive secret messages yet.",
+  "securePeerHasNoKeysBody": "Their device has not published encryption keys. Ask them to open IronLink once.",
+  "secureEncryptFailed": "The message was not sent, because it could not be encrypted.",
+  "secureDecryptFailed": "A message could not be decrypted.",
+  "secureMessageUnreadable": "Message could not be decrypted",
+  "secretChatOn": "Secret chat is on",
+  "secretChatOff": "Secret chat is off",
+  "secretChatNotice": "Messages in this chat are end-to-end encrypted. The server stores only ciphertext it cannot read.",
+  "secretChatAttachmentWarning": "Attachments are not yet encrypted end-to-end — only their captions are.",
+  "attachmentLoadFailed": "Attachment could not be loaded",
+  "attachmentTampered": "This attachment was altered and was not opened",
+  "attachmentEncrypted": "Encrypted attachment",
+  "chatNotEncryptedNotice": "Messages in this chat are not end-to-end encrypted. They are protected in transit, but the server can read them.",
+  "messageNotEncrypted": "Not end-to-end encrypted",
+  "play": "Play",
+  "pause": "Pause",
+  "recordVoiceNote": "Hold to record a voice note",
+  "voiceNoteTooShort": "Hold to record",
+  "groupNoMessages": "No messages yet",
+  "groupMessageUnreadable": "Message could not be decrypted",
+  "groupNoLongerMember": "You are no longer a member of this group",
+  "groupAnnouncementOnly": "Only admins can post in this group",
+  "groupEncryptionNotice": "Messages in this group are end-to-end encrypted. The server routes them and cannot read them.",
+  "groupRotationNotice": "When someone joins or leaves, everyone's keys change — so a person who leaves cannot read what is said afterwards.",
+  "groupMembersCount": "{count, plural, =0{No members} =1{1 member} other{{count} members}}",
+  "@groupMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupChat": "Group chat",
+  "leaveGroup": "Leave group",
+  "leaveGroupConfirm": "You will stop receiving messages from this group, and will not be able to read what is said after you leave.",
+  "groupLeft": "You left the group",
+  "ownerMustTransfer": "Hand over ownership before leaving",
+  "verificationTimedOut": "The verification service did not respond. Your connection is fine — this usually means the app is not set up for phone sign-in yet.",
+  "aiConsentTitle": "AI features in this conversation",
+  "aiConsentWhatHappens": "To summarise, translate or suggest replies, this app decrypts the messages and sends them to an AI provider outside IronLink. They leave your device and are read by a third party.",
+  "aiConsentEncryptionNote": "Every other message in this app is end-to-end encrypted and unreadable by our server. These features are the one exception, which is why they are off unless you ask for them.",
+  "aiConsentToggle": "Allow AI features here",
+  "aiConsentToggleHint": "Applies only to your conversation with {name}.",
+  "@aiConsentToggleHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConsentWaitingOn": "Waiting for {names} to agree. Until then nothing is sent.",
+  "@aiConsentWaitingOn": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConsentWaitingGeneric": "Waiting for the other participants to agree. Until then nothing is sent.",
+  "aiConsentEveryoneAgreed": "Everyone has agreed. AI features are available here.",
+  "aiConsentWithdrawNote": "You can withdraw at any time. That stops anything further being sent, but cannot recall what was already sent.",
+  "aiConsentRequired": "Everyone in this conversation has to agree before AI features can be used.",
+  "aiFeatures": "AI features",
+  "aiSummarise": "Summarise conversation",
+  "signOut": "Sign out",
+  "signOutConfirm": "This device will be signed out and everything stored on it erased — your message history, your encryption keys and any drafts. Because messages are end-to-end encrypted, the server cannot restore that history afterwards.",
+  "smartAlertTitle": "Smart Alert",
+  "smartAlertOpenDocument": "Open document",
+  "smartAlertAcknowledge": "Acknowledge",
+  "smartAlertMoreCount": "{count, plural, =1{1 Smart Alert} other{{count} Smart Alerts}}",
+  "smartAlertSemantics": "Smart Alert: \"{matched}\" found in a document. Context: {context}",
+  "alertCenterTitle": "Smart Alerts",
+  "alertCenterEmpty": "No alerts",
+  "alertCenterEmptyHint": "When an image or document arrives containing one of your keywords, the alert appears here.",
+  "alertFilterAll": "All",
+  "alertFilterUnacknowledged": "Unacknowledged",
+  "alertFilterAcknowledged": "Acknowledged",
+  "alertFilterHighConfidence": "High confidence",
+  "alertSectionToday": "Today",
+  "alertSectionYesterday": "Yesterday",
+  "alertSectionEarlier": "Earlier",
+  "alertStatusAcknowledged": "Acknowledged",
+  "alertStatusPresented": "Not acknowledged",
+  "alertStatusOpened": "Opened, not acknowledged",
+  "alertStatusExpired": "Expired",
+  "alertStatusDismissed": "Dismissed",
+  "alertRetentionNote": "Alerts are kept for 48 hours and then deleted automatically.",
+  "alertPageNumber": "Page {page}",
+  "alertProcessedLocally": "Processed on this device",
+  "alertProcessedInCloud": "Processed in the cloud",
+  "alertSuppressedByCap": "Over this keyword daily limit",
+  "keywordManagementTitle": "Keywords",
+  "keywordManagementSubtitle": "Private to this conversation. The sender, group admins and everyone else cannot see them.",
+  "keywordAddTitle": "Add keyword",
+  "keywordEditTitle": "Edit keyword",
+  "keywordFieldLabel": "Keyword",
+  "keywordFieldHint": "Type a word or phrase",
+  "keywordPriorityLabel": "Priority",
+  "keywordPriorityLow": "Low",
+  "keywordPriorityMedium": "Medium",
+  "keywordPriorityHigh": "High",
+  "keywordPriorityCritical": "Critical",
+  "keywordMatchModeLabel": "Matching",
+  "keywordMatchExact": "Whole word",
+  "keywordMatchPhrase": "Phrase",
+  "keywordMatchFuzzy": "Tolerate scan errors",
+  "keywordMatchRegex": "Advanced pattern",
+  "keywordCategoryLabel": "Category (optional)",
+  "keywordNotesLabel": "Private note (optional)",
+  "keywordCaseSensitiveLabel": "Match capitalisation",
+  "keywordDailyCapLabel": "Daily alert limit (optional)",
+  "keywordEnabledLabel": "Enabled",
+  "keywordDeleteConfirm": "This keyword and every alert it raised will be deleted. This cannot be undone.",
+  "keywordEmpty": "No keywords for this conversation yet",
+  "keywordTestTitle": "Test this keyword",
+  "keywordTestHint": "Paste some text to see whether the keyword would match it",
+  "keywordTestMatched": "Matches",
+  "keywordTestNoMatch": "No match",
+  "keywordErrorTooShort": "Too short - at least two characters.",
+  "keywordErrorTooLong": "That keyword is too long.",
+  "keywordErrorNotMatchable": "Nothing in that keyword can be matched inside a document.",
+  "keywordErrorStopWord": "That is a common connecting word, and would appear in almost every document.",
+  "keywordErrorRegexInvalid": "That pattern is not valid.",
+  "keywordErrorRegexUnsafe": "That pattern can take unbounded time to evaluate.",
+  "keywordErrorDuplicate": "That keyword is already in this conversation.",
+  "documentCheckingNow": "Checking document…",
+  "documentCheckedNothingFound": "Checked, nothing found",
+  "documentUnreadable": "This document could not be read reliably.",
+  "documentTooLowResolution": "This image is too low-resolution to analyze reliably.",
+  "documentUnsupported": "This kind of file cannot be checked.",
+  "documentTooLarge": "This file is larger than the checking limit.",
+  "documentTruncated": "Long document - only the first {pages} pages were checked.",
+  "securityCenterLocalExplained": "No document leaves this device to be checked, and your keywords are stored only here.",
+  "securityCenterNoLocalEngine": "There is no reading engine on this device, so images cannot be checked. Nothing will be sent to the cloud automatically.",
+  "senderReportTitle": "Recipient status",
+  "senderReportAlertRaised": "A Smart Alert was raised",
+  "senderReportNoAlert": "No alert",
+  "senderReportKeywordHidden": "The keyword is private to the recipient and is not shown to you",
+  "senderReportUnavailable": "The recipient has not shared this status",
+  "securityCenterTitle": "Security Center",
+  "securityCenterSubtitle": "Everything here is based on something the system actually knows. Nothing is estimated.",
+  "securityLevelHigh": "Looks good",
+  "securityLevelMedium": "Worth reviewing",
+  "securityLevelLow": "Needs your attention",
+  "securityActiveSessions": "Signed-in devices",
+  "securityThisDevice": "This device",
+  "securityUnknownDevice": "Unrecognised device",
+  "securityLastActive": "Last active {when}",
+  "securityNeverActive": "Not used yet",
+  "securitySignOutDevice": "Sign out this device",
+  "securitySignOutDeviceConfirm": "This device will be signed out immediately and disconnected. No other device is affected.",
+  "securitySecureAccount": "Secure my account",
+  "securitySecureAccountConfirm": "Every other device will be signed out. This one stays signed in.",
+  "securitySecureAccountDone": "All other devices were signed out.",
+  "securitySecureAccountPartial": "{count} devices could not be signed out. The list below shows what is actually signed in now.",
+  "securityNoOtherDevices": "No other devices are signed in",
+  "securityFindingOtherDevices": "You are signed in on more than one device",
+  "securityFindingOtherDevicesWhy": "Not a problem in itself. It is stated because it is the first thing you would need to know if someone reached your account.",
+  "securityFindingStaleSession": "A device has not been used in over two weeks",
+  "securityFindingStaleSessionWhy": "It may be a device you use occasionally. Have a look, and sign it out if you do not recognise it.",
+  "securityFindingEncryptionOn": "End-to-end encryption is on by default",
+  "securityFindingEncryptionOnWhy": "The server holds no key and cannot read your messages or attachments.",
+  "securityFindingEncryptionOff": "Encryption is not the default on this device",
+  "securityFindingEncryptionOffWhy": "This is the most serious thing this screen can say. Restart the app; if it persists, it needs investigating.",
+  "securityFindingKeywordsLocal": "Your keywords are stored only on this device",
+  "securityFindingKeywordsLocalWhy": "The server never received them, so it cannot leak them.",
+  "securityFindingCloudOcr": "Cloud document checking is enabled",
+  "securityFindingCloudOcrWhy": "You chose this. It means a document may be read outside your device when local reading fails.",
+  "securityWhyLabel": "Why am I seeing this?",
+  "securityCheckedNothingWrong": "Checked, nothing to report",
+  "securityLoadFailed": "Could not load security status",
+  "safetyWarningTitle": "Safety notice",
+  "safetyDismiss": "Hide",
+  "safetyCredentialRequest": "This message asks for a verification code",
+  "safetyCredentialRequestWhy": "IronLink sends verification codes to you alone. Anyone asking you for one — even claiming to be support — is trying to get into your account. Do not send it to anybody.",
+  "safetySuspiciousLink": "A link here looks deceptive",
+  "safetySuspiciousLinkWhy": "This address is written to look like a different site. It was checked on your device, and nobody else saw it.",
+  "safetyPaymentRequest": "A payment request, alongside other signs",
+  "safetyPaymentRequestWhy": "A request for money on its own is ordinary. This is flagged because it arrived with another signal — urgency, a claimed identity, or a deceptive link.",
+  "safetyAuthorityClaim": "The sender claims an official identity",
+  "safetyAuthorityClaimWhy": "Someone is claiming to be support, a bank, or an administrator. Those parties do not ask for codes or passwords in messages.",
+  "safetyOffPlatform": "A request to move the conversation elsewhere",
+  "safetyOffPlatformWhy": "Moving a conversation somewhere unencrypted is a common step before fraud. There may be an ordinary reason, but it is worth confirming.",
+  "safetyUrgency": "Time pressure, alongside other signs",
+  "safetyUrgencyWhy": "Urgency stops people thinking. On its own it is ordinary — here it appeared with another signal.",
+  "attachUnsupportedFormat": "This file is not a type we can strip hidden data from, so it was not sent. Photos and voice notes work normally.",
+  "connectionOffline": "No connection. Your messages will send when you are back.",
+  "connectionConnecting": "Reconnecting…",
+  "connectionOutdated": "This version is too old. Update the app to continue.",
+  "replyToYou": "You",
+  "replyToThem": "Replying to",
+  "replyUnavailableTitle": "Original message",
+  "replyUnavailableBody": "Not available on this device",
+  "replyOriginalDeleted": "This message was removed",
+  "replyKindImage": "Photo",
+  "replyKindVoice": "Voice note",
+  "replyKindAttachment": "Attachment",
+  "replySwipeHint": "Swipe a message to reply to it"
+}

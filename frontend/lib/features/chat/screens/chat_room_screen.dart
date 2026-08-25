@@ -1,20 +1,36 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
+import '../../../core/widgets/connection_banner.dart';
+import '../../../core/api_client.dart';
+import '../../../core/crypto/signal.dart';
+import '../../../core/env.dart';
+import '../../../core/failure.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/ws_service.dart';
-import '../../../core/widgets/ticker.dart';
+import '../../keyword_alert/keyword_alert_service.dart';
+import '../../security/widgets/message_safety_banner.dart';
+import '../../keyword_alert/widgets/smart_alert_ticker.dart';
+import '../../../l10n/app_localizations.dart';
 import '../bloc/chat_bloc.dart';
+import '../ai_consent_repository.dart';
 import '../chat_repository.dart';
+import '../local/message_store.dart';
+import '../widgets/ai_consent_sheet.dart';
 import '../widgets/attach_flow.dart';
+import '../widgets/reaction_bar.dart';
+import '../widgets/reply_quote.dart';
+import '../widgets/encrypted_image.dart';
 import '../widgets/smart_replies.dart';
 import '../widgets/summary_banner.dart';
+import '../widgets/voice_player.dart';
 import '../widgets/voice_recorder.dart';
-import 'dart:convert';
+import '../../../core/icons.dart';
+import '../../moderation/moderation_repository.dart';
+import '../../moderation/screens/blocked_users_screen.dart' show confirmBlock;
+import '../../moderation/widgets/report_sheet.dart';
 
 class ChatRoomScreen extends StatelessWidget {
   const ChatRoomScreen({
@@ -25,7 +41,10 @@ class ChatRoomScreen extends StatelessWidget {
     required this.peerId,
     required this.peerName,
     required this.peerOnline,
-    required this.isSecret,
+    // Encrypted unless a caller deliberately says otherwise. A protection
+    // that has to be switched on is one most people never get.
+    this.isSecret = false,
+    this.encrypted = true,
   });
 
   final ChatRepository repo;
@@ -34,13 +53,16 @@ class ChatRoomScreen extends StatelessWidget {
   final String peerId;
   final String peerName;
   final bool peerOnline;
+
+  /// Additionally keeps nothing on the device. Encryption is independent of
+  /// this and is on either way.
   final bool isSecret;
+
+  final bool encrypted;
 
   @override
   Widget build(BuildContext context) {
-    // In a real app, these would come from secure storage/config
-    final baseUrl = 'https://api.ironlink.app';
-    final authToken = ''; // TODO: get from secure storage
+    final baseUrl = Env.apiBaseUrl;
 
     return BlocProvider(
       create: (_) => ChatBloc(
@@ -48,11 +70,21 @@ class ChatRoomScreen extends StatelessWidget {
         ws: ws,
         myId: myId,
         peerId: peerId,
+        peerName: peerName,
         isSecret: isSecret,
+        encrypted: encrypted,
         baseUrl: baseUrl,
-        authToken: authToken,
+        api: context.read<ApiClient>(),
+        store: context.read<MessageStore>(),
+        // The one provided at Home, so every chat shares a single key store
+        // and session state rather than each screen building its own.
+        signalService: context.read<SignalService>(),
       )..add(const ChatOpened()),
       child: _ChatRoomView(
+        isSecret: isSecret,
+        encrypted: encrypted,
+        myId: myId,
+        peerId: peerId,
         peerName: peerName,
         peerOnline: peerOnline,
       ),
@@ -61,8 +93,22 @@ class ChatRoomScreen extends StatelessWidget {
 }
 
 class _ChatRoomView extends StatefulWidget {
-  const _ChatRoomView({required this.peerName, required this.peerOnline});
+  const _ChatRoomView({
+    required this.isSecret,
+    required this.encrypted,
+    required this.myId,
+    required this.peerId,
+    required this.peerName,
+    required this.peerOnline,
+  });
 
+  final bool isSecret;
+  final bool encrypted;
+
+  /// Whose device this is. An alert belongs to the person reading the
+  /// document, not to the conversation.
+  final String myId;
+  final String peerId;
   final String peerName;
   final bool peerOnline;
 
@@ -74,11 +120,154 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
 
+  /// Null until the block state is known. The composer is not disabled while
+  /// it is unknown — guessing "blocked" would silently stop a normal
+  /// conversation on a slow network.
+  bool? _blocked;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBlockState();
+    _loadAiConsent();
+  }
+
   @override
   void dispose() {
     _input.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  ModerationRepository get _moderation => context.read<ModerationRepository>();
+
+  /// Assumed absent until the server says otherwise, so nothing is offered
+  /// that would send content before consent is known.
+  AiConsentState _aiConsent = AiConsentState.unknown;
+
+  Future<void> _loadAiConsent() async {
+    try {
+      final state = await context
+          .read<AiConsentRepository>()
+          .read(peerId: widget.peerId);
+      if (!mounted) return;
+      setState(() => _aiConsent = state);
+    } catch (_) {
+      // Left as "not consented". A failed check must never be read as
+      // permission to transmit.
+    }
+  }
+
+  Future<void> _openAiConsent() async {
+    final updated = await showAiConsentSheet(
+      context,
+      repository: context.read<AiConsentRepository>(),
+      current: _aiConsent,
+      peerId: widget.peerId,
+      conversationName: widget.peerName,
+    );
+    if (updated == null || !mounted) return;
+    setState(() => _aiConsent = updated);
+  }
+
+  void _summarise() {
+    if (!_aiConsent.canUseAi) {
+      _toast(L.of(context).aiConsentRequired);
+      return;
+    }
+    context.read<ChatBloc>().add(ChatFetchSummaryStarted());
+  }
+
+  Future<void> _loadBlockState() async {
+    try {
+      final blocked = await _moderation.isBlocked(widget.peerId);
+      if (!mounted) return;
+      setState(() => _blocked = blocked);
+    } catch (_) {
+      // Left unknown on purpose. A failed status check must not decide that
+      // someone is blocked.
+    }
+  }
+
+  Future<void> _toggleBlock() async {
+    final t = L.of(context);
+    final blocked = _blocked ?? false;
+
+    if (!blocked && !await confirmBlock(context, widget.peerName)) return;
+    if (!mounted) return;
+
+    try {
+      if (blocked) {
+        await _moderation.unblock(widget.peerId);
+      } else {
+        await _moderation.block(widget.peerId);
+      }
+      if (!mounted) return;
+      setState(() => _blocked = !blocked);
+      _toast(blocked
+          ? t.userUnblocked(widget.peerName)
+          : t.userBlocked(widget.peerName));
+    } catch (e) {
+      if (!mounted) return;
+      _toast(failureMessage(t, NetworkFailureClassifier.from(e)));
+    }
+  }
+
+  Future<void> _report({String? messageId, String? snapshot}) async {
+    final outcome = await showReportSheet(
+      context,
+      repository: _moderation,
+      reportedUserId: widget.peerId,
+      reportedUserName: widget.peerName,
+      messageId: messageId,
+      contentSnapshot: snapshot,
+    );
+    if (outcome == null || !mounted) return;
+
+    if (outcome.alsoBlocked) setState(() => _blocked = true);
+    _toast(L.of(context).reportSubmitted);
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: IronColors.navySurface),
+    );
+  }
+
+  /// Tells the user a message was refused, and why.
+  ///
+  /// A send that silently does nothing is barely better than a silent
+  /// downgrade — in both cases the user believes something happened that did
+  /// not. A changed identity gets a dialog rather than a toast because it is
+  /// the one case that needs a decision.
+  void _showSecureError(SecureChatError error) {
+    final t = L.of(context);
+    switch (error) {
+      case SecureChatError.identityChanged:
+        showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: IronColors.navySurface,
+            title: Text(t.secureIdentityChanged,
+                style: const TextStyle(color: IronColors.textHi)),
+            content: Text(t.secureIdentityChangedBody,
+                style: const TextStyle(color: IronColors.textTertiary)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(t.cancel,
+                    style: const TextStyle(color: IronColors.textTertiary)),
+              ),
+            ],
+          ),
+        );
+      case SecureChatError.peerHasNoKeys:
+        _toast(t.securePeerHasNoKeys);
+      case SecureChatError.encryptFailed:
+        _toast(t.secureEncryptFailed);
+      case SecureChatError.decryptFailed:
+        _toast(t.secureDecryptFailed);
+    }
   }
 
   void _jumpToBottom() {
@@ -93,20 +282,40 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
     });
   }
 
+
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: MilColors.navySurface,
+        backgroundColor: IronColors.navySurface,
+        elevation: 0,
+        shape: const Border(
+          bottom: BorderSide(color: IronColors.navyBorder),
+        ),
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 17,
-              backgroundColor: MilColors.navyDeep,
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: IronColors.navyDeep,
+                border: Border.all(color: IronColors.navyBorder),
+                boxShadow: widget.peerOnline
+                    ? [
+                        BoxShadow(
+                          color: IronColors.gold.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                        ),
+                      ]
+                    : null,
+              ),
               child: Text(
                 widget.peerName.characters.first,
                 style: const TextStyle(
-                    color: MilColors.gold, fontWeight: FontWeight.w700),
+                    color: IronColors.gold, fontWeight: FontWeight.w700),
               ),
             ),
             const SizedBox(width: 10),
@@ -115,51 +324,157 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
               children: [
                 Text(widget.peerName,
                     style: const TextStyle(
-                        fontSize: 16, color: MilColors.textHi)),
+                        fontSize: 16, color: IronColors.textHi)),
                 if (widget.peerOnline)
-                  const Text('متصل الآن',
-                      style: TextStyle(
-                          fontSize: 11, color: MilColors.gold)),
+                  Text(t.onlineNow,
+                      style: const TextStyle(
+                          fontSize: 11, color: IronColors.gold)),
               ],
             ),
           ],
         ),
         actions: [
-          // Secret chat toggle button (simplified)
-          BlocBuilder<ChatBloc, ChatRoomState>(
-            builder: (context, state) {
-              return IconButton(
-                tooltip: 'بدء محادثة سرية',
-                icon: const Icon(Icons.lock, color: MilColors.gold),
-                onPressed: () {
-                  // In a full implementation, we would restart the bloc with isSecret=true
-                  // For now, just show a snack bar
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('تم تفعيل المحادثة السرية (سيتم تطبيقها في التحديث التالي)'),
-                      backgroundColor: MilColors.gold,
-                    ),
-                  );
-                },
-              );
-            },
+          // Reports the actual state of this conversation rather than
+          // offering a toggle. Switching mid-conversation would leave half
+          // the history unencrypted while still claiming to be secret, so
+          // the mode is fixed when the chat is opened.
+          IconButton(
+            tooltip: widget.encrypted ? t.secretChatOn : t.secretChatOff,
+            icon: Icon(
+              widget.encrypted ? IronIcons.lock : IronIcons.unlock,
+              color: widget.encrypted
+                  ? IronColors.accentText
+                  : IronColors.textTertiary,
+            ),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: IronColors.navySurface,
+                title: Text(
+                  widget.encrypted ? t.secretChatOn : t.secretChatOff,
+                  style: const TextStyle(color: IronColors.textHi),
+                ),
+                content: Text(
+                  widget.encrypted
+                      ? t.secretChatNotice
+                      : t.chatNotEncryptedNotice,
+                  style: const TextStyle(color: IronColors.textTertiary),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(t.done,
+                        style: const TextStyle(color: IronColors.accentText)),
+                  ),
+                ],
+              ),
+            ),
           ),
-          // AI Summary toggle (for demo, we'll just show it automatically if there are many messages)
-          // In a real app, this could be a setting
+          PopupMenuButton<String>(
+            icon: const Icon(IronIcons.more, color: IronColors.textHi),
+            color: IronColors.navySurface,
+            onSelected: (value) {
+              if (value == 'ai') {
+                _openAiConsent();
+              } else if (value == 'summarise') {
+                _summarise();
+              } else if (value == 'block') {
+                _toggleBlock();
+              } else if (value == 'report') {
+                // Reporting the person rather than one message: no id and no
+                // snapshot, because there is nothing specific to attach.
+                _report();
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'ai',
+                child: Row(
+                  children: [
+                    const Icon(IronIcons.info,
+                        size: IronIcons.sizeCompact,
+                        color: IronColors.textTertiary),
+                    const SizedBox(width: 10),
+                    Text(t.aiFeatures,
+                        style: const TextStyle(color: IronColors.textHi)),
+                  ],
+                ),
+              ),
+              // Only offered once everyone has agreed. Showing it otherwise
+              // would be an action that always fails.
+              if (_aiConsent.canUseAi)
+                PopupMenuItem(
+                  value: 'summarise',
+                  child: Row(
+                    children: [
+                      const Icon(IronIcons.keywordSearch,
+                          size: IronIcons.sizeCompact,
+                          color: IronColors.textTertiary),
+                      const SizedBox(width: 10),
+                      Text(t.aiSummarise,
+                          style: const TextStyle(color: IronColors.textHi)),
+                    ],
+                  ),
+                ),
+              PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    const Icon(IronIcons.report,
+                        size: IronIcons.sizeCompact,
+                        color: IronColors.textTertiary),
+                    const SizedBox(width: 10),
+                    Text(t.reportUser,
+                        style: const TextStyle(color: IronColors.textHi)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'block',
+                child: Row(
+                  children: [
+                    const Icon(IronIcons.blocked,
+                        size: IronIcons.sizeCompact,
+                        color: IronColors.errorRed),
+                    const SizedBox(width: 10),
+                    Text(
+                      (_blocked ?? false) ? t.unblockUser : t.blockUser,
+                      style: const TextStyle(color: IronColors.textHi),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: Column(
         children: [
-          // News Ticker for OCR alerts
-          const NewsTicker(),
+          // Inside the conversation too, and not only on the home screen: this
+          // is where somebody is actively waiting for a message to send, and
+          // the one place where not knowing costs them something immediately.
+          ConnectionBanner(ws: context.read<WsService>()),
+          // The Smart Alert ticker, anchored below the app bar and above the
+          // messages — never over the compose bar (§5.2.1). Draws nothing
+          // when there is nothing outstanding.
+          const SmartAlertTicker(),
           Expanded(
             child: BlocConsumer<ChatBloc, ChatRoomState>(
-              listener: (_, __) => _jumpToBottom(),
+              listener: (context, state) {
+                _jumpToBottom();
+                final secureError = state.secureError;
+                if (secureError != null) _showSecureError(secureError);
+              },
               builder: (context, state) {
                 if (state.loading) {
                   return const Center(
-                      child: CircularProgressIndicator(color: MilColors.gold));
+                      child: CircularProgressIndicator(color: IronColors.gold));
                 }
+                // One pass over the list, so a reply's quotation is a map
+                // lookup rather than a search. Built here because it is
+                // consumed by every bubble below.
+                final byId = {for (final m in state.messages) m.id: m};
+
                 return Column(
                   children: [
                     // AI Summary Banner
@@ -168,7 +483,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                         summary: '',
                         isLoading: true,
                         onRefresh: () {
-                          context.read<ChatBloc>().add(const ChatFetchSummaryStarted());
+                          context.read<ChatBloc>().add(ChatFetchSummaryStarted());
                         },
                       )
                     else if (state.summary.isNotEmpty)
@@ -176,7 +491,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                         summary: state.summary,
                         isLoading: false,
                         onRefresh: () {
-                          context.read<ChatBloc>().add(const ChatFetchSummaryStarted());
+                          context.read<ChatBloc>().add(ChatFetchSummaryStarted());
                         },
                       )
                     else
@@ -191,6 +506,16 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                           final message = state.messages[i];
                           return _MessageBubble(
                             message: message,
+                            // Resolved from the index built once above rather
+                            // than searched per bubble: thirty visible bubbles
+                            // each scanning the list is quadratic work on
+                            // every scroll frame.
+                            repliedTo: message.replyToId == null
+                                ? null
+                                : byId[message.replyToId],
+                            conversationId: widget.peerId,
+                            myId: widget.myId,
+                            isSecret: widget.isSecret,
                             onTranslatePressed: (text, targetLang) {
                               // Trigger translation for this message
                               // We need the message ID - we'll pass it via the message object
@@ -212,6 +537,8 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                                 text: text,
                               ));
                             },
+                            onReportPressed: (messageId, snapshot) =>
+                                _report(messageId: messageId, snapshot: snapshot),
                           );
                         },
                       ),
@@ -229,18 +556,41 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                         },
                       ),
 
-                    _InputBar(
-                      controller: _input,
-                      onChanged: (text) => context
-                          .read<ChatBloc>()
-                          .add(TypingChanged(text.isNotEmpty)),
-                      onSend: () {
-                        final text = _input.text.trim();
-                        if (text.isEmpty) return;
-                        context.read<ChatBloc>().add(TextSent(text));
-                        _input.clear();
-                      },
-                    ),
+                    // The composer is replaced rather than merely disabled:
+                    // a greyed-out text field invites the user to keep
+                    // tapping it without saying why nothing happens.
+                    if (_blocked ?? false)
+                      _BlockedBanner(onUnblock: _toggleBlock)
+                    else
+                      // What you are answering, above what you are writing.
+                      // Dismissible, because picking the wrong message by a
+                      // stray swipe should cost one tap to undo.
+                      if (state.replyingToId != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                          child: ReplyQuote(
+                            original: byId[state.replyingToId],
+                            myId: widget.myId,
+                            onDismiss: () => context
+                                .read<ChatBloc>()
+                                .add(const ReplyTargetChanged(null)),
+                          ),
+                        ),
+                      _InputBar(
+                        encrypted: widget.encrypted,
+                        controller: _input,
+                        onChanged: (text) => context
+                            .read<ChatBloc>()
+                            .add(TypingChanged(text.isNotEmpty)),
+                        onSend: () {
+                          final text = _input.text.trim();
+                          if (text.isEmpty) return;
+                          context
+                              .read<ChatBloc>()
+                              .add(TextSent(text, replyTo: state.replyingToId));
+                          _input.clear();
+                        },
+                      ),
                   ],
                 );
               },
@@ -252,35 +602,167 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   }
 }
 
+/// Shown where the composer would be while this user has the peer blocked.
+class _BlockedBanner extends StatelessWidget {
+  const _BlockedBanner({required this.onUnblock});
+
+  final VoidCallback onUnblock;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = L.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      decoration: const BoxDecoration(
+        color: IronColors.navySurface,
+        border: Border(top: BorderSide(color: IronColors.navyBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(IronIcons.blocked,
+                    size: IronIcons.sizeCompact, color: IronColors.textTertiary),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    t.blockedBannerTitle,
+                    style: const TextStyle(
+                        color: IronColors.textHi,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              t.blockedBannerBody,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(color: IronColors.textTertiary, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: onUnblock,
+              child: Text(t.unblockUser,
+                  style: const TextStyle(color: IronColors.accentText)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Message bubble with translate/moderate callbacks ───────────────
 
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
-    super.key,
     required this.message,
+    required this.conversationId,
+    required this.myId,
+    required this.isSecret,
     required this.onTranslatePressed,
     required this.onModeratePressed,
+    required this.onReportPressed,
+    this.repliedTo,
   });
 
   final ChatMessage message;
+
+  /// The message this one answers, already resolved from this device's own
+  /// history — or null when this device does not have it.
+  ///
+  /// Resolved by the caller rather than looked up here, so the whole list is
+  /// indexed once per build instead of once per bubble. Thirty visible bubbles
+  /// each scanning the message list is quadratic work on every scroll frame.
+  final ChatMessage? repliedTo;
+
+  /// Who this conversation is with, whose device this is, and whether the
+  /// chat is ephemeral — everything the keyword pipeline needs to attribute
+  /// an alert, and nothing it does not.
+  final String conversationId;
+  final String myId;
+  final bool isSecret;
+
   final void Function(String text, String targetLang) onTranslatePressed;
   final void Function(String text) onModeratePressed;
+
+  /// Carries the decrypted text along with the id: the server holds only
+  /// ciphertext it cannot read, so this device is the only place the evidence
+  /// exists in a readable form.
+  final void Function(String messageId, String? snapshot) onReportPressed;
+
+
+  /// What the keyword pipeline needs, or null when the service is absent.
+  ///
+  /// Read from the widget tree rather than held as a field, so a bubble built
+  /// without the service — in a test, or on a platform with no local store —
+  /// simply gets null instead of failing to build.
+  KeywordScanContext? _scanContext(BuildContext context) {
+    final service = context.read<KeywordAlertService?>();
+    if (service == null) return null;
+
+    return KeywordScanContext(
+      service: service,
+      conversationId: conversationId,
+      messageId: message.id,
+      attachmentId: message.mediaKey ?? message.id,
+      recipientUserId: myId,
+      isMine: message.isMine,
+      // A secret chat leaves nothing on this device, and an alert about one
+      // would outlive the message it describes by 48 hours.
+      isSecret: isSecret,
+    );
+  }
 
   static const _slateGrey = Color(0xFF3E4A5C);
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     final mine = message.isMine;
 
     return Align(
       alignment:
           mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
-      child: GestureDetector(
-        // Long-press for options (translate, moderate, unsend)
-        onLongPress: mine && !message.deleted
-            ? () => _showMessageOptions(context)
-            : null,
-        child: Container(
+      child: Dismissible(
+        // Swipe to reply — the gesture people already have muscle memory for
+        // from every other messenger, so it needs no discovery.
+        //
+        // `confirmDismiss` returning false is what makes this a swipe *action*
+        // rather than a dismissal: the bubble springs back and nothing leaves
+        // the list. A real dismissal here would delete a message by accident
+        // on the first mis-swipe.
+        key: ValueKey('swipe-${message.id}'),
+        direction: message.deleted
+            ? DismissDirection.none
+            : DismissDirection.startToEnd,
+        dismissThresholds: const {DismissDirection.startToEnd: 0.25},
+        confirmDismiss: (_) async {
+          context.read<ChatBloc>().add(ReplyTargetChanged(message.id));
+          HapticFeedback.selectionClick();
+          return false;
+        },
+        background: const Padding(
+          padding: EdgeInsetsDirectional.only(start: 20),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Icon(Icons.reply, size: 20, color: IronColors.accentText),
+          ),
+        ),
+        child: GestureDetector(
+          // Available on the peer's messages too. Gating this on `mine` made
+          // reporting unreachable for exactly the messages worth reporting.
+          onLongPress:
+              message.deleted ? null : () => _showMessageOptions(context),
+          child: Container(
           constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.75),
           margin: const EdgeInsets.only(bottom: 10),
@@ -289,13 +771,13 @@ class _MessageBubble extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: mine && !message.deleted
                 ? const LinearGradient(
-                    colors: [MilColors.goldBright, MilColors.gold],
+                    colors: [IronColors.goldBright, IronColors.gold],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
                 : null,
             color: mine
-                ? (message.deleted ? MilColors.navySurface : null)
+                ? (message.deleted ? IronColors.navySurface : null)
                 : _slateGrey,
             borderRadius: BorderRadiusDirectional.only(
               topStart: const Radius.circular(16),
@@ -308,57 +790,157 @@ class _MessageBubble extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // The quotation, above the reply itself. Absent on a message
+              // that answers nothing, which is most of them.
+              if (message.replyToId != null && !message.deleted)
+                ReplyQuote(original: repliedTo, myId: myId),
               if (message.deleted)
-                const Row(
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.block, size: 14, color: MilColors.textLo),
-                    SizedBox(width: 6),
-                    Text('تم حذف هذه الرسالة',
-                        style: TextStyle(
-                            color: MilColors.textLo,
+                    const Icon(IronIcons.blocked, size: IronIcons.sizeCompact, color: IronColors.textLo),
+                    const SizedBox(width: 6),
+                    Text(t.messageDeleted,
+                        style: const TextStyle(
+                            color: IronColors.textLo,
                             fontStyle: FontStyle.italic,
                             fontSize: 13)),
                   ],
                 )
               else
                 if (message.kind == 'voice') ...[
+                  // Reads typed fields instead of re-parsing the content as
+                  // JSON three times. The metadata now arrives inside the
+                  // encrypted envelope, so it sits on the message itself.
                   VoicePlayer(
-                    mediaKey: (jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['mediaKey'] as String? ?? '',
-                    duration: (jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['duration'] as double? ?? 0,
-                    waveform: ((jsonDecode(message.content ?? '{}') as Map<String, dynamic>)['waveform'] as List<dynamic>?)?.map((e) => (e as double).toDouble()).toList() ?? [],
+                    media: context.read<MediaService>(),
+                    mediaKey: message.mediaKey ?? '',
+                    duration: message.duration ?? 0,
+                    waveform: message.waveform ?? const [],
+                    attachmentKey: message.attachmentKey,
+                    tint: mine ? IronColors.navyDeep : IronColors.gold,
                   )
+                ] else if (message.attachmentKey != null &&
+                    message.mediaKey != null) ...[
+                  // Fetched and decrypted on the device: the stored object is
+                  // ciphertext, so there is no URL that renders directly.
+                  EncryptedImage(
+                    media: context.read<MediaService>(),
+                    mediaKey: message.mediaKey!,
+                    attachmentKey: message.attachmentKey!,
+                    // The one moment plaintext exists on this device. Null
+                    // when keyword alerts are unavailable, which changes
+                    // nothing about how the image renders.
+                    scan: _scanContext(context),
+                  ),
+                  if ((message.content ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      message.content!,
+                      style: TextStyle(
+                        color: mine ? IronColors.navyDeep : IronColors.textHi,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ] else if (message.content == null) ...[
+                  // Content is null on a message that failed to decrypt.
+                  // Rendering an empty bubble would read as an empty message
+                  // rather than as something that could not be verified.
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(IronIcons.lock,
+                          size: IronIcons.sizeCompact,
+                          color: IronColors.textLo),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          t.secureMessageUnreadable,
+                          style: const TextStyle(
+                              color: IronColors.textLo,
+                              fontStyle: FontStyle.italic,
+                              fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
                 ] else ...[
                   Text(
                     message.content ?? '',
                     style: TextStyle(
-                      // Dark bold text on gold for readability, as specified
-                      color: mine ? const Color(0xFF1A1503) : MilColors.textHi,
+                      // Dark bold text on the bright cyan bubble for readability.
+                      color: mine ? IronColors.navyDeep : IronColors.textHi,
                       fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
                       fontSize: 15,
                     ),
                   ),
+                  // Below the message, never over it. The text stays readable
+                  // and the links stay tappable; this annotates, it does not
+                  // gate. Analysis happened on this device — the server holds
+                  // only ciphertext and could not do this if it wanted to.
+                  if (!mine && (message.content ?? '').isNotEmpty)
+                    MessageSafetyBanner(
+                      isMine: mine,
+                      assessment: context.read<MessageSafety>().assess(
+                        message.id,
+                        message.content!,
+                      ),
+                    ),
                 ],
               const SizedBox(height: 4),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Marks a message that did not arrive encrypted. Only the
+                  // exception is labelled — badging every protected message
+                  // trains people to ignore the badge, which is precisely
+                  // when the missing one stops being noticed.
+                  if (!message.encrypted && !message.deleted) ...[
+                    Tooltip(
+                      message: t.messageNotEncrypted,
+                      child: Icon(
+                        IronIcons.unlock,
+                        size: 11,
+                        semanticLabel: t.messageNotEncrypted,
+                        color: mine
+                            ? IronColors.navyDeep.withValues(alpha: 0.6)
+                            : IronColors.textLo,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Text(
                     _time(message.createdAt),
                     style: TextStyle(
                       fontSize: 10,
                       color: mine
-                          ? const Color(0x991A1503)
-                          : MilColors.textLo,
+                          ? IronColors.navyDeep.withValues(alpha: 0.6)
+                          : IronColors.textLo,
                     ),
                   ),
                   if (mine && !message.deleted) ...[
                     const SizedBox(width: 5),
-                    _Ticks(tick: message.tick, pending: message.pending),
+                    _Ticks(
+                      tick: message.tick,
+                      pending: message.pending,
+                      failed: message.failed,
+                    ),
                   ],
                 ],
               ),
+              // Under the message and inside the bubble, so a reaction is
+              // plainly attached to what it reacts to rather than floating
+              // between two of them.
+              ReactionBar(
+                reactions: message.reactions,
+                myId: myId,
+                onToggle: (emoji) => context
+                    .read<ChatBloc>()
+                    .add(ReactionToggled(message.id, emoji)),
+              ),
             ],
+          ),
           ),
         ),
       ),
@@ -366,19 +948,32 @@ class _MessageBubble extends StatelessWidget {
   }
 
   void _showMessageOptions(BuildContext context) {
+    final t = L.of(context);
+    final bloc = context.read<ChatBloc>();
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: MilColors.navySurface,
+      backgroundColor: IronColors.navySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // First, and before any destructive option. Reacting is the most
+            // common reason to hold a message and the least consequential, so
+            // it should not be reached past "delete" and "report".
+            ReactionPicker(
+              selected: message.reactions[myId],
+              onPick: (emoji) {
+                bloc.add(ReactionToggled(message.id, emoji));
+                Navigator.pop(sheetContext);
+              },
+            ),
+            const Divider(height: 1, color: IronColors.navyDeep),
             ListTile(
-              leading: const Icon(Icons.translate, color: MilColors.gold),
-              title: const Text('ترجمة'),
+              leading: const Icon(IronIcons.translate, color: IronColors.gold),
+              title: Text(t.translate),
               onTap: () {
                 Navigator.pop(context);
                 // For translation, we need to ask for target language
@@ -389,9 +984,12 @@ class _MessageBubble extends StatelessWidget {
                 }
               },
             ),
+            // This runs the AI classifier and shows scores — it never
+            // reaches a person. It was previously labelled "report", which
+            // told the user they had filed a complaint when they had not.
             ListTile(
-              leading: const Icon(Icons.shield, color: MilColors.gold),
-              title: const Text('إبلاغ عن رسالة'),
+              leading: const Icon(IronIcons.info, color: IronColors.gold),
+              title: Text(t.analyzeContent),
               onTap: () {
                 Navigator.pop(context);
                 final text = message.content ?? '';
@@ -400,15 +998,28 @@ class _MessageBubble extends StatelessWidget {
                 }
               },
             ),
-            if (mine && !message.deleted) ...[
-              const Divider(color: MilColors.navyDeep),
+            // Reporting your own message would only report yourself, which
+            // the server rejects anyway.
+            if (!message.isMine)
               ListTile(
-                leading: const Icon(Icons.delete_forever_outlined,
-                    color: MilColors.errorRed),
-                title: const Text('حذف لدى الجميع',
-                    style: TextStyle(color: MilColors.textHi)),
-                subtitle: const Text('متاح خلال 5 دقائق من الإرسال',
-                    style: TextStyle(color: MilColors.textLo, fontSize: 12)),
+                leading:
+                    const Icon(IronIcons.report, color: IronColors.errorRed),
+                title: Text(t.reportMessage,
+                    style: const TextStyle(color: IronColors.textHi)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onReportPressed(message.id, message.content);
+                },
+              ),
+            if (message.isMine && !message.deleted) ...[
+              const Divider(color: IronColors.navyDeep),
+              ListTile(
+                leading: const Icon(IronIcons.delete,
+                    color: IronColors.errorRed),
+                title: Text(t.deleteForEveryone,
+                    style: const TextStyle(color: IronColors.textHi)),
+                subtitle: Text(t.deleteForEveryoneHint,
+                    style: const TextStyle(color: IronColors.textLo, fontSize: 12)),
                 onTap: () {
                   Navigator.pop(context);
                   // Find the bloc and send unsend event
@@ -428,34 +1039,46 @@ class _MessageBubble extends StatelessWidget {
 
 // ── One grey ����� ��� ��� � ��� � � ✓ (sent) → two grey ����� ��� ��� � ��� � � ✓��������������✓ (delivered) → two GOLD ����� ��� ��� � ��� � � ✓��������������✓ (read).
 class _Ticks extends StatelessWidget {
-  const _Ticks({required this.tick, required this.pending});
+  const _Ticks({
+    required this.tick,
+    required this.pending,
+    required this.failed,
+  });
 
   final MessageTick tick;
   final bool pending;
+  final bool failed;
 
   @override
   Widget build(BuildContext context) {
-    if (pending) {
-      return const Icon(Icons.schedule,
-          size: 13, color: Color(0x991A1503));
+    final onBubble = IronColors.navyDeep;
+    // Checked before `pending`, because a message the outbox gave up on is
+    // still pending and would otherwise keep showing the waiting clock
+    // forever — which is the exact impression this is here to correct.
+    if (failed) {
+      return const Icon(
+        Icons.error_outline,
+        size: IronIcons.sizeCompact,
+        color: IronColors.errorRed,
+      );
     }
-    final gold = tick == MessageTick.read;
+    if (pending) {
+      return Icon(IronIcons.pending, size: IronIcons.sizeCompact, color: onBubble.withValues(alpha: 0.6));
+    }
+    final read = tick == MessageTick.read;
     final double single = tick == MessageTick.sent ? 1 : 2;
-    final color = gold
-        ? const Color(0xFF7A5C00) // deep gold — visible ON the gold bubble
-        : const Color(0x991A1503);
     return Icon(
-      single == 1 ? Icons.done : Icons.done_all,
+      single == 1 ? IronIcons.sent : IronIcons.delivered,
       size: 14,
-      color: gold ? const Color(0xFF5C4400) : color,
-      shadows: gold
-          ? const [Shadow(color: Color(0xFFFFE082), blurRadius: 4)]
+      color: onBubble.withValues(alpha: read ? 0.85 : 0.6),
+      shadows: read
+          ? [Shadow(color: IronColors.goldBright.withValues(alpha: 0.5), blurRadius: 4)]
           : null,
     );
   }
 }
 
-// ── "يكتب..." indicator with 3 animated gold dots ────────────────────────────
+// ── "typing…" indicator with 3 animated gold dots ─────────────────────────────
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator({required this.peerName});
 
@@ -485,8 +1108,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       child: Row(
         children: [
           Text(
-            '${widget.peerName} يكتب',
-            style: const TextStyle(color: MilColors.gold, fontSize: 13),
+            L.of(context).typingIndicator(widget.peerName),
+            style: const TextStyle(color: IronColors.gold, fontSize: 13),
           ),
           const SizedBox(width: 6),
           AnimatedBuilder(
@@ -502,7 +1125,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                         width: 5,
                         height: 5,
                         decoration: const BoxDecoration(
-                          color: MilColors.gold,
+                          color: IronColors.gold,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -510,10 +1133,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                   ),
               ],
             ),
-          ),
-        ],
-      );
-    }
+          )
+        ]
+      ),
+    );
   }
 
   double _dotOpacity(int i) {
@@ -528,34 +1151,46 @@ class _InputBar extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     required this.onSend,
+    required this.encrypted,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onSend;
 
+  /// Decides whether an attachment is encrypted before upload.
+  final bool encrypted;
+
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<ChatBloc>();
+    final t = L.of(context);
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        color: MilColors.navySurface,
+        decoration: const BoxDecoration(
+          color: IronColors.navySurface,
+          border: Border(top: BorderSide(color: IronColors.navyBorder)),
+        ),
         child: Row(
           children: [
             IconButton(
-              tooltip: 'إرفاق',
-              icon: const Icon(Icons.attach_file, color: MilColors.gold),
+              tooltip: t.attach,
+              icon: const Icon(IronIcons.attach, color: IronColors.gold),
               onPressed: () async {
-                final bloc = context.read<ChatBloc>();
                 final media = context.read<MediaService>();
-                final result =
-                    await showAttachFlow(context, media: media);
+                final result = await showAttachFlow(
+                  context,
+                  media: media,
+                  encrypted: encrypted,
+                );
                 if (result != null) {
                   bloc.add(MediaSent(
                     kind: 'image',
                     mediaKey: result.mediaKey,
                     mimeType: result.mimeType,
                     caption: result.caption,
+                    attachmentKey: result.key,
                   ));
                 }
               },
@@ -566,32 +1201,34 @@ class _InputBar extends StatelessWidget {
                 onChanged: onChanged,
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'اكتب رسالة…',
-                  fillColor: MilColors.navyDeep,
+                decoration: InputDecoration(
+                  hintText: t.messageHint,
+                  fillColor: IronColors.navyDeep,
                 ),
               ),
             ),
             const SizedBox(width: 8),
             VoiceRecorder(
-              onSend: (mediaKey, duration, waveform) => bloc.add(MediaSent(
+              media: context.read<MediaService>(),
+              encrypted: encrypted,
+              onSend: (note) => bloc.add(MediaSent(
                 kind: 'voice',
-                mediaKey: mediaKey,
-                mimeType: 'audio/opus',
-                caption: jsonEncode({
-                  'mediaKey': mediaKey,
-                  'duration': duration,
-                  'waveform': waveform,
-                }),
+                mediaKey: note.mediaKey,
+                // The container the recorder actually produces. It used to
+                // claim audio/opus while writing AAC.
+                mimeType: 'audio/mp4',
+                attachmentKey: note.attachmentKey,
+                duration: note.duration,
+                waveform: note.waveform,
               )),
               onCancel: () {},
             ),
             CircleAvatar(
-              backgroundColor: MilColors.gold,
+              backgroundColor: IronColors.gold,
               child: IconButton(
-                tooltip: 'إرسال',
-                icon: const Icon(Icons.send,
-                    color: MilColors.navyDeep, size: 20),
+                tooltip: t.send,
+                icon: const Icon(IronIcons.send,
+                    color: IronColors.navyDeep, size: IronIcons.sizeInline),
                 onPressed: onSend,
               ),
             ),

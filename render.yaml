@@ -1,0 +1,182 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Declares the API, its PostgreSQL database, and its Redis instance as code, so
+# the deployment is reviewable and reproducible instead of a sequence of
+# dashboard clicks. Apply with: Render Dashboard -> New -> Blueprint.
+#
+# Secrets are deliberately declared with `sync: false`. Render prompts for those
+# values once at apply time and stores them encrypted; they are never written
+# to this file and never reach the git history.
+
+databases:
+  - name: ironlink-db
+    databaseName: ironlink
+    user: ironlink_user
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  # ── Redis: pub/sub fan-out, OTP store, WS session registry ──────────────────
+  # noeviction matters. The default allkeys-lru would silently discard OTP codes
+  # and live WebSocket session keys under memory pressure, which surfaces as
+  # random logout and "invalid code" bugs rather than as an obvious failure.
+  - type: redis
+    name: ironlink-redis
+    plan: free
+    region: oregon
+    ipAllowList: []          # internal-only; no public access
+    maxmemoryPolicy: noeviction
+
+  # ── FastAPI application ─────────────────────────────────────────────────────
+  # Named ironlink-api, not ironlink: a manually created service already holds
+  # "IronLink" in this workspace. Render's collision behaviour there is
+  # unpredictable — it may refuse the apply, silently adopt the existing
+  # service, or create a second one with a suffixed slug. A distinct name makes
+  # the outcome deterministic instead.
+  - type: web
+    name: ironlink-api
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: fix/boot-crashes-and-backend-merge
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+
+    # preDeployCommand is deliberately absent: it is a paid-plan feature, and so
+    # are Shell and One-Off Jobs, which leaves the free tier with no way to run
+    # migrations except at container start. docker-entrypoint.sh runs
+    # `alembic upgrade head` before uvicorn instead. On a paid plan, move it
+    # here and set RUN_MIGRATIONS_ON_START=false so replicas cannot race.
+
+    envVars:
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: API_PREFIX
+        value: /api/v1
+
+      # One worker is deliberate on a 512 MB instance — see the Dockerfile.
+      - key: WEB_CONCURRENCY
+        value: "1"
+
+      # CORS origins (scheme included) and the Host allow-list (scheme excluded)
+      # are different things.
+      #
+      # ALLOWED_HOSTS is a wildcard because the assigned hostname is not known
+      # until Render creates the service. The app also reads
+      # RENDER_EXTERNAL_HOSTNAME at runtime, so the exact host is trusted even
+      # if this is later tightened. Narrow it to the real hostname once known.
+      - key: ALLOWED_HOSTS
+        value: '["*.onrender.com"]'
+
+      # Empty on purpose. The Flutter client is not a browser and sends no
+      # Origin header, so CORS is irrelevant to it — a wildcard here would be
+      # rejected by browsers anyway, since allow_credentials is True. Add the
+      # admin panel's exact origin here when it is deployed.
+      - key: ALLOWED_ORIGINS
+        value: "[]"
+
+      # ── Database (injected by Render from the managed instance) ─────────────
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: ironlink-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: ironlink-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: ironlink-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: ironlink-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: ironlink-db
+          property: database
+
+      # ── Redis ──────────────────────────────────────────────────────────────
+      - key: REDIS_URL
+        fromService:
+          name: ironlink-redis
+          type: redis
+          property: connectionString
+
+      # Migrations run at container start — see docker-entrypoint.sh.
+      - key: RUN_MIGRATIONS_ON_START
+        value: "true"
+
+      # ── Object storage: Cloudflare R2 (S3-compatible) ──────────────────────
+      # R2 rejects a SigV4 signature scoped to any region other than "auto".
+      - key: S3_SECURE
+        value: "true"
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET_AVATARS
+        value: ironlink-avatars
+      - key: S3_BUCKET_ATTACHMENTS
+        value: ironlink-attachments
+
+      # ── Secrets: entered once in the Render UI, never stored in git ─────────
+      # Only DB_ENCRYPTION_KEY is needed for the service to start. The rest may
+      # be left blank now and filled in later: without S3 the media endpoints
+      # return 503, without CONTACT_HASH_SALT contact discovery returns 503,
+      # and without HF_API_TOKEN the AI features fall back to canned
+      # responses. Everything else keeps running in each case.
+      - key: SECRET_KEY
+        generateValue: true          # Render generates a strong random value
+      - key: DB_ENCRYPTION_KEY
+        sync: false                  # REQUIRED — and see the warning below
+      - key: CONTACT_HASH_SALT
+        sync: false                  # optional — see the warning below
+      - key: S3_ENDPOINT
+        sync: false                  # optional — <ACCOUNT_ID>.r2.cloudflarestorage.com
+      - key: S3_ACCESS_KEY_ID
+        sync: false                  # optional
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false                  # optional
+      - key: HF_API_TOKEN
+        sync: false                  # optional
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false                  # optional
+
+# ── CONTACT_HASH_SALT warning ─────────────────────────────────────────────────
+# This salts the phone-number hashes used for contact discovery. While unset,
+# the /contacts endpoints return 503 and the rest of the service runs
+# normally — one feature's missing secret should not be able to stop
+# messaging from booting.
+#
+# It is `sync: false` rather than `generateValue: true` for the same reason as
+# the key below: rotating it changes every hash, so previously indexed
+# contacts stop matching and discovery silently returns nothing — with no
+# error to notice. Set it once, store it in a password manager, leave it
+# alone.
+#
+# It has to stay out of the database as well: phone numbers are a small enough
+# space that an unsalted or salt-alongside-data dump can be reversed by
+# enumeration.
+
+# ── DB_ENCRYPTION_KEY warning ─────────────────────────────────────────────────
+# This key encrypts columns at rest (hashed_military_id, device_fingerprint).
+# It is `sync: false` rather than `generateValue: true` on purpose: a regenerated
+# key makes every previously encrypted row permanently unreadable. Set it once,
+# store it in a password manager, and never rotate it without a re-encryption
+# migration.
+#
+# ── Object storage: one-time Cloudflare setup ─────────────────────────────────
+# 1. Cloudflare dashboard -> R2 -> create buckets "ironlink-avatars" and
+#    "ironlink-attachments". Leave both PRIVATE; do not attach an r2.dev domain,
+#    or the pre-signed URL expiry stops meaning anything.
+# 2. R2 -> Manage API Tokens -> Create API token, Object Read & Write, scoped to
+#    those two buckets only. Not an account-wide token.
+# 3. Paste the Access Key ID, Secret Access Key, and the endpoint host
+#    (<ACCOUNT_ID>.r2.cloudflarestorage.com, no https://) when Render prompts.
+#
+# R2's free tier has no egress charge, which is the reason to prefer it here:
+# media is served through pre-signed URLs straight from R2, so it never crosses
+# this instance's bandwidth.

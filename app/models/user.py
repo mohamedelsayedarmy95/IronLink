@@ -21,6 +21,13 @@ class UserStatus(str, Enum):
     SUSPENDED = "suspended"
     DEACTIVATED = "deactivated"
 
+    #: Registered with a verified phone number, but not yet admitted.
+    #:
+    #: Distinct from SUSPENDED, which is a decision taken about someone who
+    #: was already in. PENDING is the absence of a decision, and only this
+    #: state can be approved into ACTIVE.
+    PENDING = "pending"
+
 
 class UserRole(str, Enum):
     SOLDIER = "soldier"
@@ -124,8 +131,13 @@ class User(Base):
     audit_logs: Mapped[list[AuditLog]] = relationship(
         "AuditLog", back_populates="actor", foreign_keys="AuditLog.actor_id"
     )
+    # GroupMember has two FKs to users.id (user_id, added_by_id) — the join is
+    # ambiguous unless we pin it to user_id, matching GroupMember.user.
     group_memberships: Mapped[list[GroupMember]] = relationship(
-        "GroupMember", back_populates="user", cascade="all, delete-orphan"
+        "GroupMember",
+        foreign_keys="GroupMember.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (

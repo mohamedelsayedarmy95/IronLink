@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/icons.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../l10n/app_localizations.dart';
+import 'entry/entry_repository.dart';
+import 'entry/models/verification_form.dart';
+import 'entry/screens/group_entry_screen.dart';
+import 'entry/screens/group_entry_settings_screen.dart';
+import 'entry/screens/pending_requests_screen.dart';
 import 'groups_repository.dart';
+import 'screens/group_chat_screen.dart';
 
 /// My-groups list; tapping a group shows its members with rank icons.
 class GroupsScreen extends StatefulWidget {
-  const GroupsScreen({super.key, required this.repo});
+  const GroupsScreen({super.key, required this.repo, required this.myId});
 
   final GroupsRepository repo;
+  final String myId;
 
   @override
   State<GroupsScreen> createState() => _GroupsScreenState();
@@ -19,8 +30,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      color: MilColors.gold,
-      backgroundColor: MilColors.navySurface,
+      color: IronColors.gold,
+      backgroundColor: IronColors.navySurface,
       onRefresh: () async {
         setState(() => _future = widget.repo.myGroups());
         await _future;
@@ -30,20 +41,23 @@ class _GroupsScreenState extends State<GroupsScreen> {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(
-                child: CircularProgressIndicator(color: MilColors.gold));
+                child: CircularProgressIndicator(color: IronColors.gold));
           }
           final groups = snap.data ?? [];
           if (groups.isEmpty) {
-            return ListView(children: const [
-              SizedBox(height: 160),
-              Icon(Icons.groups_outlined,
-                  size: 64, color: MilColors.goldDim),
-              SizedBox(height: 16),
-              Center(
-                child: Text('لست عضواً في أي مجموعة بعد',
-                    style: TextStyle(color: MilColors.textLo)),
+            return LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IronEmptyState(
+                    title: L.of(context).notInAnyGroupYet,
+                    message: L.of(context).notInAnyGroupYetHint,
+                    rings: 3,
+                  ),
+                ),
               ),
-            ]);
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -51,7 +65,21 @@ class _GroupsScreenState extends State<GroupsScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, i) => _GroupCard(
               group: groups[i],
-              onTap: () => _showMembers(context, groups[i]),
+              // A member goes to the conversation, which is what a group is
+              // for; anyone without a role is looking at a group they have
+              // not joined, so the entry screen is the useful destination.
+              onTap: () => groups[i].myRole == null
+                  ? _openEntry(context, groups[i])
+                  : _openChat(context, groups[i]),
+              onShowMembers: () => _showMembers(context, groups[i]),
+              onReviewRequests: _canReview(groups[i])
+                  ? () => _openRequests(context, groups[i])
+                  : null,
+              // Entry configuration is admin-only; moderators may review
+              // requests but not change the rules they are reviewed under.
+              onOpenSettings: _canConfigure(groups[i])
+                  ? () => _openSettings(context, groups[i])
+                  : null,
             ),
           );
         },
@@ -59,10 +87,77 @@ class _GroupsScreenState extends State<GroupsScreen> {
     );
   }
 
+  /// Reviewing entry requests is a moderator-and-above capability, matching
+  /// the permission the server enforces. Showing the affordance to a member
+  /// would only produce a 403 they can do nothing about.
+  static bool _canReview(GroupInfo group) =>
+      const {'moderator', 'admin', 'owner'}.contains(group.myRole);
+
+  void _openChat(BuildContext context, GroupInfo group) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GroupChatScreen(group: group, myId: widget.myId),
+      ),
+    );
+  }
+
+  static bool _canConfigure(GroupInfo group) =>
+      const {'admin', 'owner'}.contains(group.myRole);
+
+  Future<void> _openEntry(BuildContext context, GroupInfo group) =>
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GroupEntryScreen(
+            repository: context.read<GroupEntryRepository>(),
+            groupId: group.id,
+            groupName: group.name,
+            groupDescription: group.description,
+            memberCount: group.memberCount,
+          ),
+        ),
+      );
+
+  Future<void> _openSettings(BuildContext context, GroupInfo group) =>
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GroupEntrySettingsScreen(
+            repository: context.read<GroupEntryRepository>(),
+            groupId: group.id,
+            groupName: group.name,
+          ),
+        ),
+      );
+
+  Future<void> _openRequests(BuildContext context, GroupInfo group) async {
+    final repo = context.read<GroupEntryRepository>();
+
+    // The active form is fetched up front so answers can be shown against
+    // their labels; a review screen listing bare field ids is not reviewable.
+    VerificationForm? form;
+    try {
+      form = await repo.activeForm(group.id);
+    } catch (_) {
+      // Non-fatal: the list still works, answers just fall back to raw keys.
+    }
+    if (!context.mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PendingRequestsScreen(
+          repository: repo,
+          groupId: group.id,
+          groupName: group.name,
+          form: form,
+        ),
+      ),
+    );
+  }
+
   void _showMembers(BuildContext context, GroupInfo group) {
+    final t = L.of(context);
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: MilColors.navySurface,
+      backgroundColor: IronColors.navySurface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -80,9 +175,9 @@ class _GroupsScreenState extends State<GroupsScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    '${group.name} — ${group.memberCount} عضو',
+                    t.groupMembersTitle(group.name, group.memberCount),
                     style: const TextStyle(
-                        color: MilColors.gold,
+                        color: IronColors.gold,
                         fontSize: 17,
                         fontWeight: FontWeight.w700),
                   ),
@@ -91,7 +186,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   child: snap.connectionState != ConnectionState.done
                       ? const Center(
                           child: CircularProgressIndicator(
-                              color: MilColors.gold))
+                              color: IronColors.gold))
                       : ListView.builder(
                           controller: scrollController,
                           itemCount: members.length,
@@ -109,15 +204,31 @@ class _GroupsScreenState extends State<GroupsScreen> {
 }
 
 class _GroupCard extends StatelessWidget {
-  const _GroupCard({required this.group, required this.onTap});
+  const _GroupCard({
+    required this.group,
+    required this.onTap,
+    this.onShowMembers,
+    this.onReviewRequests,
+    this.onOpenSettings,
+  });
 
   final GroupInfo group;
   final VoidCallback onTap;
 
+  /// Opening the group now goes to the conversation, so the member list
+  /// needs its own way in.
+  final VoidCallback? onShowMembers;
+
+  /// Null for members, who cannot review entry requests.
+  final VoidCallback? onReviewRequests;
+
+  /// Null for anyone below admin, who cannot change entry rules.
+  final VoidCallback? onOpenSettings;
+
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MilColors.navySurface,
+      color: IronColors.navySurface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -126,18 +237,18 @@ class _GroupCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: MilColors.navyBorder),
+            border: Border.all(color: IronColors.navyBorder),
           ),
           child: Row(
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: MilColors.navyDeep,
+                backgroundColor: IronColors.navyDeep,
                 child: Icon(
                   group.isAnnouncement
-                      ? Icons.campaign_outlined
-                      : Icons.groups_outlined,
-                  color: MilColors.gold,
+                      ? IronIcons.broadcasts
+                      : IronIcons.groups,
+                  color: IronColors.gold,
                 ),
               ),
               const SizedBox(width: 14),
@@ -157,23 +268,57 @@ class _GroupCard extends StatelessWidget {
                         if (group.myRole == 'admin' ||
                             group.myRole == 'owner') ...[
                           const SizedBox(width: 6),
-                          const Icon(Icons.star,
-                              size: 15, color: MilColors.gold),
+                          const Icon(IronIcons.admin,
+                              size: IronIcons.sizeCompact, color: IronColors.gold),
                         ],
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
                       group.isAnnouncement
-                          ? 'قناة إعلانات — للقراءة فقط'
-                          : '${group.memberCount} عضو',
+                          ? L.of(context).announcementChannelReadOnly
+                          : L.of(context).memberCount(group.memberCount),
                       style: const TextStyle(
-                          color: MilColors.textLo, fontSize: 12),
+                          color: IronColors.textLo, fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_left, color: MilColors.textLo),
+              if (onShowMembers != null && group.myRole != null)
+                IconButton(
+                  tooltip: L.of(context).groupMembersCount(group.memberCount),
+                  icon: const Icon(IronIcons.groups,
+                      size: IronIcons.sizeInline),
+                  color: IronColors.textLo,
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: onShowMembers,
+                ),
+              if (onOpenSettings != null)
+                IconButton(
+                  tooltip: L.of(context).entrySettingsTitle,
+                  icon: const Icon(IronIcons.settings,
+                      size: IronIcons.sizeInline),
+                  color: IronColors.textLo,
+                  // 48px target: the glyph alone sits well under the floor.
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: onOpenSettings,
+                ),
+              if (onReviewRequests != null)
+                IconButton(
+                  tooltip: L.of(context).joinRequestsTitle,
+                  icon: const Icon(IronIcons.verified,
+                      size: IronIcons.sizeInline),
+                  color: IronColors.gold,
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: onReviewRequests,
+                ),
+              if (onOpenSettings == null &&
+                  onReviewRequests == null &&
+                  onShowMembers == null)
+                const Icon(IronIcons.forward, color: IronColors.textLo),
             ],
           ),
         ),
@@ -189,13 +334,14 @@ class _MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = L.of(context);
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: MilColors.navyDeep,
+        backgroundColor: IronColors.navyDeep,
         child: Text(
           member.fullName.characters.first,
           style: const TextStyle(
-              color: MilColors.gold, fontWeight: FontWeight.w700),
+              color: IronColors.gold, fontWeight: FontWeight.w700),
         ),
       ),
       title: Row(
@@ -203,26 +349,26 @@ class _MemberTile extends StatelessWidget {
           Flexible(
             child: Text(member.fullName,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: MilColors.textHi)),
+                style: const TextStyle(color: IronColors.textHi)),
           ),
           const SizedBox(width: 6),
           // Rank icon: gold star = admin/owner, eye = observer
           if (member.isAdmin)
-            const Icon(Icons.star, size: 15, color: MilColors.gold)
+            const Icon(IronIcons.admin, size: IronIcons.sizeCompact, color: IronColors.gold)
           else if (member.isObserver)
-            const Icon(Icons.visibility_outlined,
-                size: 15, color: MilColors.textLo),
+            const Icon(IronIcons.show,
+                size: IronIcons.sizeCompact, color: IronColors.textLo),
         ],
       ),
       subtitle: Text(
         switch (member.role) {
-          'owner' => 'مالك المجموعة',
-          'admin' => 'مشرف',
-          'moderator' => 'منسق',
-          'observer' => 'مراقب — قراءة فقط',
-          _ => 'عضو',
+          'owner' => t.roleOwner,
+          'admin' => t.roleAdmin,
+          'moderator' => t.roleModerator,
+          'observer' => t.roleObserver,
+          _ => t.roleMember,
         },
-        style: const TextStyle(color: MilColors.textLo, fontSize: 12),
+        style: const TextStyle(color: IronColors.textLo, fontSize: 12),
       ),
     );
   }

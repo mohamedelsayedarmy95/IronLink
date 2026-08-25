@@ -38,11 +38,42 @@ class ResendOtpRequested extends AuthEvent {
   const ResendOtpRequested();
 }
 
+/// Steps back one stage. Without this a mistyped phone number stranded the
+/// user — the only way out was killing the app.
+class StepBackRequested extends AuthEvent {
+  const StepBackRequested();
+}
+
 class _CountdownTicked extends AuthEvent {
   const _CountdownTicked(this.secondsLeft);
   final int secondsLeft;
   @override
   List<Object?> get props => [secondsLeft];
+}
+
+class _CodeSent extends AuthEvent {
+  const _CodeSent(this.verificationId, this.resendToken);
+  final String verificationId;
+  final int? resendToken;
+  @override
+  List<Object?> get props => [verificationId, resendToken];
+}
+
+/// Android auto-retrieval confirmed the SMS code without the user typing it —
+/// skip straight to the military-ID step, already holding a valid ID token.
+class _PhoneAutoVerified extends AuthEvent {
+  const _PhoneAutoVerified(this.idToken);
+  final String idToken;
+  @override
+  List<Object?> get props => [idToken];
+}
+
+class _PhoneVerificationFailed extends AuthEvent {
+  const _PhoneVerificationFailed(this.code, this.detail);
+  final AuthErrorCode code;
+  final String? detail;
+  @override
+  List<Object?> get props => [code, detail];
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -58,8 +89,12 @@ class AuthState extends Equatable {
     this.phoneNumber = '',
     this.otpCode = '',
     this.resendCountdown = 0,
-    this.errorMessage,
+    this.errorCode,
+    this.errorDetail,
     this.user,
+    this.verificationId,
+    this.resendToken,
+    this.idToken,
   });
 
   final AuthStep step;
@@ -67,8 +102,14 @@ class AuthState extends Equatable {
   final String phoneNumber;
   final String otpCode;
   final int resendCountdown;
-  final String? errorMessage;
+  final AuthErrorCode? errorCode;
+  final String? errorDetail;
   final AuthUser? user;
+
+  // Firebase Phone Auth session state
+  final String? verificationId; // ties a typed OTP back to the sent SMS
+  final int? resendToken;       // lets "resend" reuse the same SMS session
+  final String? idToken;        // set only when Android auto-verified the code
 
   bool get canResend => resendCountdown == 0;
 
@@ -78,8 +119,13 @@ class AuthState extends Equatable {
     String? phoneNumber,
     String? otpCode,
     int? resendCountdown,
-    String? errorMessage,
+    AuthErrorCode? errorCode,
+    String? errorDetail,
     AuthUser? user,
+    String? verificationId,
+    int? resendToken,
+    String? idToken,
+    bool clearIdToken = false,
   }) =>
       AuthState(
         step: step ?? this.step,
@@ -87,13 +133,27 @@ class AuthState extends Equatable {
         phoneNumber: phoneNumber ?? this.phoneNumber,
         otpCode: otpCode ?? this.otpCode,
         resendCountdown: resendCountdown ?? this.resendCountdown,
-        errorMessage: errorMessage,
+        errorCode: errorCode,
+        errorDetail: errorDetail,
         user: user ?? this.user,
+        verificationId: verificationId ?? this.verificationId,
+        resendToken: resendToken ?? this.resendToken,
+        idToken: clearIdToken ? null : (idToken ?? this.idToken),
       );
 
   @override
-  List<Object?> get props =>
-      [step, status, phoneNumber, otpCode, resendCountdown, errorMessage, user?.id];
+  List<Object?> get props => [
+        step,
+        status,
+        phoneNumber,
+        otpCode,
+        resendCountdown,
+        errorCode,
+        errorDetail,
+        user?.id,
+        verificationId,
+        idToken,
+      ];
 }
 
 // ── Bloc ──────────────────────────────────────────────────────────────────────
@@ -105,6 +165,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<OtpChanged>(_onOtpChanged);
     on<MilitaryIdSubmitted>(_onMilitaryIdSubmitted);
     on<ResendOtpRequested>(_onResendRequested);
+    on<StepBackRequested>(_onStepBack);
+    on<_CodeSent>(_onCodeSent);
+    on<_PhoneAutoVerified>(_onPhoneAutoVerified);
+    on<_PhoneVerificationFailed>((e, emit) => emit(state.copyWith(
+        status: AuthStatus.error, errorCode: e.code, errorDetail: e.detail)));
     on<_CountdownTicked>(
         (e, emit) => emit(state.copyWith(resendCountdown: e.secondsLeft)));
   }
@@ -115,28 +180,50 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onPhoneSubmitted(
       PhoneSubmitted event, Emitter<AuthState> emit) async {
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(
+        status: AuthStatus.loading, phoneNumber: event.phoneNumber));
     try {
-      final retryAfter = await _repo.requestOtp(event.phoneNumber);
-      emit(state.copyWith(
-        step: AuthStep.otp,
-        status: AuthStatus.idle,
+      await _repo.sendPhoneOtp(
         phoneNumber: event.phoneNumber,
-        resendCountdown: retryAfter,
-      ));
-      _startCountdown(retryAfter);
+        forceResendingToken: state.resendToken,
+        onCodeSent: (verificationId, resendToken) =>
+            add(_CodeSent(verificationId, resendToken)),
+        onAutoVerified: (idToken) => add(_PhoneAutoVerified(idToken)),
+        onError: (code, detail) => add(_PhoneVerificationFailed(code, detail)),
+      );
     } catch (e) {
+      final (code, detail) = AuthRepository.firebaseErrorCode(e);
       emit(state.copyWith(
         status: AuthStatus.error,
-        errorMessage: AuthRepository.errorMessage(e),
+        errorCode: code,
+        errorDetail: detail,
       ));
     }
   }
 
+  void _onCodeSent(_CodeSent event, Emitter<AuthState> emit) {
+    emit(state.copyWith(
+      step: AuthStep.otp,
+      status: AuthStatus.idle,
+      verificationId: event.verificationId,
+      resendToken: event.resendToken,
+      resendCountdown: 60,
+    ));
+    _startCountdown(60);
+  }
+
+  void _onPhoneAutoVerified(_PhoneAutoVerified event, Emitter<AuthState> emit) {
+    // Android confirmed the SMS code itself — skip straight to military ID,
+    // already holding a valid Firebase ID token.
+    emit(state.copyWith(
+      step: AuthStep.militaryId,
+      status: AuthStatus.idle,
+      idToken: event.idToken,
+    ));
+  }
+
   // Fable5-Enhancement: entering the 6th OTP digit advances AUTOMATICALLY to
-  // the military-ID step — no extra "next" button. One less tap, and the OTP
-  // is validated server-side together with the military ID in a single call
-  // (fewer round-trips, no oracle telling an attacker "OTP ok, now guess the ID").
+  // the military-ID step — no extra "next" button.
   void _onOtpChanged(OtpChanged event, Emitter<AuthState> emit) {
     emit(state.copyWith(otpCode: event.code, status: AuthStatus.idle));
     if (event.code.length == 6) {
@@ -148,21 +235,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       MilitaryIdSubmitted event, Emitter<AuthState> emit) async {
     emit(state.copyWith(status: AuthStatus.loading));
     try {
-      final user = await _repo.verify(
-        phoneNumber: state.phoneNumber,
-        otpCode: state.otpCode,
+      // Auto-verification already produced an ID token; otherwise exchange
+      // the manually-typed OTP for one now.
+      final idToken = state.idToken ??
+          await _repo.confirmOtp(
+            verificationId: state.verificationId!,
+            otpCode: state.otpCode,
+          );
+      final user = await _repo.exchangeFirebaseToken(
+        idToken: idToken,
         militaryId: event.militaryId,
         deviceFingerprint: deviceFingerprint,
       );
       emit(state.copyWith(status: AuthStatus.success, user: user));
     } catch (e) {
-      // Server rejects the pair atomically — return to OTP step because the
-      // code has been consumed/burned server-side.
+      // Firebase codes are single-use — return to OTP step so the user gets
+      // a fresh one instead of retrying a burned code.
+      final (code, detail) = AuthRepository.firebaseErrorCode(e);
       emit(state.copyWith(
         step: AuthStep.otp,
         status: AuthStatus.error,
         otpCode: '',
-        errorMessage: AuthRepository.errorMessage(e),
+        clearIdToken: true,
+        errorCode: code,
+        errorDetail: detail,
       ));
     }
   }
@@ -171,6 +267,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       ResendOtpRequested event, Emitter<AuthState> emit) async {
     if (!state.canResend) return;
     add(PhoneSubmitted(state.phoneNumber));
+  }
+
+  void _onStepBack(StepBackRequested event, Emitter<AuthState> emit) {
+    // Clears any error on the way back: it described the step being left, and
+    // carrying it forward would flag a field the user hasn't touched yet.
+    switch (state.step) {
+      case AuthStep.phone:
+        return;
+      case AuthStep.otp:
+        _countdown?.cancel();
+        emit(state.copyWith(step: AuthStep.phone, status: AuthStatus.idle));
+      case AuthStep.militaryId:
+        emit(state.copyWith(
+          step: AuthStep.otp,
+          status: AuthStatus.idle,
+          otpCode: '',
+          clearIdToken: true,
+        ));
+    }
   }
 
   void _startCountdown(int seconds) {

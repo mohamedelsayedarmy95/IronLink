@@ -65,15 +65,28 @@ def create_access_token(
     user_id: UUID,
     token_version: int,
     role: str,
+    session_id: UUID,
     extra_claims: dict[str, Any] | None = None,
 ) -> str:
-    """Access token embeds token_version at issue time. Verification compares
-    against the user's current token_version — a single DB increment invalidates
-    every outstanding token for that user (see User.token_version)."""
+    """Mint an access token bound to one device's session.
+
+    Two independent revocation levers, deliberately at different scales:
+
+    - `ver` carries User.token_version. Incrementing it invalidates every
+      token for that user everywhere — the lever for a compromised account.
+    - `sid` names the UserSession. Revoking that session invalidates only
+      that device, which is what the remote-kick feature promises.
+
+    `sid` is not optional. Without it authentication cannot tell one device
+    from another, so revoking a session had no effect on requests at all:
+    the kicked device kept working until its token expired, and its socket
+    closed only if the client chose to obey the notice.
+    """
     now = datetime.now(timezone.utc)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "ver": token_version,
+        "sid": str(session_id),
         "role": role,
         "iat": now,
         "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),

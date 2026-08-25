@@ -1,14 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../core/api_client.dart';
+import '../../../core/crypto/attachment_crypto.dart';
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
-import '../../core/crypto/signal.dart';
+import '../local/message_store.dart';
+import '../../../core/crypto/key_repository.dart';
+import '../../../core/crypto/signal.dart';
 
 // ── Events ─────────────────────────────────────────────────────────────────────
 
@@ -23,10 +27,45 @@ class ChatOpened extends ChatEvent {
 }
 
 class TextSent extends ChatEvent {
-  const TextSent(this.content);
+  const TextSent(this.content, {this.replyTo});
   final String content;
+
+  /// The message being answered, by id.
+  final String? replyTo;
+
   @override
-  List<Object?> get props => [content];
+  List<Object?> get props => [content, replyTo];
+}
+
+/// The user tapped an emoji on a message, or tapped the same one again to
+/// take it back.
+class ReactionToggled extends ChatEvent {
+  const ReactionToggled(this.messageId, this.emoji);
+  final String messageId;
+
+  /// Null clears this device's reaction.
+  final String? emoji;
+
+  @override
+  List<Object?> get props => [messageId, emoji];
+}
+
+/// A reaction arrived from another device or another person.
+class _ReactionReceived extends ChatEvent {
+  const _ReactionReceived(this.targetId, this.senderId, this.emoji);
+  final String targetId;
+  final String senderId;
+  final String? emoji;
+  @override
+  List<Object?> get props => [targetId, senderId, emoji];
+}
+
+/// The user picked a message to reply to, or dismissed the composer preview.
+class ReplyTargetChanged extends ChatEvent {
+  const ReplyTargetChanged(this.messageId);
+  final String? messageId;
+  @override
+  List<Object?> get props => [messageId];
 }
 
 class MediaSent extends ChatEvent {
@@ -35,12 +74,25 @@ class MediaSent extends ChatEvent {
     required this.mediaKey,
     required this.mimeType,
     this.caption,
+    this.attachmentKey,
+    this.duration,
+    this.waveform,
   });
 
   final String kind;
   final String mediaKey;
   final String mimeType;
   final String? caption;
+
+  /// Present when the body was encrypted before upload. Carried inside the
+  /// Signal envelope, never as a field on the wire.
+  final AttachmentKey? attachmentKey;
+
+  /// Voice notes only: length in seconds and the bars to draw. Both are
+  /// metadata about the recording, so they travel inside the envelope rather
+  /// than as wire fields the server could read.
+  final double? duration;
+  final List<double>? waveform;
 
   @override
   List<Object?> get props => [kind, mediaKey];
@@ -58,6 +110,15 @@ class MessageUnsent extends ChatEvent {
   final String messageId;
   @override
   List<Object?> get props => [messageId];
+}
+
+/// The transport gave up on a queued send — refused by the server, or out of
+/// retries, or trimmed from a full queue.
+class _SendGaveUp extends ChatEvent {
+  const _SendGaveUp(this.clientRef);
+  final String clientRef;
+  @override
+  List<Object?> get props => [clientRef];
 }
 
 class _FrameReceived extends ChatEvent {
@@ -165,11 +226,24 @@ class ChatModerateMessageFailure extends ChatEvent {
   List<Object?> get props => [messageId, error];
 }
 
+/// Why a secure chat could not carry a message.
+///
+/// Distinct cases rather than one flag, because the answers differ: a changed
+/// identity needs the user to decide, a peer with no keys cannot be messaged
+/// at all, and a failed decrypt affects one message rather than the session.
+enum SecureChatError {
+  identityChanged,
+  peerHasNoKeys,
+  encryptFailed,
+  decryptFailed,
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 class ChatRoomState extends Equatable {
   const ChatRoomState({
     this.messages = const [],
+    this.replyingToId,
     this.peerTyping = false,
     this.loading = true,
     this.error,
@@ -182,6 +256,7 @@ class ChatRoomState extends Equatable {
     this.translationLoading = const {}, // map messageId -> bool
     this.moderationScores = const {}, // map messageId -> scores
     this.moderationLoading = const {}, // map messageId -> bool
+    this.secureError,
   });
 
   final List<ChatMessage> messages;
@@ -199,8 +274,21 @@ class ChatRoomState extends Equatable {
   final Map<String, Map<String, double>> moderationScores;
   final Map<String, bool> moderationLoading;
 
+  /// Set when encryption refused to carry a message. Cleared like [error]:
+  /// it describes the last attempt, not a lasting condition.
+  final SecureChatError? secureError;
+
+  /// The message the composer is currently answering, if any.
+  ///
+  /// Held as an id rather than a whole message so it cannot go stale: the
+  /// original may be edited, deleted, or retracted while the reply is being
+  /// typed, and the preview should follow whatever the history now says.
+  final String? replyingToId;
+
   ChatRoomState copyWith({
     List<ChatMessage>? messages,
+    String? replyingToId,
+    bool clearReplyingTo = false,
     bool? peerTyping,
     bool? loading,
     String? error,
@@ -212,9 +300,15 @@ class ChatRoomState extends Equatable {
     Map<String, bool>? translationLoading,
     Map<String, Map<String, double>>? moderationScores,
     Map<String, bool>? moderationLoading,
+    SecureChatError? secureError,
   }) =>
       ChatRoomState(
         messages: messages ?? this.messages,
+        // `clearReplyingTo` rather than relying on a null argument: sending a
+        // reply must be able to clear the target, and `?? this.replyingToId`
+        // cannot express "set this to nothing".
+        replyingToId:
+            clearReplyingTo ? null : (replyingToId ?? this.replyingToId),
         peerTyping: peerTyping ?? this.peerTyping,
         loading: loading ?? this.loading,
         error: error,
@@ -226,16 +320,51 @@ class ChatRoomState extends Equatable {
         translationLoading: translationLoading ?? this.translationLoading,
         moderationScores: moderationScores ?? this.moderationScores,
         moderationLoading: moderationLoading ?? this.moderationLoading,
+        // Not `?? this.secureError` — like `error`, it must not persist into
+        // the next state or a one-off failure would look permanent.
+        secureError: secureError,
       );
 
   @override
-  List<Object?> get props =>
-      [messages.length, _rev, peerTyping, loading, error, summary, summaryLoading, smartReplies, smartRepliesLoading];
+  List<Object?> get props => [
+        messages.length,
+        _rev,
+        replyingToId,
+        peerTyping,
+        loading,
+        error,
+        summary,
+        summaryLoading,
+        smartReplies,
+        smartRepliesLoading,
+        secureError,
+      ];
 
-  // Revision counter derived from mutable message fields so Equatable
-  // notices tick/deletion changes inside the list.
+  // Revision counter derived from mutable message fields so Equatable notices
+  // changes *inside* the list, which it otherwise cannot see: the list
+  // identity is unchanged when a message's tick moves.
+  //
+  // `failed` was missing from this fold and had to be added. Marking a message
+  // failed mutates it in place and emits a state whose props were therefore
+  // identical, so Equatable reported no change and the failure marker never
+  // rendered — the bubble sat there looking sent, which is precisely the lie
+  // the failed flag exists to prevent. A state field that the UI reads and
+  // this fold does not mention is invisible, and that is easy to miss because
+  // the bug looks like a rendering problem rather than an equality one.
   int get _rev => messages.fold(
-      0, (acc, m) => acc + m.tick.index + (m.deleted ? 100 : 0) + (m.pending ? 1000 : 0));
+      0,
+      (acc, m) =>
+          acc +
+          m.tick.index +
+          (m.deleted ? 100 : 0) +
+          (m.pending ? 1000 : 0) +
+          (m.failed ? 10000 : 0) +
+          // Reactions mutate the message in place, so they are invisible to
+          // Equatable unless they are folded in here — the same trap that hid
+          // the failed marker. The emoji themselves are included, not just the
+          // count, or swapping one reaction for another would not redraw.
+          m.reactions.entries.fold<int>(
+              0, (a, e) => a + e.key.hashCode ^ e.value.hashCode));
 }
 
 // ── Bloc ──────────────────────────────────────────────────────────────────────
@@ -246,18 +375,30 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     required WsService ws,
     required this.myId,
     required this.peerId,
-    this.isSecret = false,
+    this.peerName,
+    bool isSecret = false,
+    bool encrypted = true,
     required String baseUrl,
-    required String authToken,
+    required ApiClient api,
+    MessageStore? store,
+    SignalService? signalService,
   })  : _repo = repo,
+        _api = api,
         _ws = ws,
-        _signalService = SignalService(myId, baseUrl: baseUrl),
+        _store = store,
+        _signalService = signalService ??
+            SignalService(myId, keys: KeyRepository(api)),
         _isSecret = isSecret,
+        // A secret chat is encrypted by definition; the flag only ever adds
+        // to the protection, never removes it.
+        _encrypted = encrypted || isSecret,
         _baseUrl = baseUrl,
-        _authToken = authToken,
         super(const ChatRoomState()) {
     on<ChatOpened>(_onOpened);
     on<TextSent>(_onTextSent);
+    on<ReplyTargetChanged>(_onReplyTargetChanged);
+    on<ReactionToggled>(_onReactionToggled);
+    on<_ReactionReceived>(_onReactionReceived);
     on<MediaSent>(_onMediaSent);
     on<TypingChanged>(_onTypingChanged);
     on<MessageUnsent>(_onUnsent);
@@ -276,85 +417,287 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     on<ChatModerateMessageStarted>(_onModerateMessageStarted);
     on<ChatModerateMessageSuccess>(_onModerateMessageSuccess);
     on<ChatModerateMessageFailure>(_onModerateMessageFailure);
+    on<_SendGaveUp>(_onSendGaveUp);
 
     _sub = _ws.frames.listen((f) => add(_FrameReceived(f)));
+    // A message the outbox gave up on has to stop looking sent. Nothing else
+    // will notice: the frame left the queue, so no ack is coming and no error
+    // is coming, and without this the bubble waits on its clock forever.
+    _droppedSub = _ws.dropped.listen((ref) => add(_SendGaveUp(ref)));
   }
 
   final ChatRepository _repo;
   final WsService _ws;
   final String myId;
   final String peerId;
+
+  /// Stored alongside cached messages so a search hit can name the
+  /// conversation it came from without a network call.
+  final String? peerName;
+
+  /// Whether messages are end-to-end encrypted. On by default for every
+  /// direct chat — encryption that has to be switched on is encryption most
+  /// people never get.
+  final bool _encrypted;
+
+  /// The stricter mode: additionally never written to the local cache, so
+  /// nothing survives on the device. Costs search and offline history, which
+  /// is why it is not the default rather than encryption being opt-in.
   final bool _isSecret;
   final SignalService _signalService;
 
+  /// Local cache that makes search possible. Null when the device could not
+  /// open the database — the chat still works, it just is not searchable.
+  final MessageStore? _store;
+
+  /// Writes to the cache never block or break the conversation: a full disk
+  /// must not stop a message from being displayed. Secret chats are filtered
+  /// inside [MessageStore.upsertAll], which refuses to persist them at all.
+  void _cache(List<ChatMessage> messages) {
+    final store = _store;
+    if (store == null || messages.isEmpty) return;
+    unawaited(
+      store
+          .upsertAll(peerId, messages,
+              peerName: peerName, isSecret: _isSecret)
+          .catchError((Object e) => debugPrint('[cache] $e')),
+    );
+  }
+
   final String _baseUrl;
-  final String _authToken;
+  final ApiClient _api;
+
+  /// Read per request rather than captured once when the bloc is built.
+  /// The stored token is refreshed while a chat screen stays open, so a
+  /// copy taken at construction goes stale — and it was being constructed
+  /// from an empty string, which made every AI call a guaranteed 401.
+  Future<Map<String, String>> _authHeaders() async => {
+        'Authorization': 'Bearer ${await _api.accessToken ?? ''}',
+        'Content-Type': 'application/json',
+      };
 
   StreamSubscription? _sub;
+  StreamSubscription? _droppedSub;
   Timer? _typingDebounce;
   int _refCounter = 0;
 
-  Future<void> _onOpened(ChatOpened e, Emitter<ChatRoomState> emit) async {
+  /// Decrypts a message that came from server history rather than live.
+  ///
+  /// Most already-delivered messages are NOT recoverable from the server: the
+  /// ratchet advances as messages are processed, and a key that has been used
+  /// is deleted — that deletion is what forward secrecy means. Messages that
+  /// queued while this device was offline are still unprocessed and do
+  /// decrypt here, which is how offline delivery works at all.
+  ///
+  /// Own sent messages never decrypt from the server, because they were
+  /// encrypted to the peer and no sender-side copy exists. They are read from
+  /// the local cache instead, which is why that cache is the real history.
+  Future<ChatMessage> _decryptHistoric(ChatMessage m) async {
+    if (!_encrypted || !SignalService.isEnvelope(m.content)) {
+      // Predates encryption, or a peer on an older build. Shown, but the
+      // bubble marks it as unprotected.
+      return m;
+    }
+    if (m.isMine) {
+      m.content = null;
+      return m;
+    }
     try {
-      final history = await _repo.history(peerId, myId: myId);
+      m.content = await _signalService.decrypt(m.content!, peerId);
+      return ChatMessage(
+        id: m.id,
+        senderId: m.senderId,
+        content: m.content,
+        createdAt: m.createdAt,
+        isMine: m.isMine,
+        kind: m.kind,
+        tick: m.tick,
+        deleted: m.deleted,
+        mediaKey: m.mediaKey,
+        encrypted: true,
+      );
+    } catch (_) {
+      // Already consumed, or not for this device. Not an error worth
+      // shouting about — it is the expected cost of forward secrecy.
+      m.content = null;
+      return m;
+    }
+  }
+
+  Future<void> _onOpened(ChatOpened e, Emitter<ChatRoomState> emit) async {
+    // The local cache first: it holds already-decrypted plaintext, is the
+    // only place own sent messages survive, and works with no network.
+    final cached = await _store?.conversation(peerId) ?? const <ChatMessage>[];
+    if (cached.isNotEmpty) {
+      emit(state.copyWith(messages: cached, loading: false));
+    }
+
+    try {
+      final remote = await _repo.history(peerId, myId: myId);
+      final known = {for (final m in cached) m.id};
+
+      final merged = [...cached];
+      for (final m in remote) {
+        // Anything already cached was decrypted when it arrived; decrypting
+        // it again would fail and would count as a replay.
+        if (known.contains(m.id)) continue;
+        merged.add(await _decryptHistoric(m));
+      }
+      merged.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+      final history = merged;
       emit(state.copyWith(messages: history, loading: false));
+      _cache(history);
       // Everything from the peer that we just displayed is now read
       for (final m in history.where((m) => !m.isMine && m.tick != MessageTick.read)) {
         _ws.sendRead(m.id);
       }
-      // Optionally fetch summary if there are many messages
-      // For now, we can trigger summary fetch if unread count > 20
-      final unreadCount = history.where((m) => !m.isMine && m.tick != MessageTick.read).length;
-      if (unreadCount > 20) {
-        add(ChatFetchSummaryStarted());
-      }
+      // Summarising used to fire automatically here whenever more than 20
+      // messages were unread — which sent the conversation to a third party
+      // on merely opening a chat, with nobody having asked for it and nobody
+      // told. It is now something the user requests, and only after everyone
+      // in the conversation has agreed.
     } catch (err) {
+      // Cached messages stay on screen: being offline should not empty a
+      // conversation the device can already display.
       emit(state.copyWith(loading: false, error: err.toString()));
     }
+  }
+
+  void _onReactionToggled(ReactionToggled e, Emitter<ChatRoomState> emit) {
+    final existing = _reactionOf(e.messageId, myId);
+    // Tapping the same emoji again withdraws it, which is the gesture people
+    // expect and means the picker needs no separate "remove" affordance.
+    final next = existing == e.emoji ? null : e.emoji;
+
+    _applyReaction(e.messageId, myId, next, emit);
+    _ws.sendReaction(
+      target: e.messageId,
+      to: peerId,
+      content: next,
+      clientRef: 'rx_${++_refCounter}',
+    );
+  }
+
+  void _onReactionReceived(_ReactionReceived e, Emitter<ChatRoomState> emit) {
+    _applyReaction(e.targetId, e.senderId, e.emoji, emit);
+  }
+
+  /// Decrypts a reaction's payload, or returns null.
+  ///
+  /// An emoji goes through the same ratchet a message body does — it is
+  /// content, and "somebody laughed at this" is exactly the inference a
+  /// metadata-only adversary wants. A failure yields null, which reads as
+  /// "no reaction" rather than rendering ciphertext as an emoji.
+  Future<String?> _decryptOrNull(String? payload) async {
+    if (payload == null || payload.isEmpty) return null;
+    if (!_encrypted || !SignalService.isEnvelope(payload)) return payload;
+    try {
+      return await _signalService.decrypt(payload, peerId);
+    } on DuplicateMessageException {
+      // Already processed. A reaction is idempotent by nature — the same
+      // person reacting the same way twice is one reaction — so there is
+      // nothing to drop and nothing to apply.
+      return null;
+    } catch (err) {
+      debugPrint('[signal] reaction decrypt failed: $err');
+      return null;
+    }
+  }
+
+  String? _reactionOf(String messageId, String who) {
+    for (final m in state.messages) {
+      if (m.id == messageId) return m.reactions[who];
+    }
+    return null;
+  }
+
+  /// Folds one reaction onto its target and emits.
+  ///
+  /// A reaction for a message this device does not have is dropped rather than
+  /// held: it would be waiting for a message that may never be fetched, and a
+  /// pending-reaction store is a cache nobody would ever invalidate.
+  void _applyReaction(
+    String targetId,
+    String who,
+    String? emoji,
+    Emitter<ChatRoomState> emit,
+  ) {
+    var changed = false;
+    for (final m in state.messages) {
+      if (m.id != targetId) continue;
+      if (emoji == null) {
+        changed = m.reactions.remove(who) != null;
+      } else {
+        changed = m.reactions[who] != emoji;
+        m.reactions[who] = emoji;
+      }
+      break;
+    }
+    if (changed) emit(state.copyWith(messages: [...state.messages]));
+  }
+
+  void _onReplyTargetChanged(
+    ReplyTargetChanged e,
+    Emitter<ChatRoomState> emit,
+  ) {
+    emit(state.copyWith(
+      replyingToId: e.messageId,
+      clearReplyingTo: e.messageId == null,
+    ));
   }
 
   void _onTextSent(TextSent e, Emitter<ChatRoomState> emit) async {
     final ref = 'ref_${++_refCounter}';
     String contentToSend = e.content;
 
-    if (_isSecret) {
-      // For secret chats, we need to establish a session if we don't have one
-      final sessionExists = await _signalService.loadSession(peerId) != null;
-      if (!sessionExists) {
-        try {
-          // Perform X3DH key exchange to establish session
-          await _signalService.performX3DH(peerId);
-          // Initialize session as sender
-          await _signalService.initSessionAsSender(peerId, {});
-          // Note: In a full implementation, we'd need to exchange the ephemeral key
-          // and pre-key ID with the remote party, but for now we assume the
-          // signal service handles storing what it needs
-        } catch (e) {
-          // If key exchange fails, we fall back to unencrypted? Or show error?
-          // For now, we'll log and continue with unencrypted (not ideal but prevents blocking)
-          // In production, we'd show an error to the user
-          print('Failed to establish secure session: $e');
-        }
+    if (_encrypted) {
+      try {
+        // Opens the session on first use. Encryption failures are NOT
+        // swallowed: sending plaintext from a screen the user believes is
+        // encrypted is the worst outcome available here, so the send is
+        // abandoned and the reason surfaced instead.
+        contentToSend = await _signalService.encrypt(e.content, peerId);
+      } on IdentityChanged {
+        emit(state.copyWith(secureError: SecureChatError.identityChanged));
+        return;
+      } on PeerHasNoKeys {
+        emit(state.copyWith(secureError: SecureChatError.peerHasNoKeys));
+        return;
+      } catch (err) {
+        debugPrint('[signal] encrypt failed: $err');
+        emit(state.copyWith(secureError: SecureChatError.encryptFailed));
+        return;
       }
-
-      // Encrypt the message
-      final encrypted = await _signalService.encryptMessage(e.content, peerId);
-      contentToSend = encrypted['ciphertext'] as String;
     }
 
-    // Optimistic bubble — replaced by the server ack
+    // Optimistic bubble — replaced by the server ack.
+    //
+    // Shows e.content, not contentToSend: once encryption is on, the latter
+    // is the ciphertext envelope, and the sender would watch their own
+    // message appear as a blob of JSON.
     final optimistic = ChatMessage(
       id: ref,
       senderId: myId,
-      content: contentToSend,
+      content: e.content,
       createdAt: DateTime.now(),
       isMine: true,
       pending: true,
+      encrypted: _encrypted,
+      replyToId: e.replyTo,
     );
-    _ws.sendText(to: peerId, content: contentToSend, clientRef: ref);
+    _ws.sendText(
+      to: peerId,
+      content: contentToSend,
+      clientRef: ref,
+      replyTo: e.replyTo,
+    );
     // Send typing_stop via HTTP when sending a message
     _repo.sendTyping(peerId, false);
-    emit(state.copyWith(messages: [...state.messages, optimistic]));
+    emit(state.copyWith(
+      messages: [...state.messages, optimistic],
+      clearReplyingTo: true,
+    ));
   }
 
   void _onMediaSent(MediaSent e, Emitter<ChatRoomState> emit) async {
@@ -362,26 +705,43 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     String contentToSend = e.caption ?? '[${e.kind}]';
     String mediaKeyToSend = e.mediaKey;
 
-    if (_isSecret) {
-      // For secret chats, we need to establish a session if we don't have one
-      final sessionExists = await _signalService.loadSession(peerId) != null;
-      if (!sessionExists) {
-        try {
-          // Perform X3DH key exchange to establish session
-          await _signalService.performX3DH(peerId);
-          // Initialize session as sender
-          await _signalService.initSessionAsSender(peerId, {});
-        } catch (e) {
-          print('Failed to establish secure session: $e');
-        }
-      }
+    // What actually goes on the wire as the message body. Kept separate from
+    // `contentToSend`, which is what the local bubble shows: the previous
+    // code encrypted into `contentToSend` and then handed sendMedia the
+    // plaintext caption anyway, so the caption left the device in the clear.
+    String? wireContent = e.caption;
 
-      // For media in secret chats, we encrypt the media key and caption together
-      // as we did before, but now with real encryption
-      final combined = '${e.mediaKey}:${e.caption ?? ''}';
-      final encrypted = await _signalService.encryptMessage(combined, peerId);
-      contentToSend = encrypted['ciphertext'] as String;
-      mediaKeyToSend = ''; // Not used separately since it's in the encrypted content
+    if (_encrypted) {
+      // The pointer, the caption, the real MIME type and the attachment's
+      // decryption key all travel together inside one envelope. The key in
+      // particular must never reach the server: with it, the stored object
+      // stops being opaque.
+      //
+      // JSON rather than the "$mediaKey:$caption" concatenation this used to
+      // be — that had no room for key material, and a caption containing a
+      // colon split in the wrong place.
+      final payload = jsonEncode({
+        'media_key': e.mediaKey,
+        'caption': e.caption,
+        'mime': e.mimeType,
+        if (e.attachmentKey != null) 'att': e.attachmentKey!.toJson(),
+        if (e.duration != null) 'dur': e.duration,
+        if (e.waveform != null) 'wave': e.waveform,
+      });
+      try {
+        wireContent = await _signalService.encrypt(payload, peerId);
+      } on IdentityChanged {
+        emit(state.copyWith(secureError: SecureChatError.identityChanged));
+        return;
+      } on PeerHasNoKeys {
+        emit(state.copyWith(secureError: SecureChatError.peerHasNoKeys));
+        return;
+      } catch (err) {
+        debugPrint('[signal] media encrypt failed: $err');
+        emit(state.copyWith(secureError: SecureChatError.encryptFailed));
+        return;
+      }
+      mediaKeyToSend = ''; // carried inside the envelope instead
     }
 
     final optimistic = ChatMessage(
@@ -390,14 +750,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       content: contentToSend,
       createdAt: DateTime.now(),
       isMine: true,
+      kind: e.kind,
       pending: true,
+      encrypted: _encrypted,
+      mediaKey: e.mediaKey,
+      attachmentKey: e.attachmentKey,
     );
     _ws.sendMedia(
       to: peerId,
       kind: e.kind,
       mediaKey: mediaKeyToSend,
       mimeType: e.mimeType,
-      caption: e.caption,
+      caption: wireContent,
       clientRef: ref,
     );
     // Send typing_stop via HTTP when sending a message
@@ -427,43 +791,135 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       m.content = null;
     }
     emit(state.copyWith(messages: updated));
+    // Re-cached so the retracted text stops matching searches. upsertAll
+    // stores null content for a deleted message, which is the point.
+    _cache([
+      for (final m in updated)
+        if (m.id == e.messageId) m
+    ]);
   }
 
-  void _onFrame(_FrameReceived e, Emitter<ChatRoomState> emit) {
+  void _onSendGaveUp(_SendGaveUp e, Emitter<ChatRoomState> emit) {
+    emit(state.copyWith(messages: [
+      for (final m in state.messages)
+        if (m.id == e.clientRef) (m..failed = true) else m,
+    ]));
+  }
+
+  Future<void> _onFrame(_FrameReceived e, Emitter<ChatRoomState> emit) async {
     final f = e.frame;
     switch (f['type']) {
+      case 'reaction':
+        add(_ReactionReceived(
+          f['target'] as String,
+          f['from'] as String,
+          // The emoji arrives encrypted like any other content, so it is
+          // decrypted on the way in — the same path a message body takes.
+          await _decryptOrNull(f['content'] as String?),
+        ));
+        return;
       case 'ack':
         final ref = f['client_ref'] as String?;
         final updated = [
           for (final m in state.messages)
             if (m.id == ref)
+              // Carries the media fields and the encrypted flag across:
+              // rebuilding from scratch here used to drop them, which blanked
+              // the sender's own attachment the moment the ack arrived.
               ChatMessage(
                 id: f['message_id'] as String,
                 senderId: myId,
                 content: m.content,
                 createdAt: DateTime.parse(f['created_at'] as String),
                 isMine: true,
+                kind: m.kind,
+                mediaKey: m.mediaKey,
+                attachmentKey: m.attachmentKey,
+                encrypted: m.encrypted,
               )
             else
               m
         ];
         emit(state.copyWith(messages: updated));
+        // Cached only now, not at send time: before the ack the message has
+        // a client ref rather than its real id, and caching that would leave
+        // a row search could never match back to the conversation.
+        _cache([
+          for (final m in updated)
+            if (m.id == f['message_id']) m
+        ]);
 
       case 'message':
         if (f['from'] != peerId) return; // other conversation
-        String content = f['content'] as String?;
 
-        if (_isSecret) {
+        // Second line of defence behind the server's idempotency key. A
+        // reconnect can redeliver a frame the socket had already carried, and
+        // showing the same message twice is the visible symptom users would
+        // report. Cheap to check, and it costs nothing when it never happens.
+        final incomingId = f['message_id'] as String?;
+        if (incomingId != null &&
+            state.messages.any((m) => m.id == incomingId)) {
+          return;
+        }
+        String? content = f['content'] as String?;
+
+        // Encrypted unless it demonstrably is not. See _isEnvelope: a message
+        // that never went through the ratchet is shown, but marked, rather
+        // than silently rendered as though it had been verified.
+        var wasEncrypted = false;
+
+        if (_encrypted) {
+          if (SignalService.isEnvelope(content)) {
+            try {
+              content = await _signalService.decrypt(content!, peerId);
+              wasEncrypted = true;
+            } on DuplicateMessageException {
+              // The ratchet already processed this one. Dropping it is the
+              // point — showing it twice is what a replay wants.
+              return;
+            } catch (err) {
+              debugPrint('[signal] decrypt failed: $err');
+              // Never fall back to the raw bytes: rendering ciphertext, or
+              // an attacker's plaintext, as a normal bubble misrepresents
+              // what was actually verified.
+              content = null;
+              emit(state.copyWith(secureError: SecureChatError.decryptFailed));
+            }
+          }
+          // Not an envelope: either a message from before this device had a
+          // session, or a peer on an older build. Shown with an explicit
+          // "not encrypted" marker on the bubble, so a stripped message can
+          // never pass as a protected one.
+        }
+
+        final kind = f['kind'] as String? ?? 'text';
+        String? mediaKey = f['media_key'] as String?;
+        AttachmentKey? attachmentKey;
+        double? duration;
+        List<double>? waveform;
+
+        // A secret media message carries its pointer and key inside the
+        // envelope rather than in wire fields, so they have to be unpacked
+        // after decryption before the message means anything.
+        if (wasEncrypted && kind != 'text' && content != null) {
           try {
-            // For secret chats, we need to decrypt the message
-            final decrypted = await _signalService.decryptMessage(
-                {'ciphertext': content}, peerId);
-            content = decrypted;
-          } catch (decryptionError) {
-            // If decryption fails, we might want to show an error or fallback
-            // For now, we'll keep the encrypted content and log the error
-            print('Failed to decrypt message: $decryptionError');
-            // Keep content as is (encrypted) so it doesn't break the UI completely
+            final payload = jsonDecode(content) as Map<String, dynamic>;
+            mediaKey = payload['media_key'] as String?;
+            content = payload['caption'] as String?;
+            final att = payload['att'];
+            if (att != null) {
+              attachmentKey =
+                  AttachmentKey.fromJson(att as Map<String, dynamic>);
+            }
+            duration = (payload['dur'] as num?)?.toDouble();
+            waveform = [
+              for (final v in (payload['wave'] as List<dynamic>? ?? const []))
+                (v as num).toDouble()
+            ];
+          } catch (err) {
+            debugPrint('[signal] media envelope malformed: $err');
+            content = null;
+            emit(state.copyWith(secureError: SecureChatError.decryptFailed));
           }
         }
 
@@ -473,11 +929,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
           content: content,
           createdAt: DateTime.parse(f['created_at'] as String),
           isMine: false,
+          mediaKey: mediaKey,
+          attachmentKey: attachmentKey,
+          encrypted: wasEncrypted,
+          duration: duration,
+          waveform: waveform,
+          kind: kind,
         );
         emit(state.copyWith(
           messages: [...state.messages, msg],
           peerTyping: false,
         ));
+        _cache([msg]);
         // Chat room is open → delivered AND read immediately
         _ws.sendDelivered(msg.id);
         _ws.sendRead(msg.id);
@@ -542,7 +1005,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     try {
       // Fetch recent messages from the chat
       final messages = await _repo.history(peerId, myId: myId, limit: 100);
-      final messageTexts = messages.where((m) => m.content.isNotEmpty).map((m) => m.content).toList();
+      final messageTexts = messages
+          .where((m) => (m.content ?? '').isNotEmpty)
+          .map((m) => m.content!)
+          .toList();
       if (messageTexts.isEmpty) {
         emit(state.copyWith(summaryLoading: false, summary: ''));
         return;
@@ -550,10 +1016,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       // Call AI summary endpoint
       final response = await http.post(
         Uri.parse('$_baseUrl/chats/$peerId/summary'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'messages': messageTexts,
         }),
@@ -593,13 +1056,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       }
       final response = await http.post(
         Uri.parse('$_baseUrl/ai/smart-replies'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'context': context,
           'num_replies': 3,
+          // Tells the server which conversation this text came from, so it
+          // can check that everyone in it agreed. Without it there is
+          // nothing to enforce.
+          'peer_id': peerId,
         }),
       );
       if (response.statusCode == 200) {
@@ -634,13 +1098,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/ai/translate'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'text': event.text,
           'target_lang': event.targetLang,
+          'peer_id': peerId,
         }),
       );
       if (response.statusCode == 200) {
@@ -692,12 +1154,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/ai/moderate'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
+        headers: await _authHeaders(),
         body: jsonEncode({
           'text': event.text,
+          'peer_id': peerId,
         }),
       );
       if (response.statusCode == 200) {
@@ -746,6 +1206,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   Future<void> close() {
     _typingDebounce?.cancel();
     _sub?.cancel();
+    _droppedSub?.cancel();
     return super.close();
   }
 }

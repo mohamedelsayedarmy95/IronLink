@@ -6,7 +6,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -41,6 +41,25 @@ class JoinRequestStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+    # Admin asked the requester to amend their answers; the request stays alive
+    # and returns to PENDING on resubmission.
+    MORE_INFO_NEEDED = "more_info_needed"
+    # Passed request_expiry_days with no admin decision. Kept rather than
+    # deleted so an admin can still see what they missed.
+    EXPIRED = "expired"
+
+
+class GroupJoinMode(str, Enum):
+    """How a group admits people.
+
+    Supersedes the older `join_approval_required` boolean, which could not
+    express "invite only". That column is retained and kept in sync so
+    existing clients and queries keep working — see Group.join_mode.
+    """
+
+    OPEN = "open"
+    INVITE_ONLY = "invite_only"
+    REQUEST_APPROVAL = "request_approval"
 
 
 class GroupType(str, Enum):
@@ -65,6 +84,23 @@ class Group(Base):
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    #: Bumped on every membership change. This is the whole basis of group
+    #: encryption's forward security.
+    #:
+    #: Group messages are encrypted with a per-sender key that every member
+    #: holds a copy of. Anyone who ever received that key can decrypt every
+    #: later message from that sender — so removing someone from the group
+    #: means nothing until each remaining sender generates a fresh key. The
+    #: epoch is how a client learns it must do that: it is compared against
+    #: the epoch its current sender key was minted for.
+    #:
+    #: The server cannot enforce the rotation, because it cannot see the keys.
+    #: What it can do is make the change impossible to miss, which is what
+    #: this column is for.
+    members_epoch: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1", default=1
+    )
     avatar_object_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     group_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default=GroupType.TASK_FORCE, index=True
@@ -88,7 +124,34 @@ class Group(Base):
     )
     join_approval_required: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true",
-        comment="Joining requires admin approval (formal-workplace default)",
+        comment=(
+            "Legacy flag, superseded by join_mode. Kept in sync on write so "
+            "existing clients and queries continue to work; read join_mode."
+        ),
+    )
+    join_mode: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=GroupJoinMode.REQUEST_APPROVAL,
+        server_default=GroupJoinMode.REQUEST_APPROVAL.value,
+        index=True,
+        comment="open | invite_only | request_approval",
+    )
+    verification_form_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("verification_forms.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Active form for this group; NULL means no questions are asked",
+    )
+    request_expiry_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=14, server_default="14"
+    )
+    allow_rejoin: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="Whether a rejected user may submit a fresh request",
     )
     only_admins_can_add_members: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
@@ -190,16 +253,55 @@ class GroupJoinRequest(Base):
         server_default=JoinRequestStatus.PENDING.value, index=True,
     )
     message: Mapped[str | None] = mapped_column(
-        String(300), nullable=True, comment="Optional note to the group admin"
+        String(300), nullable=True, comment="Optional free-text note to the admin"
     )
+
+    # ── Verification form answers ──────────────────────────────────────────────
+    form_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("verification_forms.id", ondelete="SET NULL"),
+        nullable=True,
+        comment=(
+            "The form this request answered, snapshotted at submission. Editing "
+            "a group's active form must not change what a pending request was "
+            "asked, so the request keeps its own reference."
+        ),
+    )
+    answers: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment='{"<field_id>": value} — validated against form_id at submit time',
+    )
+
+    # ── Admin decision trail ───────────────────────────────────────────────────
+    admin_notes: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="Shown to the requester when more info is needed"
+    )
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     decided_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     decided_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
     __table_args__ = (
         Index("ix_join_req_group_status", "group_id", "status"),
         Index("ix_join_req_unique_pending", "group_id", "user_id", unique=True),
+        Index("ix_join_req_expires", "expires_at"),
     )
+
+    def is_actionable(self) -> bool:
+        """Whether an admin decision may still be applied.
+
+        Guards the spec's rule that an expired request cannot be approved after
+        the fact — the window closing is the whole point of having one.
+        """
+        return self.status in (
+            JoinRequestStatus.PENDING,
+            JoinRequestStatus.MORE_INFO_NEEDED,
+        )

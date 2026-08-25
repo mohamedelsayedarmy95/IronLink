@@ -1,0 +1,784 @@
+{
+  "@@locale": "ar",
+  "authTagline": "خاص · آمن · بلا حدود",
+  "authSubtitle": "منظومة التراسل المؤمَّنة",
+  "featureE2EE": "تشفير من طرف لطرف",
+  "featureVerifiedIdentity": "هوية موثقة",
+  "featurePrivacyByDesign": "خصوصية بالتصميم",
+  "featureDeviceSecurity": "أمان على كل جهاز",
+  "getStarted": "ابدأ الآن",
+  "alreadyHaveAccount": "لديك حساب بالفعل؟ ",
+  "signIn": "تسجيل الدخول",
+  "devGuestLogin": "دخول تجريبي بدون سيرفر",
+  "secureSignInTitle": "تسجيل الدخول الآمن",
+  "phoneStepSubtitle": "أدخل رقم هاتفك المسجل لدى الوحدة",
+  "otpStepSubtitle": "أدخل رمز التحقق المرسل إليك عبر رسالة نصية",
+  "militaryIdStepSubtitle": "أدخل رقمك العسكري لإتمام التحقق",
+  "phoneNumberLabel": "رقم الهاتف",
+  "otpCodeLabel": "رمز التحقق",
+  "sendVerificationCode": "إرسال رمز التحقق",
+  "resendCode": "إعادة إرسال الرمز",
+  "resendCodeCountdown": "إعادة الإرسال بعد {seconds} ثانية",
+  "@resendCodeCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "militaryIdHint": "الرقم العسكري",
+  "showPassword": "إظهار",
+  "hidePassword": "إخفاء",
+  "confirmSignIn": "تأكيد الدخول",
+  "e2eeNotice": "بياناتك مشفّرة من طرف لطرف ولا يمكن للخادم قراءتها.",
+  "errorFirebaseTokenFailed": "تعذر الحصول على رمز التحقق من Firebase",
+  "errorNetwork": "تعذر الاتصال بالخادم — تحقق من الشبكة",
+  "errorUnexpected": "حدث خطأ غير متوقع",
+  "errorInvalidPhone": "رقم الهاتف غير صالح",
+  "errorTooManyRequests": "محاولات كثيرة جدًا — حاول لاحقًا",
+  "errorInvalidCode": "رمز التحقق غير صحيح",
+  "errorSessionExpired": "انتهت صلاحية الرمز — أعد الإرسال",
+  "errorPhoneVerificationFailed": "حدث خطأ أثناء التحقق من الهاتف",
+  "noChatsYet": "لا توجد محادثات بعد",
+  "noChatsYetHint": "ابدأ محادثة مؤمَّنة مع أحد جهات اتصالك.",
+  "onlineNow": "متصل الآن",
+  "startSecretChat": "بدء محادثة سرية",
+  "secretChatComingSoon": "تم تفعيل المحادثة السرية (سيتم تطبيقها في التحديث التالي)",
+  "messageDeleted": "تم حذف هذه الرسالة",
+  "translate": "ترجمة",
+  "reportMessage": "إبلاغ عن رسالة",
+  "deleteForEveryone": "حذف لدى الجميع",
+  "deleteForEveryoneHint": "متاح خلال 5 دقائق من الإرسال",
+  "typingIndicator": "{name} يكتب",
+  "@typingIndicator": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "attach": "إرفاق",
+  "messageHint": "اكتب رسالة…",
+  "send": "إرسال",
+  "notInAnyGroupYet": "لست عضواً في أي مجموعة بعد",
+  "notInAnyGroupYetHint": "أنشئ مجموعة أو انضم إلى واحدة للتنسيق مع فريقك.",
+  "groupMembersTitle": "{name} — {count} عضو",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "announcementChannelReadOnly": "قناة إعلانات — للقراءة فقط",
+  "memberCount": "{count} عضو",
+  "@memberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleOwner": "مالك المجموعة",
+  "roleAdmin": "مشرف",
+  "roleModerator": "منسق",
+  "roleObserver": "مراقب — قراءة فقط",
+  "roleMember": "عضو",
+  "channelsTitle": "القنوات",
+  "createChannel": "إنشاء قناة",
+  "noChannelsYet": "لا توجد قنوات بعد",
+  "noChannelsYetHint": "اشترك في قناة لتصلك الإعلانات الرسمية.",
+  "channelsLoadFailedTitle": "تعذّر تحميل القنوات",
+  "subscriberCount": "{count} مشترك",
+  "@subscriberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ocrKeywordsTitle": "كلمات المسح الضوئي المفتاحية (OCR)",
+  "ocrKeywordsDescription": "يتم تنبيهك تلقائيًا إذا ظهرت أي من هذه الكلمات في نص ممسوح ضوئيًا (OCR) داخل صورة أو مستند.",
+  "newKeywordLabel": "كلمة مفتاحية جديدة",
+  "newKeywordHint": "اكتب كلمة وأضفها",
+  "noKeywordsYet": "لا توجد كلمات مفتاحية بعد",
+  "add": "إضافة",
+  "ocrKeywordExists": "هذه الكلمة مُضافة بالفعل.",
+  "ocrKeywordsEmptyHint": "أضف كلمة ليتم تنبيهك عند ظهورها في أي صورة أو مستند ممسوح ضوئيًا.",
+  "retry": "إعادة المحاولة",
+  "delete": "حذف",
+  "ocrLoadFailedTitle": "تعذّر تحميل الكلمات",
+  "ocrAddFailed": "لم تُضَف الكلمة. حاول مرة أخرى.",
+  "ocrRemoveFailed": "لم تُحذَف الكلمة. حاول مرة أخرى.",
+  "failureOffline": "لا يوجد اتصال بالإنترنت. تحقّق من الشبكة ثم أعد المحاولة.",
+  "failureTimeout": "الخادم يستغرق وقتًا أطول من المعتاد. أعد المحاولة بعد قليل.",
+  "failureServer": "تعذّر الوصول إلى الخادم حاليًا. أعد المحاولة بعد قليل.",
+  "failureUnauthorized": "انتهت صلاحية جلستك. سجّل الدخول مرة أخرى.",
+  "failureRejected": "تعذّر إتمام الطلب. راجع البيانات وحاول مرة أخرى.",
+  "failureInsecure": "تعذّر التحقّق من أمان الاتصال. لم تُرسَل أي بيانات.",
+  "failureUnknown": "حدث خطأ غير متوقّع. أعد المحاولة.",
+  "tabChats": "المحادثات",
+  "tabGroups": "المجموعات",
+  "tabBroadcasts": "التعميمات",
+  "tabSettings": "الإعدادات",
+  "comingSoon": "قريباً",
+  "releaseToCancel": "اترك للإلغاء",
+  "dragToCancel": "← اسحب للإلغاء",
+  "voiceUploadFailed": "فشل رفع التسجيل الصوتي",
+  "uploadFailed": "تعذّر رفع المرفق. حاول مرة أخرى.",
+  "attachGallery": "المعرض",
+  "attachCamera": "الكاميرا",
+  "attachDocument": "مستند PDF",
+  "attachPdfComingSoon": "اختيار ملفات PDF غير متاح بعد.",
+  "captionHint": "أضف تعليقًا…",
+  "ocrAlertFound": "رُصدت الكلمة \"{keyword}\" في ملف مرفوع.",
+  "@ocrAlertFound": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "acknowledged": "علمت",
+  "completeVerificationForm": "استكمال نموذج التحقق",
+  "joinRequestFor": "طلب انضمام: {group}",
+  "@joinRequestFor": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "completeFormBelow": "يرجى استكمال النموذج أدناه.",
+  "submitRequest": "إرسال الطلب",
+  "resubmit": "إعادة الإرسال",
+  "requestToJoin": "طلب الانضمام",
+  "cancelRequest": "إلغاء الطلب",
+  "requestAgain": "إعادة الطلب",
+  "requiredFieldsProgress": "{filled} من {total} حقول مطلوبة مكتملة",
+  "@requiredFieldsProgress": {
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "draftRestored": "تم استرجاع إجاباتك السابقة",
+  "formAnswersEncrypted": "إجاباتك مشفّرة أثناء النقل وعند التخزين.",
+  "formLoadFailedTitle": "تعذّر تحميل النموذج",
+  "noFormRequired": "لا يوجد نموذج مطلوب",
+  "noFormRequiredHint": "هذه المجموعة لا تطلب أي معلومات إضافية. أرسل طلبك مباشرة.",
+  "selectAnOption": "اختر خيارًا",
+  "selectADate": "اختر تاريخًا",
+  "noFileSelected": "لم يتم اختيار ملف",
+  "fieldTypeUnsupported": "هذا الحقل غير مدعوم في هذا الإصدار. حدّث التطبيق لإكماله.",
+  "statusPending": "قيد المراجعة",
+  "statusApproved": "تمت الموافقة",
+  "statusRejected": "مرفوض",
+  "statusMoreInfo": "بحاجة لمعلومات",
+  "statusExpired": "منتهي",
+  "joinRequestsTitle": "طلبات الانضمام",
+  "tabPending": "معلّقة",
+  "tabExpired": "منتهية",
+  "tabHistory": "السجل",
+  "select": "تحديد",
+  "cancel": "إلغاء",
+  "approve": "موافقة",
+  "reject": "رفض",
+  "approveAll": "قبول الكل",
+  "rejectAll": "رفض الكل",
+  "approveSelected": "قبول ({count})",
+  "@approveSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectSelected": "رفض ({count})",
+  "@rejectSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approveAllTitle": "قبول جميع الطلبات",
+  "rejectAllTitle": "رفض جميع الطلبات",
+  "approveAllConfirm": "هل أنت متأكد أنك تريد قبول جميع الطلبات المعلّقة وعددها {count}؟",
+  "@approveAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectAllConfirm": "هل أنت متأكد أنك تريد رفض جميع الطلبات المعلّقة وعددها {count}؟ لا يمكن التراجع عن هذا الإجراء.",
+  "@rejectAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkResult": "تمت المعالجة بنجاح لـ {count} طلب",
+  "@bulkResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectRequestTitle": "رفض الطلب",
+  "rejectionReasonOptional": "سبب الرفض (اختياري)",
+  "rejectionReasonLabel": "سبب الرفض",
+  "noAnswersSubmitted": "لم تُقدَّم أي إجابات",
+  "requestsLoadFailedTitle": "تعذّر تحميل الطلبات",
+  "noPendingRequests": "لا توجد طلبات انضمام معلّقة",
+  "noPendingRequestsHint": "مجموعتك آمنة. ستظهر الطلبات الجديدة هنا.",
+  "nothingHere": "لا يوجد شيء هنا",
+  "nothingHereHint": "لا توجد طلبات بهذه الحالة بعد.",
+  "minutesAgo": "منذ {count} دقيقة",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "منذ {count} ساعة",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "منذ {count} يوم",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "entrySettingsTitle": "إعدادات الانضمام",
+  "joinModeSection": "طريقة الانضمام",
+  "modeOpen": "مفتوحة",
+  "modeOpenHint": "أي شخص ينضم فورًا بدون موافقة.",
+  "modeInviteOnly": "بالدعوة فقط",
+  "modeInviteOnlyHint": "لا يمكن الانضمام إلا عبر رابط دعوة.",
+  "modeRequestApproval": "طلب وموافقة",
+  "modeRequestApprovalHint": "يملأ المتقدّم نموذج تحقق وينتظر موافقة المشرف.",
+  "verificationFormSection": "نموذج التحقق",
+  "noFormAttached": "لا يوجد نموذج",
+  "noFormAttachedHint": "المجموعة مغلقة لكنها لا تسأل أي شيء. أنشئ نموذجًا.",
+  "fieldCount": "{count} حقل",
+  "@fieldCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestHandlingSection": "معالجة الطلبات",
+  "requestExpiryTitle": "انتهاء صلاحية الطلب",
+  "requestExpiryHint": "الطلبات التي لا يُتخذ فيها قرار خلال هذه المدة تنتهي تلقائيًا.",
+  "expiryNever": "بلا انتهاء",
+  "expiryDays": "{count} يوم",
+  "@expiryDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allowRejoinTitle": "السماح بإعادة التقديم",
+  "allowRejoinHint": "يمكن لمن رُفض طلبه تقديم طلب جديد.",
+  "saveChanges": "حفظ التغييرات",
+  "settingsSaved": "تم حفظ الإعدادات",
+  "formBuilderTitle": "بنّاء النموذج",
+  "formBuilderEmptyTitle": "لم تُضف أي حقول بعد",
+  "formBuilderEmptyHint": "أضف الحقول التي يجب على المتقدّم استكمالها قبل الانضمام.",
+  "addField": "إضافة حقل",
+  "saveAndActivate": "حفظ وتفعيل",
+  "previewForm": "معاينة",
+  "editForm": "تحرير",
+  "previewNotice": "هذا ما سيراه المتقدّم بالضبط.",
+  "formNameLabel": "اسم النموذج",
+  "formNameHint": "مثال: تحقق الوحدة",
+  "formNeedsName": "أدخل اسمًا للنموذج",
+  "formNeedsFields": "أضف حقلًا واحدًا على الأقل",
+  "fieldNumber": "الحقل {number}",
+  "@fieldNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "fieldNeedsLabel": "هذا الحقل يحتاج عنوانًا",
+  "fieldNeedsOptions": "أضف خيارًا واحدًا على الأقل",
+  "untitledField": "حقل بلا عنوان",
+  "chooseFieldType": "اختر نوع الحقل",
+  "fieldLabelLabel": "السؤال",
+  "fieldLabelHint": "مثال: الاسم الرباعي بالعربي",
+  "fieldPlaceholderLabel": "نص توضيحي داخل الحقل (اختياري)",
+  "fieldHelperLabel": "إرشاد أسفل الحقل (اختياري)",
+  "fieldRequiredLabel": "حقل مطلوب",
+  "fieldOptionsLabel": "الخيارات",
+  "addOptionHint": "أضف خيارًا",
+  "optionExists": "هذا الخيار موجود بالفعل",
+  "done": "تم",
+  "fieldTypeTextShort": "نص قصير",
+  "fieldTypeTextLong": "نص طويل",
+  "fieldTypeNumber": "رقم",
+  "fieldTypeSelectSingle": "اختيار واحد",
+  "fieldTypeSelectMulti": "اختيار متعدد",
+  "fieldTypeDate": "تاريخ",
+  "fieldTypePhone": "رقم هاتف",
+  "fieldTypeFile": "ملف",
+  "fieldTypeImage": "صورة",
+  "fieldTypeCheckbox": "مربع اختيار",
+  "fieldTypeUrl": "رابط",
+  "fieldTypeEmail": "بريد إلكتروني",
+  "auditLogTitle": "سجل التدقيق",
+  "auditLogEmpty": "لم يُسجَّل أي نشاط بعد",
+  "auditLogEmptyHint": "ستظهر هنا كل الإجراءات الحساسة على المجموعة.",
+  "auditLogLoadFailedTitle": "تعذّر تحميل السجل",
+  "loadMore": "تحميل المزيد",
+  "filterAll": "الكل",
+  "filterApprovals": "الموافقات",
+  "filterRejections": "الرفض",
+  "filterBans": "الحظر",
+  "filterSettings": "الإعدادات",
+  "auditApproved": "تمت الموافقة على طلب انضمام",
+  "auditRejected": "تم رفض طلب انضمام",
+  "auditMoreInfo": "طُلبت معلومات إضافية",
+  "auditBulkApproved": "تمت الموافقة على {count} طلب دفعة واحدة",
+  "@auditBulkApproved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBulkRejected": "تم رفض {count} طلب دفعة واحدة",
+  "@auditBulkRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "auditBanned": "تم حظر عضو",
+  "auditUnbanned": "تم رفع الحظر عن عضو",
+  "auditRemoved": "تمت إزالة عضو",
+  "auditJoinModeChanged": "تم تغيير طريقة الانضمام",
+  "auditFormUpdated": "تم تحديث نموذج التحقق",
+  "auditModeratorAssigned": "تم تعيين منسق",
+  "auditReopened": "تمت إعادة فتح طلب",
+  "auditExported": "تم تصدير سجل التدقيق",
+  "uploading": "جارٍ الرفع…",
+  "fileAttached": "تم إرفاق ملف",
+  "choose": "اختيار",
+  "replace": "استبدال",
+  "amendRequest": "تعديل الطلب",
+  "cancelRequestTitle": "إلغاء الطلب",
+  "cancelRequestConfirm": "سيُحذف طلبك وإجاباتك. يمكنك التقديم من جديد لاحقًا.",
+  "keepRequest": "الإبقاء عليه",
+  "groupRequiresApproval": "هذه المجموعة تتطلّب موافقة المشرف قبل الانضمام.",
+  "statusPendingBody": "طلبك قيد المراجعة من قِبل المشرف.",
+  "statusApprovedBody": "تمت الموافقة على طلبك! يمكنك الآن المشاركة في المجموعة.",
+  "statusRejectedBody": "لم تتم الموافقة على طلبك.",
+  "statusMoreInfoBody": "يحتاج المشرف إلى معلومات إضافية. يرجى تعديل طلبك.",
+  "statusExpiredBody": "انتهت صلاحية طلبك. يمكنك تقديم طلب جديد.",
+  "contactsTitle": "جهات الاتصال",
+  "findContactsTitle": "اكتشاف جهات اتصالك",
+  "findContactsHeadline": "اعثر على من تعرفهم",
+  "findContactsBody": "نطابق دفتر عناوينك مع مستخدمي آيرون لينك، من غير ما نعرف أرقامك.",
+  "contactsPointHashedTitle": "التجزئة تتم على جهازك",
+  "contactsPointHashedBody": "كل رقم يتحوّل إلى بصمة مشفّرة قبل أن يغادر الهاتف.",
+  "contactsPointNoNumbersTitle": "لا تُرسَل أرقام أبدًا",
+  "contactsPointNoNumbersBody": "الخادم يستقبل بصمات فقط، ولا يمكنه استرجاع الرقم منها.",
+  "contactsPointReversibleTitle": "قابل للتراجع في أي وقت",
+  "contactsPointReversibleBody": "يمكنك حذف كل ما تم مطابقته بضغطة واحدة.",
+  "contactsDeniedHint": "بدون الإذن لن نستطيع اقتراح من تعرفهم. يمكنك تفعيله لاحقًا من إعدادات النظام.",
+  "allowContactAccess": "السماح بالوصول",
+  "notNow": "ليس الآن",
+  "contactSyncOff": "المزامنة غير مفعّلة",
+  "contactSyncOffHint": "فعّلها لاكتشاف من تعرفهم على آيرون لينك.",
+  "enableContactSync": "تفعيل المزامنة",
+  "syncNow": "مزامنة الآن",
+  "syncFoundNew": "تم العثور على {count} جهة اتصال جديدة",
+  "@syncFoundNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncNoNewContacts": "لا توجد جهات اتصال جديدة",
+  "noContactsFound": "لم نجد أحدًا بعد",
+  "noContactsFoundHint": "لا أحد من جهات اتصالك على آيرون لينك حاليًا.",
+  "contactsLoadFailedTitle": "تعذّر تحميل جهات الاتصال",
+  "onIronLink": "على آيرون لينك ({count})",
+  "@onIronLink": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeNew": "جديد",
+  "contactPrivacyTitle": "خصوصية جهات الاتصال",
+  "whoCanFindMe": "من يمكنه العثور عليّ برقم هاتفي",
+  "discoverEveryone": "الجميع",
+  "discoverEveryoneHint": "أي شخص لديه رقمك يمكنه اكتشافك.",
+  "discoverMutual": "من أعرفهم فقط",
+  "discoverMutualHint": "فقط من يظهر رقمك عندهم وتظهر أرقامهم عندك.",
+  "discoverNobody": "لا أحد",
+  "discoverNobodyHint": "لن يعثر عليك أحد عبر رقم هاتفك.",
+  "storedHashesNotice": "نحتفظ بـ {count} بصمة مشفّرة، بدون أي أرقام.",
+  "@storedHashesNotice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteContactData": "حذف بيانات جهات الاتصال",
+  "deleteContactDataTitle": "حذف كل البيانات",
+  "deleteContactDataConfirm": "سيتم حذف كل البصمات والمطابقات نهائيًا، وستختفي من قوائم اكتشاف الآخرين.",
+  "deleteEverything": "حذف الكل",
+  "contactDataDeleted": "تم حذف بيانات جهات الاتصال",
+  "blockUser": "حظر المستخدم",
+  "unblockUser": "إلغاء الحظر",
+  "blockUserTitle": "حظر {name}؟",
+  "@blockUserTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockUserBody": "لن يستطيع مراسلتك ولن تستطيع مراسلته. ولن يتم إبلاغه بأنك حظرته.",
+  "blockedUsers": "المستخدمون المحظورون",
+  "blockedUsersEmpty": "لم تحظر أحدًا",
+  "blockedUsersEmptyHint": "من تحظرهم سيظهرون هنا، ويمكنك التراجع في أي وقت.",
+  "blockedOn": "محظور منذ {date}",
+  "@blockedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "userBlocked": "تم حظر {name}",
+  "@userBlocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userUnblocked": "تم إلغاء حظر {name}",
+  "@userUnblocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedBannerTitle": "أنت حظرت هذا الشخص",
+  "blockedBannerBody": "ألغِ الحظر لاستئناف إرسال واستقبال الرسائل.",
+  "reportUser": "الإبلاغ عن المستخدم",
+  "reportTitle": "إبلاغ",
+  "reportReasonQuestion": "ما المشكلة؟",
+  "reportDetails": "تفاصيل إضافية (اختياري)",
+  "reportSubmit": "إرسال البلاغ",
+  "reportSubmitted": "تم إرسال البلاغ",
+  "reportSubmittedBody": "سيراجعه أحد المسؤولين. يمكنك أيضًا حظر هذا الشخص حتى لا يتواصل معك في أثناء ذلك.",
+  "reportAlsoBlock": "احظره أيضًا",
+  "reportAlreadySent": "سبق أن أبلغت عن هذه الرسالة",
+  "reportEvidenceNotice": "تُرفق نسخة من الرسالة المُبلَّغ عنها، لتبقى متاحة حتى لو تم حذفها.",
+  "reasonSpam": "رسائل مزعجة",
+  "reasonHarassment": "تحرش أو إساءة",
+  "reasonImpersonation": "انتحال شخصية",
+  "reasonScam": "احتيال أو نصب",
+  "reasonIllegalContent": "محتوى غير قانوني",
+  "reasonLeakedClassified": "مواد سرية",
+  "reasonOther": "شيء آخر",
+  "analyzeContent": "تحليل المحتوى",
+  "myReports": "بلاغاتي",
+  "reportStatusOpen": "قيد المراجعة",
+  "reportStatusReviewing": "تحت المراجعة",
+  "reportStatusActioned": "تم اتخاذ إجراء",
+  "reportStatusDismissed": "لم يُتخذ إجراء",
+  "searchMessages": "البحث في الرسائل",
+  "searchMessagesTitle": "البحث في الرسائل",
+  "searchMessagesHint": "ابحث داخل هذه المحادثة",
+  "searchMessagesOnDeviceNotice": "البحث يتم على هذا الجهاز فقط. الرسائل مُشفّرة ولا يستطيع الخادم قراءتها، لذلك تشمل النتائج ما نزّله هذا الجهاز.",
+  "searchNoResults": "لا توجد نتائج",
+  "searchNoResultsHint": "جرّب كلمة أقصر أو إملاءً مختلفًا.",
+  "searchResultCount": "{count, plural, =0{لا نتائج} =1{نتيجة واحدة} =2{نتيجتان} few{{count} نتائج} other{{count} نتيجة}}",
+  "@searchResultCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secureIdentityChanged": "رمز الأمان الخاص بهذا الشخص تغيّر. لم يتم إرسال الرسالة.",
+  "secureIdentityChangedBody": "يحدث هذا عند إعادة تثبيت التطبيق، وهو أيضًا شكل انتحال الشخصية. تأكّد منه عبر وسيلة أخرى قبل المتابعة.",
+  "secureAcceptNewIdentity": "تحققت منه — تابع",
+  "securePeerHasNoKeys": "هذا الشخص لا يستطيع استقبال رسائل سرية بعد.",
+  "securePeerHasNoKeysBody": "جهازه لم ينشر مفاتيح التشفير. اطلب منه فتح IronLink مرة واحدة.",
+  "secureEncryptFailed": "لم تُرسل الرسالة، لأنه تعذّر تشفيرها.",
+  "secureDecryptFailed": "تعذّر فك تشفير إحدى الرسائل.",
+  "secureMessageUnreadable": "تعذّر فك تشفير الرسالة",
+  "secretChatOn": "المحادثة السرية مفعّلة",
+  "secretChatOff": "المحادثة السرية غير مفعّلة",
+  "secretChatNotice": "رسائل هذه المحادثة مشفّرة من طرف إلى طرف. الخادم يحفظ نصًا مشفّرًا لا يستطيع قراءته.",
+  "secretChatAttachmentWarning": "المرفقات ليست مشفّرة من طرف إلى طرف بعد — التشفير يشمل التعليقات فقط.",
+  "attachmentLoadFailed": "تعذّر تحميل المرفق",
+  "attachmentTampered": "هذا المرفق تم التلاعب به ولم يُفتح",
+  "attachmentEncrypted": "مرفق مشفّر",
+  "chatNotEncryptedNotice": "رسائل هذه المحادثة ليست مشفّرة من طرف إلى طرف. هي محميّة أثناء النقل، لكن الخادم يستطيع قراءتها.",
+  "messageNotEncrypted": "غير مشفّرة من طرف إلى طرف",
+  "play": "تشغيل",
+  "pause": "إيقاف مؤقت",
+  "recordVoiceNote": "اضغط مطوّلاً لتسجيل رسالة صوتية",
+  "voiceNoteTooShort": "اضغط مطوّلاً للتسجيل",
+  "groupNoMessages": "لا توجد رسائل بعد",
+  "groupMessageUnreadable": "تعذّر فك تشفير الرسالة",
+  "groupNoLongerMember": "لم تعد عضوًا في هذه المجموعة",
+  "groupAnnouncementOnly": "النشر في هذه المجموعة للمسؤولين فقط",
+  "groupEncryptionNotice": "رسائل هذه المجموعة مشفّرة من طرف إلى طرف. الخادم يوجّهها ولا يستطيع قراءتها.",
+  "groupRotationNotice": "عند انضمام أو خروج أي شخص تتغيّر مفاتيح الجميع، فلا يستطيع من يخرج قراءة ما يُقال بعد ذلك.",
+  "groupMembersCount": "{count, plural, =0{لا أعضاء} =1{عضو واحد} =2{عضوان} few{{count} أعضاء} other{{count} عضوًا}}",
+  "@groupMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupChat": "محادثة المجموعة",
+  "leaveGroup": "مغادرة المجموعة",
+  "leaveGroupConfirm": "لن تصلك رسائل هذه المجموعة بعد الآن، ولن تستطيع قراءة ما يُقال بعد مغادرتك.",
+  "groupLeft": "غادرت المجموعة",
+  "ownerMustTransfer": "سلّم ملكية المجموعة قبل المغادرة",
+  "verificationTimedOut": "خدمة التحقق لم تستجب. اتصالك سليم — غالبًا التطبيق لسه غير مُهيّأ لتسجيل الدخول بالهاتف.",
+  "aiConsentTitle": "مميزات الذكاء الاصطناعي في هذه المحادثة",
+  "aiConsentWhatHappens": "للتلخيص أو الترجمة أو اقتراح الردود، يفك التطبيق تشفير الرسائل ويرسلها إلى مزوّد ذكاء اصطناعي خارج IronLink. أي أنها تغادر جهازك ويقرأها طرف ثالث.",
+  "aiConsentEncryptionNote": "كل رسالة أخرى في التطبيق مشفّرة من طرف إلى طرف ولا يستطيع خادمنا قراءتها. هذه المميزات هي الاستثناء الوحيد، ولهذا فهي مغلقة ما لم تطلبها.",
+  "aiConsentToggle": "السماح بمميزات الذكاء الاصطناعي هنا",
+  "aiConsentToggleHint": "ينطبق على محادثتك مع {name} فقط.",
+  "@aiConsentToggleHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConsentWaitingOn": "في انتظار موافقة {names}. حتى ذلك الحين لا يُرسل أي شيء.",
+  "@aiConsentWaitingOn": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConsentWaitingGeneric": "في انتظار موافقة بقية المشاركين. حتى ذلك الحين لا يُرسل أي شيء.",
+  "aiConsentEveryoneAgreed": "وافق الجميع. المميزات متاحة في هذه المحادثة.",
+  "aiConsentWithdrawNote": "يمكنك سحب الموافقة في أي وقت. هذا يوقف إرسال أي شيء بعدها، لكنه لا يستعيد ما أُرسل بالفعل.",
+  "aiConsentRequired": "يجب أن يوافق كل من في المحادثة قبل استخدام مميزات الذكاء الاصطناعي.",
+  "aiFeatures": "مميزات الذكاء الاصطناعي",
+  "aiSummarise": "تلخيص المحادثة",
+  "signOut": "تسجيل الخروج",
+  "signOutConfirm": "سيتم تسجيل الخروج من هذا الجهاز ومسح كل ما هو مخزّن عليه — سجل رسائلك ومفاتيح التشفير وأي مسودات. ولأن الرسائل مشفّرة من طرف إلى طرف، لن يستطيع الخادم استعادة هذا السجل بعدها.",
+  "smartAlertTitle": "تنبيه ذكي",
+  "smartAlertOpenDocument": "فتح المستند",
+  "smartAlertAcknowledge": "تم الاطلاع",
+  "smartAlertMoreCount": "{count, plural, =1{تنبيه ذكي واحد} =2{تنبيهان ذكيان} few{{count} تنبيهات ذكية} other{{count} تنبيهًا ذكيًا}}",
+  "@smartAlertMoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "smartAlertSemantics": "تنبيه ذكي: عُثر على \"{matched}\" في مستند. السياق: {context}",
+  "@smartAlertSemantics": {
+    "placeholders": {
+      "matched": {
+        "type": "String"
+      },
+      "context": {
+        "type": "String"
+      }
+    }
+  },
+  "alertCenterTitle": "التنبيهات الذكية",
+  "alertCenterEmpty": "لا توجد تنبيهات",
+  "alertCenterEmptyHint": "عندما تصل صورة أو مستند يحتوي على إحدى كلماتك، سيظهر التنبيه هنا.",
+  "alertFilterAll": "الكل",
+  "alertFilterUnacknowledged": "لم يتم الاطلاع",
+  "alertFilterAcknowledged": "تم الاطلاع",
+  "alertFilterHighConfidence": "عالية الثقة",
+  "alertSectionToday": "اليوم",
+  "alertSectionYesterday": "أمس",
+  "alertSectionEarlier": "أقدم",
+  "alertStatusAcknowledged": "تم الاطلاع",
+  "alertStatusPresented": "لم يتم الاطلاع",
+  "alertStatusOpened": "فُتح المستند، ولم يتم الاطلاع",
+  "alertStatusExpired": "انتهت صلاحيته",
+  "alertStatusDismissed": "أُهمل",
+  "alertRetentionNote": "تُحفظ التنبيهات ٤٨ ساعة ثم تُحذف تلقائيًا.",
+  "alertPageNumber": "صفحة {page}",
+  "@alertPageNumber": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "alertProcessedLocally": "تمت المعالجة على هذا الجهاز",
+  "alertProcessedInCloud": "تمت المعالجة في السحابة",
+  "alertSuppressedByCap": "تجاوز الحد اليومي لهذه الكلمة",
+  "keywordManagementTitle": "الكلمات المفتاحية",
+  "keywordManagementSubtitle": "كلمات خاصة بهذه المحادثة وحدها. لا يراها المرسل ولا مشرفو المجموعة ولا أي شخص آخر.",
+  "keywordAddTitle": "إضافة كلمة",
+  "keywordEditTitle": "تعديل الكلمة",
+  "keywordFieldLabel": "الكلمة",
+  "keywordFieldHint": "اكتب كلمة أو عبارة",
+  "keywordPriorityLabel": "الأولوية",
+  "keywordPriorityLow": "منخفضة",
+  "keywordPriorityMedium": "متوسطة",
+  "keywordPriorityHigh": "عالية",
+  "keywordPriorityCritical": "حرجة",
+  "keywordMatchModeLabel": "طريقة المطابقة",
+  "keywordMatchExact": "كلمة كاملة",
+  "keywordMatchPhrase": "عبارة",
+  "keywordMatchFuzzy": "تسامح مع أخطاء المسح",
+  "keywordMatchRegex": "نمط متقدم",
+  "keywordCategoryLabel": "التصنيف (اختياري)",
+  "keywordNotesLabel": "ملاحظة خاصة (اختياري)",
+  "keywordCaseSensitiveLabel": "مطابقة حالة الأحرف",
+  "keywordDailyCapLabel": "حد التنبيهات اليومي (اختياري)",
+  "keywordEnabledLabel": "مُفعّلة",
+  "keywordDeleteConfirm": "سيتم حذف هذه الكلمة وكل التنبيهات التي أنشأتها. لا يمكن التراجع.",
+  "keywordEmpty": "لا توجد كلمات لهذه المحادثة بعد",
+  "keywordTestTitle": "جرّب الكلمة",
+  "keywordTestHint": "الصق نصًا لترى إن كانت الكلمة ستطابقه",
+  "keywordTestMatched": "تطابق",
+  "keywordTestNoMatch": "لا تطابق",
+  "keywordErrorTooShort": "الكلمة قصيرة جدًا — حرفان على الأقل.",
+  "keywordErrorTooLong": "الكلمة طويلة جدًا.",
+  "keywordErrorNotMatchable": "لا يوجد في هذه الكلمة ما يمكن مطابقته داخل مستند.",
+  "keywordErrorStopWord": "هذه كلمة رابطة شائعة، وستظهر في كل مستند تقريبًا.",
+  "keywordErrorRegexInvalid": "النمط غير صالح.",
+  "keywordErrorRegexUnsafe": "قد يستغرق هذا النمط وقتًا غير محدود في التنفيذ.",
+  "keywordErrorDuplicate": "هذه الكلمة موجودة بالفعل في هذه المحادثة.",
+  "documentCheckingNow": "جارٍ فحص المستند…",
+  "documentCheckedNothingFound": "فُحص المستند ولم يُعثر على شيء",
+  "documentUnreadable": "تعذّرت قراءة هذا المستند بشكل موثوق.",
+  "documentTooLowResolution": "دقة الصورة أقل من أن تُقرأ بشكل موثوق.",
+  "documentUnsupported": "هذا النوع من الملفات غير مدعوم للفحص.",
+  "documentTooLarge": "الملف أكبر من الحد المسموح للفحص.",
+  "documentTruncated": "مستند طويل — فُحصت الصفحات الأولى فقط ({pages} صفحة).",
+  "@documentTruncated": {
+    "placeholders": {
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "securityCenterLocalExplained": "لا يغادر أي مستند هذا الجهاز أثناء الفحص، والكلمات المفتاحية مخزَّنة هنا فقط.",
+  "securityCenterNoLocalEngine": "لا يوجد محرك قراءة على هذا الجهاز، لذا لا يمكن فحص الصور. لن يُرسَل أي شيء إلى السحابة تلقائيًا.",
+  "senderReportTitle": "حالة المستلمين",
+  "senderReportAlertRaised": "صدر تنبيه ذكي",
+  "senderReportNoAlert": "لا يوجد تنبيه",
+  "senderReportKeywordHidden": "الكلمة المفتاحية خاصة بالمستلم ولا تظهر لك",
+  "senderReportUnavailable": "لم يسمح المستلم بمشاركة هذه الحالة",
+  "securityCenterTitle": "مركز الأمان",
+  "securityCenterSubtitle": "كل ما يظهر هنا مبني على معلومات يعرفها النظام فعلاً. لا يوجد تقدير ولا تخمين.",
+  "securityLevelHigh": "الحالة جيدة",
+  "securityLevelMedium": "يستحق المراجعة",
+  "securityLevelLow": "يحتاج انتباهك الآن",
+  "securityActiveSessions": "الأجهزة المسجَّل دخولها",
+  "securityThisDevice": "هذا الجهاز",
+  "securityUnknownDevice": "جهاز غير معروف",
+  "securityLastActive": "آخر نشاط {when}",
+  "@securityLastActive": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "securityNeverActive": "لم يُستخدم بعد",
+  "securitySignOutDevice": "تسجيل خروج هذا الجهاز",
+  "securitySignOutDeviceConfirm": "سيتم تسجيل خروج هذا الجهاز فورًا وقطع اتصاله. لن يتأثر أي جهاز آخر.",
+  "securitySecureAccount": "تأمين حسابي",
+  "securitySecureAccountConfirm": "سيتم تسجيل خروج كل الأجهزة الأخرى. هذا الجهاز يبقى مسجَّلًا.",
+  "securitySecureAccountDone": "تم تسجيل خروج كل الأجهزة الأخرى.",
+  "securitySecureAccountPartial": "تعذّر تسجيل خروج {count} من الأجهزة. القائمة أدناه تعرض ما هو مسجَّل فعلًا الآن.",
+  "@securitySecureAccountPartial": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "securityNoOtherDevices": "لا توجد أجهزة أخرى مسجَّلة",
+  "securityFindingOtherDevices": "أنت مسجَّل الدخول على أكثر من جهاز",
+  "securityFindingOtherDevicesWhy": "ليست مشكلة بحد ذاتها. تُذكر لأنها أول ما تحتاج معرفته لو وصل أحد إلى حسابك.",
+  "securityFindingStaleSession": "جهاز لم يُستخدم منذ أكثر من أسبوعين",
+  "securityFindingStaleSessionWhy": "قد يكون جهازًا تستخدمه أحيانًا. راجعه، وسجِّل خروجه إن لم تعرفه.",
+  "securityFindingEncryptionOn": "التشفير من طرف إلى طرف مُفعَّل افتراضيًا",
+  "securityFindingEncryptionOnWhy": "الخادم لا يملك المفتاح، ولا يستطيع قراءة رسائلك ولا مرفقاتك.",
+  "securityFindingEncryptionOff": "التشفير ليس هو الافتراضي على هذا الجهاز",
+  "securityFindingEncryptionOffWhy": "هذا أخطر ما يمكن أن يظهر في هذه الشاشة. أعد تشغيل التطبيق، وإن استمر فالمشكلة تحتاج فحصًا.",
+  "securityFindingKeywordsLocal": "كلماتك المفتاحية مخزَّنة على هذا الجهاز فقط",
+  "securityFindingKeywordsLocalWhy": "الخادم لم يستلمها أصلًا، فلا يمكن أن تُفشى منه.",
+  "securityFindingCloudOcr": "فحص المستندات في السحابة مُفعَّل",
+  "securityFindingCloudOcrWhy": "أنت اخترت هذا. معناه أن المستند قد يُقرأ خارج جهازك عند تعذّر القراءة محليًا.",
+  "securityWhyLabel": "لماذا أرى هذا؟",
+  "securityCheckedNothingWrong": "تم الفحص، ولا يوجد ما يستدعي القلق",
+  "securityLoadFailed": "تعذّر تحميل حالة الأمان",
+  "safetyWarningTitle": "تنبيه أمان",
+  "safetyDismiss": "إخفاء",
+  "safetyCredentialRequest": "الرسالة دي بتطلب كود تحقق",
+  "safetyCredentialRequestWhy": "IronLink بيبعت أكواد التحقق لك انت وحدك. أي حد يطلب منك الكود — حتى لو قال إنه من الدعم — بيحاول يدخل حسابك. متبعتوش لأي حد.",
+  "safetySuspiciousLink": "فيه رابط شكله مضلل",
+  "safetySuspiciousLinkWhy": "العنوان ده مكتوب بطريقة تخليه يبان زي موقع تاني. اتفحص على جهازك، ومحدش غيرك شافه.",
+  "safetyPaymentRequest": "طلب تحويل فلوس مع علامات أخرى",
+  "safetyPaymentRequestWhy": "طلب الفلوس لوحده عادي. اللي خلانا نقول ده إنه جه مع إشارة تانية — استعجال، أو ادعاء صفة، أو رابط مشبوه.",
+  "safetyAuthorityClaim": "المُرسل بيدّعي صفة رسمية",
+  "safetyAuthorityClaimWhy": "حد بيقول إنه من الدعم أو البنك أو الإدارة. الجهات دي مابتطلبش أكواد ولا كلمات سر في رسايل.",
+  "safetyOffPlatform": "طلب ينقل الكلام لتطبيق تاني",
+  "safetyOffPlatformWhy": "نقل المحادثة لمكان مش مشفّر خطوة شائعة قبل الاحتيال. ممكن يكون سبب عادي، بس يستاهل تتأكد.",
+  "safetyUrgency": "استعجال مع علامات أخرى",
+  "safetyUrgencyWhy": "الضغط بالوقت بيمنع الناس من التفكير. الاستعجال لوحده عادي — ظهر هنا مع إشارة تانية.",
+  "attachUnsupportedFormat": "الملف ده مش من نوع نقدر ننضّفه من البيانات المخفية، فمابعتناهوش. الصور والتسجيلات الصوتية شغالة عادي.",
+  "connectionOffline": "مافيش اتصال. رسايلك هتتبعت أول ما ترجع.",
+  "connectionConnecting": "بيحاول يتصل…",
+  "connectionOutdated": "النسخة دي بقت قديمة. حدّث التطبيق عشان تكمل.",
+  "replyToYou": "أنت",
+  "replyToThem": "رد على",
+  "replyUnavailableTitle": "الرسالة الأصلية",
+  "replyUnavailableBody": "مش موجودة على الجهاز ده",
+  "replyOriginalDeleted": "الرسالة دي اتشالت",
+  "replyKindImage": "صورة",
+  "replyKindVoice": "رسالة صوتية",
+  "replyKindAttachment": "مرفق",
+  "replySwipeHint": "اسحب الرسالة عشان ترد عليها"
+}
