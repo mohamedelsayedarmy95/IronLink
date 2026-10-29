@@ -14,12 +14,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Runtime image ─────────────────────────────────────────────────────────
 FROM deps AS runtime
-# Install Tesseract OCR and language packs
-RUN apt-get update && apt-get install -y \
+# Install Tesseract OCR and language packs.
+# Debian's default sources use plain HTTP, which some networks and proxies
+# reject with 403. Switch them to HTTPS before refreshing the package lists.
+# curl is installed because docker-compose.yml uses it for the API healthcheck.
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y \
     tesseract-ocr \
     libtesseract-dev \
     tesseract-ocr-eng \
     tesseract-ocr-ara \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .

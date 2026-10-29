@@ -16,6 +16,7 @@ if [ "${RUN_MIGRATIONS_ON_START:-true}" = "true" ]; then
     # Deliberately not guarded: a failed migration must abort the boot rather
     # than let the app serve traffic against a schema it does not expect.
     alembic upgrade head
+    python scripts/apply_post_migrate.py
     echo "[entrypoint] migrations applied"
 else
     echo "[entrypoint] RUN_MIGRATIONS_ON_START=false — skipping migrations"
