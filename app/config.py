@@ -93,6 +93,43 @@ class Settings(BaseSettings):
     # ALL refresh tokens for a user (forced logout, device wipe) without a token blocklist.
     TOKEN_ALGORITHM: str = "HS256"
 
+    # ── WebAuthn / hardware security keys ─────────────────────────────────────
+    # The RP ID is the registrable domain the credential is bound to. It must be
+    # a suffix of the origin's host, e.g. rp_id="app.example.com" and
+    # origin="https://app.example.com". The development defaults match the
+    # self-signed https://localhost endpoint Nginx serves in docker-compose.
+    WEBAUTHN_RP_ID: str = "localhost"
+    WEBAUTHN_RP_NAME: str = "IronLink"
+    WEBAUTHN_ORIGIN: str = "https://localhost"
+    WEBAUTHN_CHALLENGE_TTL_SECONDS: int = Field(default=300, ge=30, le=600)
+    WEBAUTHN_TIMEOUT_MS: int = Field(default=60000, ge=10000, le=300000)
+    # User verification means the key itself confirmed a PIN or biometric.
+    # Requiring it makes possession of the key alone insufficient.
+    WEBAUTHN_REQUIRE_USER_VERIFICATION: bool = True
+
+    @field_validator("WEBAUTHN_RP_ID")
+    @classmethod
+    def _validate_webauthn_rp_id(cls, v: str) -> str:
+        v = v.strip()
+        if not v or "://" in v or "/" in v:
+            raise ValueError(
+                "WEBAUTHN_RP_ID must be a bare domain, e.g. app.example.com"
+            )
+        return v
+
+    @field_validator("WEBAUTHN_ORIGIN")
+    @classmethod
+    def _validate_webauthn_origin(cls, v: str) -> str:
+        v = v.strip().rstrip("/")
+        parsed = urlparse(v)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("WEBAUTHN_ORIGIN must be an absolute http(s) origin")
+        if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
+            raise ValueError(
+                "WEBAUTHN_ORIGIN must not contain a path, query, or fragment"
+            )
+        return v
+
     # ── Database ───────────────────────────────────────────────────────────────
     POSTGRES_USER: str = "ironlink_user"
     POSTGRES_PASSWORD: str = Field(default="", description="Required — never has a default")

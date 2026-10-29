@@ -41,6 +41,7 @@ from .contact import (
 )
 from .ai_consent import AiConsent, AiScopeType
 from .device_key import OneTimePreKey, UserKeyBundle
+from .webauthn import WebAuthnCredential
 from .moderation import (
     ContentReport,
     ReportReason,
@@ -116,4 +117,5 @@ __all__ = [
     "SubscriptionPlan",
     "UserKeyBundle",
     "OneTimePreKey",
+    "WebAuthnCredential",
 ]

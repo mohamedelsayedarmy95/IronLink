@@ -23,7 +23,8 @@ pydantic-settings==2.6.1
 # ── Security & auth ────────────────────────────────────────────────────
 python-jose[cryptography]==3.3.0
 bcrypt==4.2.1
-cryptography==43.0.3
+cryptography==50.0.2
+webauthn==3.0.1
 
 # ── Signal Protocol for E2EE ───────────────────────────────────────────
 # Intentionally absent. signal-protocol==0.1.0 was pinned here and broke every

@@ -142,6 +142,7 @@ class SelfDestructWorker:
             )).all()
 
             for msg in expired:
+                had_media = msg.media_object_key is not None
                 if msg.media_object_key:
                     try:
                         self._storage.delete_object(
@@ -169,16 +170,35 @@ class SelfDestructWorker:
                     resource_type="message",
                     resource_id=str(msg.id),
                     success=True,
-                    metadata_={"had_media": msg.media_object_key is not None},
+                    metadata_={"had_media": had_media},
                 ))
                 wiped += 1
 
+            if wiped:
+                await db.commit()
+
+            # Publish unsend events AFTER commit so Redis failure doesn't rollback the DB wipe
+            for msg in expired:
                 event = {"type": "unsend", "message_id": str(msg.id)}
                 if msg.recipient_id is not None:
-                    await publish(msg.recipient_id, event)
+                    try:
+                        await publish(msg.recipient_id, event)
+                    except Exception as exc:
+                        logger.warning(
+                            "unsend_publish_failed",
+                            message_id=str(msg.id),
+                            user_id=str(msg.recipient_id),
+                            error=str(exc),
+                        )
                 if msg.sender_id is not None:
-                    await publish(msg.sender_id, event)
-
-            await db.commit()
+                    try:
+                        await publish(msg.sender_id, event)
+                    except Exception as exc:
+                        logger.warning(
+                            "unsend_publish_failed",
+                            message_id=str(msg.id),
+                            user_id=str(msg.sender_id),
+                            error=str(exc),
+                        )
 
         return wiped

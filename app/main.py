@@ -29,6 +29,7 @@ from app.api.routes import (
     media,
     ocr,
     receipts,
+    webauthn,
     websocket,
 )
 from app.api.routes.websocket import manager
@@ -80,6 +81,7 @@ if settings.ENV == "production":
 
 
 app.include_router(auth.router, prefix=settings.API_PREFIX)
+app.include_router(webauthn.router, prefix=settings.API_PREFIX)
 app.include_router(chats.router, prefix=settings.API_PREFIX)
 app.include_router(groups.router, prefix=settings.API_PREFIX)
 app.include_router(group_entry.router, prefix=settings.API_PREFIX)

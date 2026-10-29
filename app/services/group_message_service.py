@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Group, GroupMember, Message
 from app.models.message import MessageStatus
+from app.services.message_service import visible_message_clause
 
 #: Sender-key distribution messages. Delivered over the ordinary one-to-one
 #: path (pairwise encrypted, one per recipient) but never shown as chat: they
@@ -173,6 +174,7 @@ async def history(
             Message.group_id == group_id,
             Message.created_at >= member.joined_at,
             Message.message_type != SKDM_MESSAGE_TYPE,
+            visible_message_clause(),
         )
         .order_by(Message.created_at.desc())
         .limit(limit)

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 _PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")   # E.164
+_MAX_WEBAUTHN_CREDENTIAL_BYTES = 64 * 1024
 
 
 class RequestOtpIn(BaseModel):
@@ -90,6 +93,88 @@ class FirebaseRegisterIn(BaseModel):
         if not v:
             raise ValueError("full_name must not be blank")
         return v
+
+
+def _validate_webauthn_credential(value: dict[str, Any]) -> dict[str, Any]:
+    """Bound the opaque WebAuthn payload before it reaches the verifier.
+
+    The nested shape is defined by the browser, not by us, so the individual
+    fields are validated by the WebAuthn library. What this layer adds is a
+    hard size ceiling and the handful of top-level keys the library requires,
+    which stops a caller using the endpoint as an arbitrary JSON store.
+    """
+    try:
+        encoded = json.dumps(value, separators=(",", ":"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("credential must be a JSON object") from exc
+    if len(encoded.encode("utf-8")) > _MAX_WEBAUTHN_CREDENTIAL_BYTES:
+        raise ValueError("credential payload is too large")
+    if not isinstance(value.get("response"), dict):
+        raise ValueError("credential.response must be an object")
+    for key in ("id", "rawId", "type"):
+        if not isinstance(value.get(key), str) or not value[key]:
+            raise ValueError(f"credential.{key} is required")
+    return value
+
+
+class WebAuthnOptionsOut(BaseModel):
+    """A ceremony id plus the browser's PublicKeyCredential options.
+
+    `ceremony_id` is returned separately because the browser's options object
+    does not carry one. The client sends it back with the credential so the
+    server can find and atomically consume the matching Redis challenge.
+    """
+
+    ceremony_id: str
+    expires_in: int
+    options: dict[str, Any]
+
+
+class WebAuthnRegisterCompleteIn(BaseModel):
+    ceremony_id: str = Field(..., min_length=16, max_length=128)
+    credential: dict[str, Any]
+    nickname: str | None = Field(default=None, max_length=100)
+
+    @field_validator("credential")
+    @classmethod
+    def _valid_credential(cls, v: dict[str, Any]) -> dict[str, Any]:
+        return _validate_webauthn_credential(v)
+
+    @field_validator("nickname")
+    @classmethod
+    def _clean_nickname(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        cleaned = " ".join(v.split())
+        return cleaned or None
+
+
+class WebAuthnAuthenticateCompleteIn(BaseModel):
+    ceremony_id: str = Field(..., min_length=16, max_length=128)
+    credential: dict[str, Any]
+    device_fingerprint: str = Field(..., min_length=16, max_length=128)
+
+    @field_validator("credential")
+    @classmethod
+    def _valid_credential(cls, v: dict[str, Any]) -> dict[str, Any]:
+        return _validate_webauthn_credential(v)
+
+
+class WebAuthnCredentialOut(BaseModel):
+    """Public metadata for one registered key. No key material is returned."""
+
+    id: UUID
+    credential_id: str
+    nickname: str | None = None
+    aaguid: str | None = None
+    credential_type: str
+    sign_count: int
+    transports: list[str] = Field(default_factory=list)
+    user_verified: bool
+    backup_eligible: bool
+    backup_state: bool
+    created_at: datetime
+    last_used_at: datetime | None = None
 
 
 class UserOut(BaseModel):
