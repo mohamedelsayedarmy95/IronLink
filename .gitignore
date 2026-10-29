@@ -40,3 +40,7 @@ Thumbs.db
 سري مفتاح.txt
 *.key
 .pytest_cache/
+
+# Local tooling
+pi-setup/
+.claude/settings.local.json
