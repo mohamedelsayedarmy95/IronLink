@@ -190,7 +190,9 @@ async def verify(
         await db.commit()
         raise generic_error
 
-    return await _issue_login(db, user, body.device_fingerprint, ip, user_agent)
+    return await _issue_login(
+        db, user, body.device_fingerprint, ip, user_agent, auth_method="otp"
+    )
 
 
 @router.post("/verify-firebase", response_model=VerifyOut)
@@ -265,7 +267,9 @@ async def verify_firebase(
         await db.commit()
         raise generic_error
 
-    return await _issue_login(db, user, body.device_fingerprint, ip, user_agent)
+    return await _issue_login(
+        db, user, body.device_fingerprint, ip, user_agent, auth_method="firebase"
+    )
 
 
 @router.post("/register-firebase", response_model=RegisterOut)
@@ -387,7 +391,12 @@ async def register_firebase(
     return RegisterOut(
         approved=True,
         session=await _issue_login(
-            db, user, body.device_fingerprint, ip, user_agent
+            db,
+            user,
+            body.device_fingerprint,
+            ip,
+            user_agent,
+            auth_method="firebase_registration",
         ),
     )
 
@@ -398,9 +407,13 @@ async def _issue_login(
     device_fingerprint: str,
     ip: str,
     user_agent: str,
+    auth_method: str = "otp",
 ) -> VerifyOut:
-    """Shared by /verify and /verify-firebase once credentials are confirmed:
-    rotate token_version, open a session, and audit-log the login."""
+    """Shared by every successful credential check: open a session and audit it.
+
+    `auth_method` is recorded in the audit metadata so a hardware-key login is
+    distinguishable from an OTP login without inventing a second success action.
+    """
     # Fable5-Enhancement: device fingerprint change is NOT a hard block (users
     # legitimately change phones) but IS recorded as a security event so the
     # admin dashboard can flag anomalous device migrations.
@@ -445,7 +458,10 @@ async def _issue_login(
         ip_address=ip,
         user_agent=user_agent,
         success=True,
-        metadata_={"fingerprint_changed": fingerprint_changed},
+        metadata_={
+            "fingerprint_changed": fingerprint_changed,
+            "auth_method": auth_method,
+        },
     ))
     if fingerprint_changed:
         db.add(AuditLog(
@@ -682,6 +698,8 @@ async def security_events(
         AuditAction.LOGIN_FAILED,
         AuditAction.LOGOUT,
         AuditAction.SESSION_REVOKED,
+        AuditAction.WEBAUTHN_REGISTERED,
+        AuditAction.WEBAUTHN_CREDENTIAL_REMOVED,
         AuditAction.DEVICE_FINGERPRINT_CHANGED,
         AuditAction.SUSPICIOUS_LOGIN,
         AuditAction.MFA_FAILED,

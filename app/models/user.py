@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .message import Message
     from .audit_log import AuditLog
     from .group import GroupMember
+    from .webauthn import WebAuthnCredential
 
 
 class UserStatus(str, Enum):
@@ -124,6 +125,9 @@ class User(Base):
     # ── Relationships ──────────────────────────────────────────────────────────
     sessions: Mapped[list[UserSession]] = relationship(
         "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
+    webauthn_credentials: Mapped[list[WebAuthnCredential]] = relationship(
+        "WebAuthnCredential", back_populates="user", cascade="all, delete-orphan"
     )
     sent_messages: Mapped[list[Message]] = relationship(
         "Message", foreign_keys="Message.sender_id", back_populates="sender"

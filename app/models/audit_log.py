@@ -22,6 +22,9 @@ class AuditAction(str, Enum):
     MFA_PASSED = "auth.mfa.passed"
     MFA_FAILED = "auth.mfa.failed"
     SESSION_REVOKED = "auth.session.revoked"
+    WEBAUTHN_REGISTERED = "auth.webauthn.registered"
+    WEBAUTHN_REGISTRATION_FAILED = "auth.webauthn.registration_failed"
+    WEBAUTHN_CREDENTIAL_REMOVED = "auth.webauthn.credential_removed"
 
     # User management
     USER_CREATED = "user.created"
