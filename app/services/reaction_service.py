@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Message
 from app.models.message import MessageType
 from app.services import message_service
+from app.services.message_service import visible_message_clause
 
 logger = structlog.get_logger("reactions")
 
@@ -68,10 +69,10 @@ async def set_reaction(
     if target is None:
         raise ReactionTargetMissing
 
-    # Reacting to a retracted message is refused. The message is gone for
+    # Reacting to a retracted or expired message is refused. The message is gone for
     # everyone; a reaction to it would render against nothing and would keep a
     # reference to something the sender asked to have removed.
-    if target.deleted_for_everyone or target.is_destructed:
+    if target.deleted_for_everyone or message_service.is_expired(target):
         raise ReactionTargetMissing
 
     # Replace rather than accumulate. Delete first, unconditionally, so
@@ -124,7 +125,7 @@ async def for_messages(
         select(Message).where(
             Message.message_type == MessageType.REACTION.value,
             Message.reply_to_id.in_(message_ids),
-            Message.is_destructed.is_(False),
+            visible_message_clause(),
         )
     )
     return list(rows.all())

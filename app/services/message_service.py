@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import structlog
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import observability
@@ -14,6 +14,71 @@ from app.models.message import MessageStatus, MessageType
 logger = structlog.get_logger("messages")
 
 UNSEND_WINDOW = timedelta(minutes=5)
+
+#: The longest lifetime a caller may request. Seven days matches the group
+#: route's schema, and gives one ceiling for both transports.
+MAX_DESTRUCT_AFTER_SECONDS = 7 * 24 * 60 * 60
+
+
+class InvalidDestructTTL(ValueError):
+    """Raised when a self-destruct lifetime is not a positive bounded integer."""
+
+
+def validate_destruct_after_seconds(value: int | None) -> int | None:
+    """Validate and return a self-destruct lifetime.
+
+    The WebSocket path receives raw JSON, so it cannot rely on Pydantic the
+    way the HTTP group route can. Validation therefore lives here, where both
+    paths meet, and a bad value is rejected instead of becoming a timer in the
+    past or a 500 later in the worker.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise InvalidDestructTTL("destruct_after must be an integer number of seconds")
+    if not 1 <= value <= MAX_DESTRUCT_AFTER_SECONDS:
+        raise InvalidDestructTTL(
+            "destruct_after must be between 1 and "
+            f"{MAX_DESTRUCT_AFTER_SECONDS} seconds"
+        )
+    return value
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Treat a naive timestamp as UTC instead of comparing it to an aware one."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def is_expired(message: Message, *, now: datetime | None = None) -> bool:
+    """Whether a message's lifetime has ended, even if the sweep has not run.
+
+    Expiry is a read-time property, not something that waits for a background
+    job. A message whose `destruct_at` has passed is already gone to every
+    caller; the worker only removes the bytes afterwards.
+    """
+    if message.is_destructed:
+        return True
+    if message.destruct_at is None:
+        return False
+    return _as_utc(message.destruct_at) <= _as_utc(now or datetime.now(timezone.utc))
+
+
+def visible_message_clause(*, now: datetime | None = None):
+    """SQL predicate for messages that may still be shown.
+
+    Use this instead of `Message.is_destructed.is_(False)` in every read path.
+    The sweeper runs on an interval, so there is always a window in which a
+    message is past `destruct_at` but `is_destructed` is still false. During
+    that window the database still holds ciphertext, and returning it would
+    keep the product's promise false for up to a minute.
+    """
+    cutoff = _as_utc(now or datetime.now(timezone.utc))
+    return and_(
+        Message.is_destructed.is_(False),
+        or_(Message.destruct_at.is_(None), Message.destruct_at > cutoff),
+    )
 
 
 class UnsendDenied(Exception):
@@ -79,6 +144,8 @@ async def save_message(
     ):
         raise BlockedDelivery
 
+    ttl = validate_destruct_after_seconds(destruct_after_seconds)
+
     # Idempotency. A client that loses the socket between the server storing a
     # message and the ack arriving cannot know which happened, so it resends
     # on reconnect — correct of it, and the reason the server has to be what
@@ -106,13 +173,13 @@ async def save_message(
         media_mime_type=media_mime_type,
         reply_to_id=reply_to_id,
         status=MessageStatus.SENT,
-        is_self_destruct=destruct_after_seconds is not None,
-        destruct_after_seconds=destruct_after_seconds,
-        destruct_at=(
-            now + timedelta(seconds=destruct_after_seconds)
-            if destruct_after_seconds
-            else None
-        ),
+        is_self_destruct=ttl is not None,
+        destruct_after_seconds=ttl,
+        # Deliberately no destruct_at here. For a direct message the timer is
+        # burn-after-reading: it starts in mark_read, on the recipient's first
+        # read. Setting it at send time made the read-time branch below
+        # unreachable and turned the feature into a send-time TTL.
+        destruct_at=None,
         delivered_at=now,  # Server considers message delivered upon successful storage and send
     )
     db.add(msg)

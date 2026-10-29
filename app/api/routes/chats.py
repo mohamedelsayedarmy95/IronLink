@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.models import Message, User
 from app.models.message import MessageType
 from app.services import reaction_service
+from app.services.message_service import visible_message_clause
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -67,7 +68,7 @@ async def list_conversations(
         .where(
             or_(Message.sender_id == user.id, Message.recipient_id == user.id),
             Message.group_id.is_(None),
-            Message.is_destructed.is_(False),
+            visible_message_clause(),
         )
         .group_by("peer_id")
         .subquery()
@@ -88,7 +89,7 @@ async def list_conversations(
                     and_(Message.sender_id == user.id, Message.recipient_id == peer.id),
                     and_(Message.sender_id == peer.id, Message.recipient_id == user.id),
                 ),
-                Message.is_destructed.is_(False),
+                visible_message_clause(),
             )
             .order_by(desc(Message.created_at))
             .limit(1)
@@ -98,7 +99,7 @@ async def list_conversations(
                 Message.sender_id == peer.id,
                 Message.recipient_id == user.id,
                 Message.status != "read",
-                Message.is_destructed.is_(False),
+                visible_message_clause(),
             )
         ) or 0
 
@@ -153,7 +154,7 @@ async def message_history(
                 and_(Message.sender_id == user.id, Message.recipient_id == peer_id),
                 and_(Message.sender_id == peer_id, Message.recipient_id == user.id),
             ),
-            Message.is_destructed.is_(False),
+            visible_message_clause(),
             # Reactions are messages, and they must not consume the page
             # budget: a message with twenty reactions would push nineteen real
             # messages off a page of fifty, and the conversation would appear
