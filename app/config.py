@@ -131,11 +131,24 @@ class Settings(BaseSettings):
         return v
 
     # ── Database ───────────────────────────────────────────────────────────────
+    # Full connection string (e.g. from Render/Supabase). If provided, takes precedence
+    # over the individual POSTGRES_* components. Render provides postgresql:// but
+    # asyncpg requires postgresql+asyncpg://, so we auto-convert.
+    DATABASE_URL: str = Field(default="", description="Full PostgreSQL connection string (asyncpg dialect)")
+
     POSTGRES_USER: str = "ironlink_user"
     POSTGRES_PASSWORD: str = Field(default="", description="Required — never has a default")
     POSTGRES_HOST: str = "db"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "ironlink"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def _fix_postgres_url(cls, v: str) -> str:
+        """Convert postgresql:// to postgresql+asyncpg:// for asyncpg compatibility."""
+        if isinstance(v, str) and v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
 
     # Pool tuned for 500 concurrent users; overflow allows burst headroom.
     DB_POOL_SIZE: int = 20
@@ -151,6 +164,9 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        """Async database URL for SQLAlchemy + asyncpg."""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -159,6 +175,9 @@ class Settings(BaseSettings):
     @property
     def sync_database_url(self) -> str:
         """Used by Alembic (sync driver)."""
+        if self.DATABASE_URL:
+            # Convert asyncpg dialect to psycopg2 for sync operations
+            return self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
         return (
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
