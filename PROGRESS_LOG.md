@@ -531,3 +531,78 @@ static Future<Map<String, dynamic>> getAssertion(Map<String, dynamic> options); 
 - Added `webauthn_service.dart` wrapper for the `passkeys` package.
 - Verified with `flutter analyze`: 0 errors (only 43 minor style infos).
 - **Status**: WebAuthn is now fully functional from Backend to Frontend.
+
+---
+
+## Session: 2026-10-30 — Render Database URL Auto-Conversion Fix
+
+### Branch
+`fix/boot-crashes-and-backend-merge`
+
+### Summary (English)
+
+This session fixed the Render deployment failure caused by a database URL format mismatch. Render provides `DATABASE_URL` starting with `postgresql://`, but the application (using `asyncpg`) requires `postgresql+asyncpg://`.
+
+#### Changes Made
+
+1. **`app/config.py`**:
+   - Added `DATABASE_URL` field to `Settings` class with a Pydantic `@field_validator` (mode="before") that automatically converts `postgresql://` to `postgresql+asyncpg://`
+   - Updated `database_url` property to use `DATABASE_URL` if provided, otherwise fall back to building from individual POSTGRES_* components
+   - Updated `sync_database_url` property to convert the asyncpg dialect to psycopg2 for Alembic sync migrations
+
+2. **`alembic/env.py`**:
+   - No changes needed — already uses `settings.database_url` and `settings.sync_database_url`, so the fix automatically applies to migrations
+
+#### Test Results
+
+```
+Full Test Suite: 485 passed, 32 skipped
+Baseline:        485 passed, 32 skipped
+```
+
+All tests pass, confirming the changes don't break existing functionality.
+
+#### Git Commit
+
+```
+5c276f0 fix(db): auto-convert postgres:// to postgresql+asyncpg:// for Render compatibility
+```
+
+#### Deployment Impact
+
+The next Render deployment will now succeed because:
+- The `DATABASE_URL` from Render (starting with `postgresql://`) is automatically converted to `postgresql+asyncpg://` at startup
+- Both the application runtime and Alembic migrations use the corrected URL
+- No manual intervention or environment variable manipulation needed
+
+---
+
+### الملخص (بالعربية)
+
+تم في هذه الجلسة إصلاح فشل النشر على Render الناتج عن عدم تطابق صيغة رابط قاعدة البيانات. يوفر Render متغير `DATABASE_URL` يبدأ بـ `postgresql://`، لكن التطبيق (الذي يستخدم `asyncpg`) يتطلب `postgresql+asyncpg://`.
+
+#### التغييرات المنفذة
+
+1. **`app/config.py`**:
+   - إضافة حقل `DATABASE_URL` في فئة `Settings` مع محقق حقلي (`@field_validator`) يعمل في وضع "before" لتحويل `postgresql://` تلقائياً إلى `postgresql+asyncpg://`
+   - تحديث الخاصية `database_url` لاستخدام `DATABASE_URL` إذا تم توفيره، وإلا الرجوع للبناء من مكونات POSTGRES_* الفردية
+   - تحديث الخاصية `sync_database_url` لتحويل لهجة asyncpg إلى psycopg2 لتهجيرات Alembic المتزامنة
+
+2. **`alembic/env.py`**:
+   - لا حاجة لتغييرات — يستخدم بالفعل `settings.database_url` و `settings.sync_database_url`، لذا الإصلاح يطبق تلقائياً على التهجيرات
+
+#### نتائج الاختبارات
+
+```
+مجموعة الاختبارات الكاملة: 485 ناجح، 32 متخطى
+خط الأساس:                485 ناجح، 32 متخطى
+```
+
+جميع الاختبارات تنجح، مما يؤكد أن التغييرات لا تكسر الوظائف الموجودة.
+
+#### تأثير النشر
+
+سينجح النشر القادم على Render لأن:
+- `DATABASE_URL` من Render (الذي يبدأ بـ `postgresql://`) يتم تحويله تلقائياً إلى `postgresql+asyncpg://` عند بدء التشغيل
+- كل من وقت تشغيل التطبيق وتهجيرات Alembic يستخدمان الرابط المصحح
+- لا حاجة لتدخل يدوي أو معالجة لمتغيرات البيئة
