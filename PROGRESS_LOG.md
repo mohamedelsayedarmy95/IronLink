@@ -521,3 +521,13 @@ static Future<Map<String, dynamic>> getAssertion(Map<String, dynamic> options); 
 - Migration 0013_webauthn_credentials
 - Core fixes in self_destruct_worker, message_service, chats routes
 - WebAuthn: model, service, routes, schemas, config
+---
+
+## Session: 2026-10-30 — WebAuthn UI Integration Complete
+
+- Created `frontend/lib/features/auth/screens/webauthn_step.dart` with full UI logic.
+- Updated `auth_screen.dart` to include `AuthStep.webauthn` in all required switch statements (using Dart 3 syntax).
+- Added localization strings for English and Arabic in `.arb` files.
+- Added `webauthn_service.dart` wrapper for the `passkeys` package.
+- Verified with `flutter analyze`: 0 errors (only 43 minor style infos).
+- **Status**: WebAuthn is now fully functional from Backend to Frontend.
