@@ -354,6 +354,83 @@ class AuthRepository {
     return AuthUser.fromJson(session['user'] as Map<String, dynamic>);
   }
 
+  // ── WebAuthn / Passkeys ──────────────────────────────────────────────────────
+  /// Hardware security key authentication (FIDO2 / WebAuthn).
+  ///
+  /// Uses discoverable (resident) credentials with conditional mediation for
+  /// usernameless login. The backend handles challenge generation, verification,
+  /// and session issuance. Private keys never leave the authenticator.
+
+  /// Begins a passkey registration ceremony.
+  ///
+  /// Calls `POST /auth/webauthn/register/begin` to obtain creation options
+  /// and a ceremony ID. The ceremony ID must be passed to
+  /// [completeWebAuthnRegistration] along with the credential response.
+  Future<Map<String, dynamic>> beginWebAuthnRegistration() async {
+    final res = await _client.dio.post<Map<String, dynamic>>(
+      '/auth/webauthn/register/begin',
+    );
+    return res.data!;
+  }
+
+  /// Completes a passkey registration ceremony.
+  ///
+  /// Submits the attestation response to `POST /auth/webauthn/register/complete`
+  /// along with the ceremony ID and device fingerprint. The backend verifies
+  /// the attestation, stores the public credential, and returns success.
+  Future<void> completeWebAuthnRegistration({
+    required String ceremonyId,
+    required Map<String, dynamic> credential,
+    required String deviceFingerprint,
+  }) async {
+    await _client.dio.post<Map<String, dynamic>>(
+      '/auth/webauthn/register/complete',
+      data: {
+        'ceremony_id': ceremonyId,
+        'credential': credential,
+        'device_fingerprint': deviceFingerprint,
+      },
+    );
+  }
+
+  /// Begins a passkey authentication ceremony (usernameless).
+  ///
+  /// Calls `POST /auth/webauthn/authenticate/begin` to obtain an empty
+  /// `allowCredentials` challenge and a ceremony ID. The ceremony ID must be
+  /// passed to [completeWebAuthnAuthentication] along with the assertion.
+  Future<Map<String, dynamic>> beginWebAuthnAuthentication() async {
+    final res = await _client.dio.post<Map<String, dynamic>>(
+      '/auth/webauthn/authenticate/begin',
+    );
+    return res.data!;
+  }
+
+  /// Completes a passkey authentication ceremony and issues a session.
+  ///
+  /// Submits the assertion to `POST /auth/webauthn/authenticate/complete`.
+  /// On success, the backend returns access/refresh tokens and user data.
+  /// Tokens are saved automatically via [ApiClient].
+  Future<AuthUser> completeWebAuthnAuthentication({
+    required String ceremonyId,
+    required Map<String, dynamic> credential,
+    required String deviceFingerprint,
+  }) async {
+    final res = await _client.dio.post<Map<String, dynamic>>(
+      '/auth/webauthn/authenticate/complete',
+      data: {
+        'ceremony_id': ceremonyId,
+        'credential': credential,
+        'device_fingerprint': deviceFingerprint,
+      },
+    );
+    final data = res.data!;
+    await _client.saveTokens(
+      access: data['access_token'] as String,
+      refresh: data['refresh_token'] as String,
+    );
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
   /// Classifies a backend-request failure for the auth screen to localize.
   /// [detail] carries through the server's raw detail string, if any, since
   /// that text comes from the API (already whatever language it replies in)

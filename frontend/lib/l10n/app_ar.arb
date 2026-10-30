@@ -780,5 +780,11 @@
   "replyKindImage": "صورة",
   "replyKindVoice": "رسالة صوتية",
   "replyKindAttachment": "مرفق",
-  "replySwipeHint": "اسحب الرسالة عشان ترد عليها"
+  "replySwipeHint": "اسحب الرسالة عشان ترد عليها",
+  "backButton": "العودة",
+  "webauthnButtonLogin": "تسجيل الدخول بمفتاح",
+  "webauthnButtonRegister": "تسجيل مفتاح جديد",
+  "webauthnStepSubtitle": "سجل أو ادخل باستخدام مفتاح الأمان الخاص بك",
+  "webauthnStepTitle": "مفتاح الأمان"
 }
+

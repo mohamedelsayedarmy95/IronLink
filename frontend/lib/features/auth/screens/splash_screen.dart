@@ -162,8 +162,8 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Text(
                   t.authTagline,
                   textAlign: TextAlign.center,
-                  style:
-                      IronTypography.bodyMedium(color: IronColors.textSecondary),
+                  style: IronTypography.bodyMedium(
+                      color: IronColors.textSecondary),
                 ),
               ),
               const Spacer(flex: 2),

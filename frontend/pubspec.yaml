@@ -35,6 +35,7 @@ dependencies:
   pointycastle: ^4.0.0
   sqflite: ^2.4.3                  # local message cache, powers offline + search
   google_mlkit_text_recognition: ^0.16.0
+  passkeys: ^2.23.1                 # WebAuthn / Passkeys (FIDO2)
 
   # Vendored, not published. The pub release calls jcenter() in its Gradle
   # script, which Gradle removed — see packages/flutter_tesseract_ocr/VENDORING.md.

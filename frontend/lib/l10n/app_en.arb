@@ -735,5 +735,11 @@
   "replyKindImage": "Photo",
   "replyKindVoice": "Voice note",
   "replyKindAttachment": "Attachment",
-  "replySwipeHint": "Swipe a message to reply to it"
+  "replySwipeHint": "Swipe a message to reply to it",
+  "backButton": "Back",
+  "webauthnButtonLogin": "Login with Key",
+  "webauthnButtonRegister": "Register New Key",
+  "webauthnStepSubtitle": "Register or login using a passkey for secure authentication",
+  "webauthnStepTitle": "Security Key"
 }
+

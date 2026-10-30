@@ -76,9 +76,41 @@ class _PhoneVerificationFailed extends AuthEvent {
   List<Object?> get props => [code, detail];
 }
 
+/// ── WebAuthn Events ─────────────────────────────────────────────────────────
+
+class WebAuthnRegistrationRequested extends AuthEvent {
+  const WebAuthnRegistrationRequested();
+}
+
+class WebAuthnAuthenticationRequested extends AuthEvent {
+  const WebAuthnAuthenticationRequested();
+}
+
+class WebAuthnRegistrationCompleted extends AuthEvent {
+  const WebAuthnRegistrationCompleted({
+    required this.ceremonyId,
+    required this.credential,
+  });
+  final String ceremonyId;
+  final Map<String, dynamic> credential;
+  @override
+  List<Object?> get props => [ceremonyId, credential];
+}
+
+class WebAuthnAuthenticationCompleted extends AuthEvent {
+  const WebAuthnAuthenticationCompleted({
+    required this.ceremonyId,
+    required this.credential,
+  });
+  final String ceremonyId;
+  final Map<String, dynamic> credential;
+  @override
+  List<Object?> get props => [ceremonyId, credential];
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
-enum AuthStep { phone, otp, militaryId }
+enum AuthStep { phone, otp, militaryId, webauthn }
 
 enum AuthStatus { idle, loading, error, success }
 
@@ -95,6 +127,11 @@ class AuthState extends Equatable {
     this.verificationId,
     this.resendToken,
     this.idToken,
+    // WebAuthn fields
+    this.ceremonyId,
+    this.options,
+    this.isWebAuthnLoading,
+    this.webAuthnError,
   });
 
   final AuthStep step;
@@ -111,6 +148,12 @@ class AuthState extends Equatable {
   final int? resendToken;       // lets "resend" reuse the same SMS session
   final String? idToken;        // set only when Android auto-verified the code
 
+  // WebAuthn ceremony state
+  final String? ceremonyId;
+  final Map<String, dynamic>? options;
+  final bool? isWebAuthnLoading;
+  final String? webAuthnError;
+
   bool get canResend => resendCountdown == 0;
 
   AuthState copyWith({
@@ -126,6 +169,11 @@ class AuthState extends Equatable {
     int? resendToken,
     String? idToken,
     bool clearIdToken = false,
+    // WebAuthn fields
+    String? ceremonyId,
+    Map<String, dynamic>? options,
+    bool? isWebAuthnLoading,
+    String? webAuthnError,
   }) =>
       AuthState(
         step: step ?? this.step,
@@ -139,6 +187,10 @@ class AuthState extends Equatable {
         verificationId: verificationId ?? this.verificationId,
         resendToken: resendToken ?? this.resendToken,
         idToken: clearIdToken ? null : (idToken ?? this.idToken),
+        ceremonyId: ceremonyId ?? this.ceremonyId,
+        options: options ?? this.options,
+        isWebAuthnLoading: isWebAuthnLoading ?? this.isWebAuthnLoading,
+        webAuthnError: webAuthnError ?? this.webAuthnError,
       );
 
   @override
@@ -153,6 +205,10 @@ class AuthState extends Equatable {
         user?.id,
         verificationId,
         idToken,
+        ceremonyId,
+        options,
+        isWebAuthnLoading,
+        webAuthnError,
       ];
 }
 
@@ -172,6 +228,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         status: AuthStatus.error, errorCode: e.code, errorDetail: e.detail)));
     on<_CountdownTicked>(
         (e, emit) => emit(state.copyWith(resendCountdown: e.secondsLeft)));
+    // WebAuthn event handlers
+    on<WebAuthnRegistrationRequested>(_onWebAuthnRegistrationRequested);
+    on<WebAuthnAuthenticationRequested>(_onWebAuthnAuthenticationRequested);
+    on<WebAuthnRegistrationCompleted>(_onWebAuthnRegistrationCompleted);
+    on<WebAuthnAuthenticationCompleted>(_onWebAuthnAuthenticationCompleted);
   }
 
   final AuthRepository _repo;
@@ -285,6 +346,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           otpCode: '',
           clearIdToken: true,
         ));
+      case AuthStep.webauthn:
+        emit(state.copyWith(
+          step: AuthStep.phone,
+          status: AuthStatus.idle,
+          ceremonyId: null,
+          options: null,
+          isWebAuthnLoading: false,
+          webAuthnError: null,
+        ));
     }
   }
 
@@ -300,6 +370,119 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         add(_CountdownTicked(left));
       }
     });
+  }
+
+  // WebAuthn event handlers
+
+  Future<void> _onWebAuthnRegistrationRequested(
+      WebAuthnRegistrationRequested event, Emitter<AuthState> emit) async {
+    emit(state.copyWith(
+      step: AuthStep.webauthn,
+      status: AuthStatus.loading,
+      isWebAuthnLoading: true,
+      ceremonyId: null,
+      options: null,
+      webAuthnError: null,
+    ));
+    try {
+      final response = await _repo.beginWebAuthnRegistration();
+      emit(state.copyWith(
+        status: AuthStatus.idle,
+        ceremonyId: response['ceremony_id'] as String,
+        options: response['options'] as Map<String, dynamic>,
+      ));
+    } catch (e) {
+      final (code, detail) = AuthRepository.errorCode(e);
+      emit(state.copyWith(
+        status: AuthStatus.error,
+        errorCode: code,
+        errorDetail: detail,
+        webAuthnError: 'Registration failed: \$detail',
+        step: AuthStep.phone,
+      ));
+    }
+  }
+
+  Future<void> _onWebAuthnAuthenticationRequested(
+      WebAuthnAuthenticationRequested event, Emitter<AuthState> emit) async {
+    emit(state.copyWith(
+      step: AuthStep.webauthn,
+      status: AuthStatus.loading,
+      isWebAuthnLoading: true,
+      ceremonyId: null,
+      options: null,
+      webAuthnError: null,
+    ));
+    try {
+      final response = await _repo.beginWebAuthnAuthentication();
+      emit(state.copyWith(
+        status: AuthStatus.idle,
+        ceremonyId: response['ceremony_id'] as String,
+        options: response['options'] as Map<String, dynamic>,
+      ));
+    } catch (e) {
+      final (code, detail) = AuthRepository.errorCode(e);
+      emit(state.copyWith(
+        status: AuthStatus.error,
+        errorCode: code,
+        errorDetail: detail,
+        webAuthnError: 'Authentication failed: \$detail',
+        step: AuthStep.phone,
+      ));
+    }
+  }
+
+  Future<void> _onWebAuthnRegistrationCompleted(
+      WebAuthnRegistrationCompleted event, Emitter<AuthState> emit) async {
+    emit(state.copyWith(status: AuthStatus.loading, isWebAuthnLoading: true));
+    try {
+      await _repo.completeWebAuthnRegistration(
+        ceremonyId: event.ceremonyId,
+        credential: event.credential,
+        deviceFingerprint: deviceFingerprint,
+      );
+      emit(state.copyWith(
+        status: AuthStatus.success,
+        ceremonyId: null,
+        options: null,
+        isWebAuthnLoading: false,
+      ));
+    } catch (e) {
+      final (code, detail) = AuthRepository.errorCode(e);
+      emit(state.copyWith(
+        status: AuthStatus.error,
+        errorCode: code,
+        errorDetail: detail,
+        webAuthnError: 'Registration completion failed: \$detail',
+      ));
+    }
+  }
+
+  Future<void> _onWebAuthnAuthenticationCompleted(
+      WebAuthnAuthenticationCompleted event, Emitter<AuthState> emit) async {
+    emit(state.copyWith(status: AuthStatus.loading, isWebAuthnLoading: true));
+    try {
+      final user = await _repo.completeWebAuthnAuthentication(
+        ceremonyId: event.ceremonyId,
+        credential: event.credential,
+        deviceFingerprint: deviceFingerprint,
+      );
+      emit(state.copyWith(
+        status: AuthStatus.success,
+        user: user,
+        ceremonyId: null,
+        options: null,
+        isWebAuthnLoading: false,
+      ));
+    } catch (e) {
+      final (code, detail) = AuthRepository.errorCode(e);
+      emit(state.copyWith(
+        status: AuthStatus.error,
+        errorCode: code,
+        errorDetail: detail,
+        webAuthnError: 'Authentication completion failed: \$detail',
+      ));
+    }
   }
 
   @override

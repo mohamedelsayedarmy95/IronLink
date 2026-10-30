@@ -1714,4 +1714,20 @@ class LAr extends L {
 
   @override
   String get replySwipeHint => 'اسحب الرسالة عشان ترد عليها';
+
+  @override
+  String get backButton => 'العودة';
+
+  @override
+  String get webauthnButtonLogin => 'تسجيل الدخول بمفتاح';
+
+  @override
+  String get webauthnButtonRegister => 'تسجيل مفتاح جديد';
+
+  @override
+  String get webauthnStepSubtitle =>
+      'سجل أو ادخل باستخدام مفتاح الأمان الخاص بك';
+
+  @override
+  String get webauthnStepTitle => 'مفتاح الأمان';
 }

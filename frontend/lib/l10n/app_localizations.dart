@@ -3132,6 +3132,36 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'اسحب الرسالة عشان ترد عليها'**
   String get replySwipeHint;
+
+  /// No description provided for @backButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'العودة'**
+  String get backButton;
+
+  /// No description provided for @webauthnButtonLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول بمفتاح'**
+  String get webauthnButtonLogin;
+
+  /// No description provided for @webauthnButtonRegister.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل مفتاح جديد'**
+  String get webauthnButtonRegister;
+
+  /// No description provided for @webauthnStepSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل أو ادخل باستخدام مفتاح الأمان الخاص بك'**
+  String get webauthnStepSubtitle;
+
+  /// No description provided for @webauthnStepTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتاح الأمان'**
+  String get webauthnStepTitle;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

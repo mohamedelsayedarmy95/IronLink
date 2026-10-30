@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'webauthn_step.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -10,7 +11,7 @@ import '../auth_repository.dart';
 import '../bloc/auth_bloc.dart';
 import '../../../core/icons.dart';
 
-/// Phone → OTP → military ID. Each step owns the full frame; completed steps
+/// Phone Ã¢â€ â€™ OTP Ã¢â€ â€™ military ID. Each step owns the full frame; completed steps
 /// collapse into a compact confirmation row so the user can see what they
 /// already gave without it competing with what's being asked now.
 class AuthScreen extends StatelessWidget {
@@ -43,7 +44,8 @@ class AuthScreen extends StatelessWidget {
                 ? null
                 : IconButton(
                     icon: const Icon(IronIcons.back),
-                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                    tooltip:
+                        MaterialLocalizations.of(context).backButtonTooltip,
                     onPressed: () =>
                         context.read<AuthBloc>().add(const StepBackRequested()),
                   ),
@@ -52,8 +54,8 @@ class AuthScreen extends StatelessWidget {
           ),
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                  IronSpacing.lg, IronSpacing.xs, IronSpacing.lg, IronSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(IronSpacing.lg, IronSpacing.xs,
+                  IronSpacing.lg, IronSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -69,17 +71,16 @@ class AuthScreen extends StatelessWidget {
                         color: IronColors.textSecondary),
                   ),
                   const SizedBox(height: IronSpacing.lg),
-
                   if (state.step != AuthStep.phone)
                     _CompletedRow(
                       label: t.phoneNumberLabel,
                       value: state.phoneNumber,
                     ),
                   if (state.step == AuthStep.militaryId)
-                    _CompletedRow(label: t.otpCodeLabel, value: '••••••'),
-
+                    _CompletedRow(
+                        label: t.otpCodeLabel,
+                        value: 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢'),
                   const SizedBox(height: IronSpacing.xs),
-
                   AnimatedSwitcher(
                     duration: IronMotion.entrance,
                     switchInCurve: IronMotion.entranceCurve,
@@ -94,7 +95,9 @@ class AuthScreen extends StatelessWidget {
                       ),
                     ),
                     child: switch (state.step) {
-                      AuthStep.phone => const _PhoneStep(key: ValueKey('phone')),
+                      AuthStep.webauthn => const WebAuthnStep(),
+                      AuthStep.phone =>
+                        const _PhoneStep(key: ValueKey('phone')),
                       AuthStep.otp => const _OtpStep(key: ValueKey('otp')),
                       AuthStep.militaryId =>
                         const _MilitaryIdStep(key: ValueKey('id')),
@@ -110,12 +113,14 @@ class AuthScreen extends StatelessWidget {
   }
 
   static String _titleFor(L t, AuthStep step) => switch (step) {
+        AuthStep.webauthn => 'Security Key',
         AuthStep.phone => t.secureSignInTitle,
         AuthStep.otp => t.otpCodeLabel,
         AuthStep.militaryId => t.militaryIdHint,
       };
 
   static String _subtitleFor(L t, AuthStep step) => switch (step) {
+        AuthStep.webauthn => 'Use a security key',
         AuthStep.phone => t.phoneStepSubtitle,
         AuthStep.otp => t.otpStepSubtitle,
         AuthStep.militaryId => t.militaryIdStepSubtitle,
@@ -137,7 +142,7 @@ String authErrorText(L t, AuthErrorCode code, String? detail) => switch (code) {
       AuthErrorCode.unexpected => detail ?? t.failureUnknown,
     };
 
-/// Inline error beneath the field it belongs to — a message at the top of the
+/// Inline error beneath the field it belongs to Ã¢â‚¬â€ a message at the top of the
 /// screen makes the user hunt for which input it refers to.
 class _FieldError extends StatelessWidget {
   const _FieldError({required this.message});
@@ -157,8 +162,7 @@ class _FieldError extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style:
-                  IronTypography.bodySmall(color: IronColors.semanticError),
+              style: IronTypography.bodySmall(color: IronColors.semanticError),
             ),
           ),
         ],
@@ -233,8 +237,7 @@ class _CompletedRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style:
-                    IronTypography.bodySmall(color: IronColors.textTertiary),
+                style: IronTypography.bodySmall(color: IronColors.textTertiary),
               ),
             ),
             Text(
@@ -250,7 +253,7 @@ class _CompletedRow extends StatelessWidget {
   }
 }
 
-// ── Step 1: phone ─────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Step 1: phone Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 class _PhoneStep extends StatefulWidget {
   const _PhoneStep({super.key});
@@ -367,7 +370,7 @@ class _PhoneStepState extends State<_PhoneStep> {
   }
 }
 
-// ── Step 2: OTP ───────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Step 2: OTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 class _OtpStep extends StatefulWidget {
   const _OtpStep({super.key});
@@ -518,7 +521,7 @@ class _DigitCell extends StatelessWidget {
   }
 }
 
-// ── Step 3: military ID ───────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Step 3: military ID Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 class _MilitaryIdStep extends StatefulWidget {
   const _MilitaryIdStep({super.key});
@@ -547,9 +550,7 @@ class _MilitaryIdStepState extends State<_MilitaryIdStep> {
 
   void _submit() {
     if (!_valid) return;
-    context
-        .read<AuthBloc>()
-        .add(MilitaryIdSubmitted(_controller.text.trim()));
+    context.read<AuthBloc>().add(MilitaryIdSubmitted(_controller.text.trim()));
   }
 
   @override
@@ -578,9 +579,7 @@ class _MilitaryIdStepState extends State<_MilitaryIdStep> {
               suffixIcon: IconButton(
                 tooltip: _obscured ? t.showPassword : t.hidePassword,
                 icon: Icon(
-                  _obscured
-                      ? IronIcons.show
-                      : IronIcons.hide,
+                  _obscured ? IronIcons.show : IronIcons.hide,
                   color: IronColors.textSecondary,
                   size: 20,
                 ),

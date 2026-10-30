@@ -1731,4 +1731,20 @@ class LEn extends L {
 
   @override
   String get replySwipeHint => 'Swipe a message to reply to it';
+
+  @override
+  String get backButton => 'Back';
+
+  @override
+  String get webauthnButtonLogin => 'Login with Key';
+
+  @override
+  String get webauthnButtonRegister => 'Register New Key';
+
+  @override
+  String get webauthnStepSubtitle =>
+      'Register or login using a passkey for secure authentication';
+
+  @override
+  String get webauthnStepTitle => 'Security Key';
 }
