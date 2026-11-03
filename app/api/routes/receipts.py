@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import BaseModel
+from sqlalchemy import select
 
 from app.api.deps import get_current_user
 from app.core.redis import redis_pubsub

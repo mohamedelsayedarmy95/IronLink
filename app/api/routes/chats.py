@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,8 +13,7 @@ from app.api.routes.websocket import manager
 from app.core.database import get_db
 from app.models import Message, User
 from app.models.message import MessageType
-from app.services import reaction_service
-from app.services.message_service import visible_message_clause
+from app.services import message_service, reaction_service
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -40,6 +39,9 @@ class MessageOut(BaseModel):
     status: str
     created_at: datetime
     deleted_for_everyone: bool
+    is_self_destruct: bool
+    destruct_after_seconds: int | None = None
+    destruct_at: datetime | None = None
 
     #: The message this one answers, or null.
     #:
@@ -57,6 +59,7 @@ async def list_conversations(
     db: AsyncSession = Depends(get_db),
 ) -> list[ConversationOut]:
     """Distinct DM partners, most recent first, with online flag from Redis."""
+    now = datetime.now(timezone.utc)
     peer_expr = func.coalesce(
         func.nullif(Message.sender_id, user.id), Message.recipient_id
     )
@@ -68,7 +71,7 @@ async def list_conversations(
         .where(
             or_(Message.sender_id == user.id, Message.recipient_id == user.id),
             Message.group_id.is_(None),
-            visible_message_clause(),
+            message_service.visible_message_clause(now=now),
         )
         .group_by("peer_id")
         .subquery()
@@ -89,7 +92,7 @@ async def list_conversations(
                     and_(Message.sender_id == user.id, Message.recipient_id == peer.id),
                     and_(Message.sender_id == peer.id, Message.recipient_id == user.id),
                 ),
-                visible_message_clause(),
+                message_service.visible_message_clause(now=now),
             )
             .order_by(desc(Message.created_at))
             .limit(1)
@@ -99,7 +102,7 @@ async def list_conversations(
                 Message.sender_id == peer.id,
                 Message.recipient_id == user.id,
                 Message.status != "read",
-                visible_message_clause(),
+                message_service.visible_message_clause(now=now),
             )
         ) or 0
 
@@ -143,6 +146,7 @@ async def message_history(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[MessageOut]:
+    now = datetime.now(timezone.utc)
     peer = await db.scalar(select(User).where(User.id == peer_id))
     if peer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="peer not found")
@@ -154,7 +158,7 @@ async def message_history(
                 and_(Message.sender_id == user.id, Message.recipient_id == peer_id),
                 and_(Message.sender_id == peer_id, Message.recipient_id == user.id),
             ),
-            visible_message_clause(),
+            message_service.visible_message_clause(now=now),
             # Reactions are messages, and they must not consume the page
             # budget: a message with twenty reactions would push nineteen real
             # messages off a page of fifty, and the conversation would appear

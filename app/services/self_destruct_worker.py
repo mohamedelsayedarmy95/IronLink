@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+from uuid import UUID
 
 import structlog
 from sqlalchemy import select
@@ -9,7 +10,7 @@ from sqlalchemy import select
 from app.core import observability
 from app.config import settings
 from app.core.database import AsyncSessionLocal
-from app.models import AuditLog, Message
+from app.models import AuditLog, GroupMember, Message
 from app.services.storage_service import StorageService
 
 logger = structlog.get_logger("self_destruct")
@@ -129,6 +130,10 @@ class SelfDestructWorker:
 
         now = datetime.now(timezone.utc)
         wiped = 0
+        # (recipients, event) pairs. Notifications are collected and sent only
+        # after the database says the wipe is durable; see the commit below.
+        notifications: list[tuple[set[UUID], dict]] = []
+        group_members: dict[UUID, set[UUID]] = {}
 
         async with AsyncSessionLocal() as db:
             expired = (await db.scalars(
@@ -142,7 +147,6 @@ class SelfDestructWorker:
             )).all()
 
             for msg in expired:
-                had_media = msg.media_object_key is not None
                 if msg.media_object_key:
                     try:
                         self._storage.delete_object(
@@ -158,9 +162,33 @@ class SelfDestructWorker:
                         )
                         continue
 
+                # Capture this before the pointer is cleared. The old order
+                # recorded `had_media` after nulling the column, so every audit
+                # row claimed the message never had an attachment.
+                had_media = msg.media_object_key is not None
+
+                if msg.group_id is not None:
+                    recipients = group_members.get(msg.group_id)
+                    if recipients is None:
+                        recipients = set((await db.scalars(
+                            select(GroupMember.user_id).where(
+                                GroupMember.group_id == msg.group_id
+                            )
+                        )).all())
+                        group_members[msg.group_id] = recipients
+                    targets = set(recipients)
+                else:
+                    targets = set()
+
+                if msg.sender_id is not None:
+                    targets.add(msg.sender_id)
+                if msg.recipient_id is not None:
+                    targets.add(msg.recipient_id)
+
                 msg.content_ciphertext = None
                 msg.media_object_key = None
                 msg.media_mime_type = None
+                msg.media_size_bytes = None
                 msg.is_destructed = True
                 msg.deleted_at = now
 
@@ -173,32 +201,31 @@ class SelfDestructWorker:
                     metadata_={"had_media": had_media},
                 ))
                 wiped += 1
+                notifications.append((
+                    targets,
+                    {"type": "unsend", "message_id": str(msg.id)},
+                ))
 
+            # The wipe must not depend on Redis being reachable. Publishing
+            # before this commit meant a Pub/Sub outage rolled the transaction
+            # back, leaving expired ciphertext in the database while the
+            # client was told the message had expired.
             if wiped:
                 await db.commit()
 
-            # Publish unsend events AFTER commit so Redis failure doesn't rollback the DB wipe
-            for msg in expired:
-                event = {"type": "unsend", "message_id": str(msg.id)}
-                if msg.recipient_id is not None:
-                    try:
-                        await publish(msg.recipient_id, event)
-                    except Exception as exc:
-                        logger.warning(
-                            "unsend_publish_failed",
-                            message_id=str(msg.id),
-                            user_id=str(msg.recipient_id),
-                            error=str(exc),
-                        )
-                if msg.sender_id is not None:
-                    try:
-                        await publish(msg.sender_id, event)
-                    except Exception as exc:
-                        logger.warning(
-                            "unsend_publish_failed",
-                            message_id=str(msg.id),
-                            user_id=str(msg.sender_id),
-                            error=str(exc),
-                        )
+        for targets, event in notifications:
+            for user_id in targets:
+                try:
+                    await publish(user_id, event)
+                except Exception as exc:  # noqa: BLE001 — best-effort notification
+                    # The message is already gone from the database. A failed
+                    # frame only delays the client's local removal until its
+                    # next history fetch, which already excludes the message.
+                    logger.warning(
+                        "self_destruct_notify_failed",
+                        message_id=event["message_id"],
+                        user_id=str(user_id),
+                        error=str(exc),
+                    )
 
         return wiped

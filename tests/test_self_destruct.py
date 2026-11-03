@@ -10,13 +10,16 @@ This test suite covers:
 
 from __future__ import annotations
 
+import inspect
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 
 from app.models import AuditLog, Message
 from app.models.message import MessageStatus, MessageType
+from app.services import group_message_service, message_service
 from app.services.message_service import visible_message_clause
 from app.services.self_destruct_worker import SelfDestructWorker
 
@@ -51,31 +54,47 @@ class _Message:
         self.is_destructed = is_destructed
         self.media_object_key = media_object_key
         self.media_mime_type = "image/png" if media_object_key else None
+        self.media_size_bytes = 1234 if media_object_key else None
         self.deleted_at = None
         self.created_at = datetime.now(timezone.utc)
         self.deleted_for_everyone = False
         self.is_edited = False
         self.edit_count = 0
         self.is_secret = False
+        self.read_at = None
+        self.delivered_at = None
+        self.client_ref = None
 
 
 class _ScalarResult:
-    def __init__(self, values: list[_Message]) -> None:
+    def __init__(self, values: list[object]) -> None:
         self._values = values
 
-    def all(self) -> list[_Message]:
+    def all(self) -> list[object]:
         return self._values
 
 
 class _MockDb:
     """Async context manager that mimics AsyncSessionLocal for the worker."""
 
-    def __init__(self, messages: list[_Message]) -> None:
+    def __init__(
+        self,
+        messages: list[_Message],
+        *,
+        group_member_ids: set[object] | None = None,
+    ) -> None:
         self._messages = messages
+        self.group_member_ids = group_member_ids or set()
         self.committed = False
         self.added: list[AuditLog] = []
 
     async def scalars(self, statement: object) -> _ScalarResult:
+        # The worker asks for group members as well as expired messages. The
+        # fake distinguishes them by the table in the statement, so a group
+        # message can fan its unsend frame out to every member in the test.
+        if "group_members" in str(statement):
+            return _ScalarResult(list(self.group_member_ids))
+
         now = datetime.now(timezone.utc)
         expired = [
             m
@@ -114,6 +133,32 @@ class _Storage:
         if self._fails:
             raise RuntimeError("object storage unreachable")
         self.deleted.append(key)
+
+
+class _ServiceDb:
+    """Small session double for save_message / mark_read / group saves."""
+
+    def __init__(self, *scalar_results: object) -> None:
+        self._scalar_results = list(scalar_results)
+        self.added: list[object] = []
+        self.commits = 0
+        self.refreshed: list[object] = []
+
+    async def scalar(self, _statement: object) -> object | None:
+        if not self._scalar_results:
+            return None
+        return self._scalar_results.pop(0)
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+    def add(self, obj: object) -> None:
+        self.added.append(obj)
+
+    async def refresh(self, obj: object) -> None:
+        self.refreshed.append(obj)
+
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 
@@ -584,9 +629,16 @@ class TestSelfDestructWorkerEdgeCases:
             assert event["message_id"] == str(msg.id)
 
     @pytest.mark.asyncio
-    async def test_publish_called_only_for_sender_in_group(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """For group messages, publish should only go to sender."""
+    async def test_publish_called_for_every_group_member(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A group message's unsend frame must reach every member, not only the sender.
+
+        Group messages have no recipient_id, so the old sender-only path left
+        every other member with the message on screen until their next history
+        fetch. The database still enforced expiry; the realtime cleanup did not.
+        """
         sender_id = uuid4()
+        member_a = uuid4()
+        member_b = uuid4()
         group_id = uuid4()
         msg = _Message(
             destruct_at=datetime.now(timezone.utc) - timedelta(minutes=1),
@@ -594,7 +646,9 @@ class TestSelfDestructWorkerEdgeCases:
             group_id=group_id,
             recipient_id=None,
         )
-        mock_db = _MockDb([msg])
+        mock_db = _MockDb(
+            [msg], group_member_ids={sender_id, member_a, member_b}
+        )
         storage = _Storage()
 
         published_events: list[tuple] = []
@@ -620,9 +674,11 @@ class TestSelfDestructWorkerEdgeCases:
         worker._storage = storage  # noqa: SLF001
         await worker.sweep_once()
 
-        assert len(published_events) == 1
-        assert str(published_events[0][0]) == str(sender_id)
-        assert published_events[0][1]["type"] == "unsend"
+        assert len(published_events) == 3
+        user_ids = {str(e[0]) for e in published_events}
+        assert user_ids == {str(sender_id), str(member_a), str(member_b)}
+        assert all(e[1]["type"] == "unsend" for e in published_events)
+        assert all(e[1]["message_id"] == str(msg.id) for e in published_events)
 
     @pytest.mark.asyncio
     async def test_empty_sweep_does_nothing(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -658,3 +714,381 @@ class TestSelfDestructWorkerEdgeCases:
         assert not mock_db.committed
         assert not publish_called
         assert len(mock_db.added) == 0
+
+class TestDirectMessageTimer:
+    """The direct-message timer is burn-after-reading, not send-time."""
+
+    @pytest.mark.asyncio
+    async def test_sending_a_self_destruct_dm_does_not_start_the_timer(self) -> None:
+        db = _ServiceDb()
+        msg = await message_service.save_message(
+            db,
+            sender_id=uuid4(),
+            recipient_id=uuid4(),
+            group_id=None,
+            message_type="text",
+            content_ciphertext="envelope",
+            destruct_after_seconds=60,
+        )
+
+        assert msg.is_self_destruct is True
+        assert msg.destruct_after_seconds == 60
+        assert msg.destruct_at is None, (
+            "a direct message must remain unexpired until it is first read"
+        )
+
+    @pytest.mark.asyncio
+    async def test_first_read_starts_the_timer(self) -> None:
+        msg = _Message(destruct_at=None, recipient_id=uuid4())
+        db = _ServiceDb(msg)
+
+        returned = await message_service.mark_read(db, msg.id, msg.recipient_id)
+
+        assert returned is msg
+        assert msg.status == MessageStatus.READ
+        assert msg.read_at is not None
+        assert msg.destruct_at == msg.read_at + timedelta(seconds=60)
+
+    @pytest.mark.asyncio
+    async def test_a_second_read_does_not_extend_the_timer(self) -> None:
+        msg = _Message(destruct_at=None, recipient_id=uuid4())
+        msg.status = MessageStatus.READ
+        msg.read_at = datetime.now(timezone.utc) - timedelta(seconds=30)
+        msg.destruct_at = msg.read_at + timedelta(seconds=60)
+        original_destruct_at = msg.destruct_at
+        db = _ServiceDb(msg)
+
+        returned = await message_service.mark_read(db, msg.id, msg.recipient_id)
+
+        assert returned is msg
+        assert msg.destruct_at == original_destruct_at
+        assert db.commits == 0, "an already-read message needs no write"
+
+    @pytest.mark.asyncio
+    async def test_a_legacy_read_row_without_a_timer_still_gets_one(self) -> None:
+        # A row written before the timer fix can be READ with destruct_at NULL.
+        msg = _Message(destruct_at=None, recipient_id=uuid4())
+        msg.status = MessageStatus.READ
+        msg.read_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+        db = _ServiceDb(msg)
+
+        returned = await message_service.mark_read(db, msg.id, msg.recipient_id)
+
+        assert returned is msg
+        assert msg.destruct_at == msg.read_at + timedelta(seconds=60)
+
+    @pytest.mark.asyncio
+    async def test_reading_after_expiry_returns_nothing_and_does_not_revive_it(self) -> None:
+        expired_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        msg = _Message(destruct_at=expired_at, recipient_id=uuid4())
+        db = _ServiceDb(msg)
+
+        returned = await message_service.mark_read(db, msg.id, msg.recipient_id)
+
+        assert returned is None
+        assert msg.destruct_at == expired_at
+        assert msg.status == MessageStatus.SENT
+        assert msg.read_at is None
+        assert db.commits == 0
+
+    @pytest.mark.asyncio
+    async def test_reading_an_already_destructed_message_returns_nothing(self) -> None:
+        msg = _Message(
+            destruct_at=datetime.now(timezone.utc) + timedelta(days=1),
+            is_destructed=True,
+            recipient_id=uuid4(),
+        )
+        db = _ServiceDb(msg)
+
+        assert await message_service.mark_read(
+            db, msg.id, msg.recipient_id
+        ) is None
+        assert db.commits == 0
+
+    @pytest.mark.asyncio
+    async def test_the_expiry_boundary_is_inclusive(self) -> None:
+        now = datetime.now(timezone.utc)
+        msg = _Message(destruct_at=now)
+
+        assert message_service.is_expired(msg, now=now) is True
+
+    def test_naive_timestamps_are_treated_as_utc(self) -> None:
+        naive = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1)
+        msg = _Message(destruct_at=naive)
+
+        assert message_service.is_expired(msg) is True
+
+    @pytest.mark.parametrize("bad_ttl", [0, -1, 604_801, True, "60", 60.5])
+    def test_invalid_durations_are_rejected(self, bad_ttl: object) -> None:
+        with pytest.raises(message_service.InvalidDestructTTL):
+            message_service.validate_destruct_after_seconds(bad_ttl)  # type: ignore[arg-type]
+
+    def test_the_maximum_duration_is_allowed(self) -> None:
+        assert message_service.validate_destruct_after_seconds(604_800) == 604_800
+
+
+class TestGroupTimer:
+    """Groups have one row and many readers, so their timer starts at send."""
+
+    async def _save(self, *, default: int | None, explicit: int | None):
+        member = SimpleNamespace(role="member")
+        group = SimpleNamespace(
+            only_admins_can_post=False,
+            disappearing_messages_seconds=default,
+        )
+        db = _ServiceDb(member, group)
+        msg = await group_message_service.save_group_message(
+            db,
+            group_id=uuid4(),
+            sender_id=uuid4(),
+            message_type="text",
+            content_ciphertext="group-envelope",
+            destruct_after_seconds=explicit,
+        )
+        return msg, db
+
+    @pytest.mark.asyncio
+    async def test_group_default_starts_at_send_time(self) -> None:
+        before = datetime.now(timezone.utc)
+        msg, _ = await self._save(default=30, explicit=None)
+        after = datetime.now(timezone.utc)
+
+        assert msg.destruct_after_seconds == 30
+        assert msg.destruct_at is not None
+        assert before + timedelta(seconds=30) <= msg.destruct_at
+        assert msg.destruct_at <= after + timedelta(seconds=30)
+
+    @pytest.mark.asyncio
+    async def test_explicit_ttl_overrides_the_group_default(self) -> None:
+        msg, _ = await self._save(default=30, explicit=120)
+
+        assert msg.destruct_after_seconds == 120
+        assert msg.destruct_at is not None
+
+    @pytest.mark.asyncio
+    async def test_invalid_group_default_is_rejected(self) -> None:
+        with pytest.raises(message_service.InvalidDestructTTL):
+            await self._save(default=0, explicit=None)
+
+
+class TestReadPathsUseTheVisibilityRule:
+    """Expiry has to be applied by readers, not deferred to the sweeper."""
+
+    @pytest.mark.asyncio
+    async def test_group_history_query_excludes_expired_rows(self) -> None:
+        member = SimpleNamespace(joined_at=datetime.now(timezone.utc) - timedelta(days=1))
+        db = _ServiceDb(member)
+        captured: list[str] = []
+
+        async def fake_scalars(statement):
+            captured.append(str(statement))
+            return _ScalarResult([])
+
+        db.scalars = fake_scalars  # type: ignore[attr-defined]
+
+        await group_message_service.history(
+            db, group_id=uuid4(), user_id=uuid4()
+        )
+
+        assert captured
+        assert "destruct_at" in captured[0]
+        assert "is_destructed" in captured[0]
+
+    @pytest.mark.asyncio
+    async def test_direct_history_route_excludes_expired_rows(self) -> None:
+        from app.api.routes.chats import message_history
+
+        caller = SimpleNamespace(id=uuid4())
+        peer = SimpleNamespace(id=uuid4())
+        db = _ServiceDb(peer)
+        captured: list[str] = []
+
+        async def fake_scalars(statement):
+            captured.append(str(statement))
+            return _ScalarResult([])
+
+        db.scalars = fake_scalars  # type: ignore[attr-defined]
+
+        await message_history(
+            peer_id=peer.id,
+            before=None,
+            limit=50,
+            user=caller,
+            db=db,
+        )
+
+        assert captured
+        assert "destruct_at" in captured[0]
+        assert "is_destructed" in captured[0]
+
+
+class TestWebSocketContract:
+    """The client sends read/delivered; the server must understand both spellings."""
+
+    def test_read_and_delivered_aliases_are_accepted(self) -> None:
+        from app.api.routes import websocket
+
+        source = inspect.getsource(websocket._handle_frame)
+        assert '"message_delivered", "delivered"' in source
+        assert '"message_read", "read"' in source
+
+    def test_websocket_rejects_invalid_destruct_ttl(self) -> None:
+        from app.api.routes import websocket
+
+        source = inspect.getsource(websocket._handle_frame)
+        assert source.count("InvalidDestructTTL") == 2
+
+    def test_realtime_frames_carry_the_destruct_metadata(self) -> None:
+        from app.api.routes import websocket
+
+        source = inspect.getsource(websocket._handle_frame)
+        assert source.count('"destruct_after": msg.destruct_after_seconds') == 2
+        assert source.count('"destruct_at": msg.destruct_at.isoformat()') == 2
+
+
+class TestWorkerCommitOrdering:
+    @pytest.mark.asyncio
+    async def test_commit_happens_before_any_notification(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        msg = _Message(
+            destruct_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            sender_id=uuid4(),
+            recipient_id=uuid4(),
+        )
+        mock_db = _MockDb([msg])
+        timeline: list[str] = []
+        original_commit = mock_db.commit
+
+        async def timed_commit():
+            timeline.append("commit")
+            await original_commit()
+
+        mock_db.commit = timed_commit  # type: ignore[method-assign]
+
+        def mock_session_factory():
+            return mock_db
+
+        monkeypatch.setattr(
+            "app.services.self_destruct_worker.AsyncSessionLocal",
+            mock_session_factory,
+        )
+
+        async def mock_publish(_user_id, _event):
+            timeline.append("publish")
+
+        monkeypatch.setattr(
+            "app.api.routes.websocket.publish",
+            mock_publish,
+        )
+
+        worker = SelfDestructWorker()
+        worker._storage = _Storage()  # noqa: SLF001
+        await worker.sweep_once()
+
+        assert timeline[0] == "commit"
+        assert timeline.count("publish") == 2
+
+    @pytest.mark.asyncio
+    async def test_one_failed_notification_does_not_skip_the_rest(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        sender_id = uuid4()
+        recipient_id = uuid4()
+        msg = _Message(
+            destruct_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            sender_id=sender_id,
+            recipient_id=recipient_id,
+        )
+        mock_db = _MockDb([msg])
+
+        def mock_session_factory():
+            return mock_db
+
+        monkeypatch.setattr(
+            "app.services.self_destruct_worker.AsyncSessionLocal",
+            mock_session_factory,
+        )
+
+        delivered: list[object] = []
+
+        async def flaky_publish(user_id, _event):
+            if user_id == recipient_id:
+                raise ConnectionError("Redis unavailable")
+            delivered.append(user_id)
+
+        monkeypatch.setattr(
+            "app.api.routes.websocket.publish",
+            flaky_publish,
+        )
+
+        worker = SelfDestructWorker()
+        worker._storage = _Storage()  # noqa: SLF001
+        wiped = await worker.sweep_once()
+
+        assert wiped == 1
+        assert mock_db.committed is True
+        assert delivered == [sender_id], (
+            "the other recipient must still receive the unsend frame"
+        )
+
+    @pytest.mark.asyncio
+    async def test_storage_failure_produces_no_unsend_notification(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        msg = _Message(
+            destruct_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            media_object_key="attachments/stuck.png",
+        )
+        mock_db = _MockDb([msg])
+        published = False
+
+        def mock_session_factory():
+            return mock_db
+
+        monkeypatch.setattr(
+            "app.services.self_destruct_worker.AsyncSessionLocal",
+            mock_session_factory,
+        )
+
+        async def mock_publish(_user_id, _event):
+            nonlocal published
+            published = True
+
+        monkeypatch.setattr(
+            "app.api.routes.websocket.publish",
+            mock_publish,
+        )
+
+        worker = SelfDestructWorker()
+        worker._storage = _Storage(fails=True)  # noqa: SLF001
+        wiped = await worker.sweep_once()
+
+        assert wiped == 0
+        assert published is False
+        assert msg.is_destructed is False
+
+    @pytest.mark.asyncio
+    async def test_media_pointer_metadata_is_wiped_with_the_body(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        msg = _Message(
+            destruct_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            media_object_key="attachments/image.png",
+        )
+        mock_db = _MockDb([msg])
+
+        def mock_session_factory():
+            return mock_db
+
+        monkeypatch.setattr(
+            "app.services.self_destruct_worker.AsyncSessionLocal",
+            mock_session_factory,
+        )
+
+        async def mock_publish(_user_id, _event):
+            return None
+
+        monkeypatch.setattr(
+            "app.api.routes.websocket.publish",
+            mock_publish,
+        )
+
+        worker = SelfDestructWorker()
+        worker._storage = _Storage()  # noqa: SLF001
+        await worker.sweep_once()
+
+        assert msg.media_mime_type is None
+        assert msg.media_size_bytes is None

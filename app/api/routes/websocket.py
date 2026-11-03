@@ -250,6 +250,11 @@ async def _handle_frame(
                     websocket, frame, "This message could not be delivered."
                 )
                 return
+            except message_service.InvalidDestructTTL:
+                await _reject(
+                    websocket, frame, "invalid 'destruct_after' duration"
+                )
+                return
             # Offline recipient → FCM push with sender name + short preview.
             # Checked while the session is open so we read fcm_token in one trip.
             recipient_offline = not await manager.is_online(to)
@@ -291,6 +296,8 @@ async def _handle_frame(
             "content": frame.get("content"),
             "media_key": frame.get("media_key"),
             "media_mime": frame.get("media_mime"),
+            "destruct_after": msg.destruct_after_seconds,
+            "destruct_at": msg.destruct_at.isoformat() if msg.destruct_at else None,
             "created_at": msg.created_at.isoformat(),
         })
         return
@@ -391,6 +398,11 @@ async def _handle_frame(
             except group_message_service.PostingNotAllowed:
                 await _reject(websocket, frame, "only admins can post here")
                 return
+            except message_service.InvalidDestructTTL:
+                await _reject(
+                    websocket, frame, "invalid 'destruct_after' duration"
+                )
+                return
 
             recipients = await group_message_service.member_ids(db, group_id)
 
@@ -413,6 +425,8 @@ async def _handle_frame(
             "content": frame.get("content"),
             "media_key": frame.get("media_key"),
             "media_mime": frame.get("media_mime"),
+            "destruct_after": msg.destruct_after_seconds,
+            "destruct_at": msg.destruct_at.isoformat() if msg.destruct_at else None,
             "created_at": msg.created_at.isoformat(),
         }
         for member_id in recipients:
@@ -472,20 +486,21 @@ async def _handle_frame(
         return
 
     # ── Delivery / read receipts ──────────────────────────────────────────────
-    if frame_type in ("message_delivered", "message_read"):
+    if frame_type in ("message_delivered", "delivered", "message_read", "read"):
         message_id = _uuid_or_none(frame.get("message_id"))
         if message_id is None:
             return
+        is_read = frame_type in ("message_read", "read")
         async with AsyncSessionLocal() as db:
-            if frame_type == "message_delivered":
-                msg = await message_service.mark_delivered(db, message_id, user_id)
-            else:
+            if is_read:
                 msg = await message_service.mark_read(db, message_id, user_id)
+            else:
+                msg = await message_service.mark_delivered(db, message_id, user_id)
         if msg is not None and msg.sender_id is not None:
             await publish(msg.sender_id, {
                 "type": "receipt",
                 "message_id": str(message_id),
-                "status": "read" if frame_type == "message_read" else "delivered",
+                "status": "read" if is_read else "delivered",
             })
         return
 

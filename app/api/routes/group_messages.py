@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models import User
-from app.services import group_message_service
+from app.services import group_message_service, message_service
 
 router = APIRouter(prefix="/groups", tags=["group-messages"])
 
@@ -41,6 +41,9 @@ class GroupMessageOut(BaseModel):
     media_mime_type: str | None
     created_at: datetime
     deleted_for_everyone: bool
+    is_self_destruct: bool
+    destruct_after_seconds: int | None = None
+    destruct_at: datetime | None = None
 
 
 @router.post(
@@ -82,6 +85,11 @@ async def send_group_message(
     except group_message_service.PostingNotAllowed:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "only admins can post in this group"
+        ) from None
+    except message_service.InvalidDestructTTL:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "destruct_after must be between 1 and 604800 seconds",
         ) from None
 
     return GroupMessageOut.model_validate(msg)

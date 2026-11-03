@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Group, GroupMember, Message
 from app.models.message import MessageStatus
-from app.services.message_service import visible_message_clause
+from app.services import message_service
 
 #: Sender-key distribution messages. Delivered over the ordinary one-to-one
 #: path (pairwise encrypted, one per recipient) but never shown as chat: they
@@ -128,7 +128,16 @@ async def save_group_message(
     now = datetime.now(timezone.utc)
     # A group-wide disappearing-message setting applies to every message in
     # it, so a member cannot opt their own messages out of the group's rule.
-    ttl = destruct_after_seconds or group.disappearing_messages_seconds
+    # Group timers start at send time: there is one message row but many
+    # readers, so "first read by any member" would end the lifetime for
+    # everyone based on one person opening the group.
+    explicit_ttl = message_service.validate_destruct_after_seconds(
+        destruct_after_seconds
+    )
+    group_ttl = message_service.validate_destruct_after_seconds(
+        group.disappearing_messages_seconds
+    )
+    ttl = explicit_ttl if explicit_ttl is not None else group_ttl
 
     msg = Message(
         client_ref=client_ref,
@@ -142,7 +151,7 @@ async def save_group_message(
         status=MessageStatus.SENT,
         is_self_destruct=ttl is not None,
         destruct_after_seconds=ttl,
-        destruct_at=now + timedelta(seconds=ttl) if ttl else None,
+        destruct_at=now + timedelta(seconds=ttl) if ttl is not None else None,
         delivered_at=now,
     )
     db.add(msg)
@@ -174,7 +183,9 @@ async def history(
             Message.group_id == group_id,
             Message.created_at >= member.joined_at,
             Message.message_type != SKDM_MESSAGE_TYPE,
-            visible_message_clause(),
+            # Expired rows stay in the table until the sweeper reaches them;
+            # they must already be invisible to readers before that happens.
+            message_service.visible_message_clause(),
         )
         .order_by(Message.created_at.desc())
         .limit(limit)

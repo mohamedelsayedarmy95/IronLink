@@ -216,6 +216,10 @@ async def mark_delivered(db: AsyncSession, message_id: UUID, user_id: UUID) -> M
         is_participant = (msg.sender_id == user_id) or (msg.recipient_id == user_id)
     if not is_participant:
         return None
+    # A receipt for an expired message would tell the sender it was seen after
+    # it ceased to exist. It must not revive the message or produce a receipt.
+    if msg.deleted_for_everyone or is_expired(msg):
+        return None
     if msg.delivered_at is None:
         msg.delivered_at = datetime.now(timezone.utc)
         await db.commit()
@@ -223,7 +227,12 @@ async def mark_delivered(db: AsyncSession, message_id: UUID, user_id: UUID) -> M
 
 
 async def mark_read(db: AsyncSession, message_id: UUID, user_id: UUID) -> Message | None:
-    """Mark a message as read by the given user (recipient or group member)."""
+    """Mark a message as read by the given user (recipient or group member).
+
+    For a direct self-destruct message, this is where the timer starts. A
+    message that is already past its lifetime is not readable and is not
+    revived by a late receipt.
+    """
     msg = await db.scalar(select(Message).where(Message.id == message_id))
     if msg is None:
         return None
@@ -242,15 +251,43 @@ async def mark_read(db: AsyncSession, message_id: UUID, user_id: UUID) -> Messag
         is_participant = (msg.sender_id == user_id) or (msg.recipient_id == user_id)
     if not is_participant:
         return None
+
+    now = datetime.now(timezone.utc)
+    if msg.deleted_for_everyone or is_expired(msg, now=now):
+        return None
+
+    changed = False
     if msg.status != MessageStatus.READ:
         msg.status = MessageStatus.READ
-        msg.read_at = datetime.now(timezone.utc)
+        msg.read_at = now
         if msg.delivered_at is None:
-            msg.delivered_at = msg.read_at
-        # Fable5-Enhancement: a read self-destruct message starts its timer at
-        # READ time, not send time — "burn after reading" semantics.
-        if msg.is_self_destruct and msg.destruct_after_seconds and msg.destruct_at is None:
-            msg.destruct_at = msg.read_at + timedelta(seconds=msg.destruct_after_seconds)
+            msg.delivered_at = now
+        changed = True
+
+    # A read self-destruct message starts its timer at READ time, not send
+    # time — "burn after reading" semantics. The check is intentionally
+    # independent of the status branch: a legacy row (or a concurrent device)
+    # can already be READ while still lacking its timer.
+    if (
+        msg.is_self_destruct
+        and msg.destruct_after_seconds is not None
+        and msg.destruct_at is None
+    ):
+        ttl = msg.destruct_after_seconds
+        if 1 <= ttl <= MAX_DESTRUCT_AFTER_SECONDS:
+            started_at = _as_utc(msg.read_at or now)
+            msg.destruct_at = started_at + timedelta(seconds=ttl)
+        else:
+            # Fail closed rather than leaving a malformed row readable forever.
+            logger.error(
+                "invalid_self_destruct_ttl",
+                message_id=str(msg.id),
+                ttl=ttl,
+            )
+            msg.destruct_at = now
+        changed = True
+
+    if changed:
         await db.commit()
     return msg
 

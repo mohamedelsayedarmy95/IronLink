@@ -606,3 +606,46 @@ The next Render deployment will now succeed because:
 - `DATABASE_URL` من Render (الذي يبدأ بـ `postgresql://`) يتم تحويله تلقائياً إلى `postgresql+asyncpg://` عند بدء التشغيل
 - كل من وقت تشغيل التطبيق وتهجيرات Alembic يستخدمان الرابط المصحح
 - لا حاجة لتدخل يدوي أو معالجة لمتغيرات البيئة
+
+
+---
+
+## Session: 2026-11-03 — Self-Destruct Test Suite Finalized
+
+### Summary (English)
+
+This session finalized the comprehensive self-destruct test suite in `tests/test_self_destruct.py`.
+
+#### Test Suite
+
+**File**: `tests/test_self_destruct.py` (1,094 lines, 44 tests, 10 test classes)
+
+| Test Class | Tests | Coverage |
+|------------|-------|----------|
+| `TestMessageExpiryBeforeAndAfter` | 4 | Direct messages read before/after expiry, already-destructed messages, messages without `destruct_at` |
+| `TestExpiredMessagesHiddenFromHistory` | 1 | `visible_message_clause` SQL excludes expired rows |
+| `TestRedisOutageDbWipeCommits` | 1 | DB commit succeeds even when Redis publish raises `ConnectionError` |
+| `TestAuditMetadataHadMedia` | 3 | `had_media=true` when media existed, `had_media=false` when no media, works for group messages |
+| `TestMultiMessageSweeps` | 3 | Multiple messages in one sweep, `BATCH_SIZE=500` limit respected, already-destructed messages skipped |
+| `TestSelfDestructWorkerEdgeCases` | 5 | MinIO failure keeps message for retry, non-self-destruct messages ignored, publish called for both parties (DM) or every group member, empty sweep does nothing |
+| `TestDirectMessageTimer` | 8 | Burn-after-reading: no timer at send, first read starts it, second read doesn't extend, legacy rows get a timer, expiry boundary inclusive, naive→UTC, invalid TTLs rejected, max TTL allowed |
+| `TestGroupTimer` | 3 | Group timer starts at send, explicit TTL overrides default, invalid group default rejected |
+| `TestReadPathsUseTheVisibilityRule` | 2 | Group + direct history routes exclude expired rows via `visible_message_clause` |
+| `TestWebSocketContract` | 3 | read/delivered aliases accepted, invalid TTL rejected, destruct metadata carried in realtime frames |
+| `TestWorkerCommitOrdering` | 4 | Commit before notification, one failed publish doesn't skip the rest, storage failure → no unsend, media pointer wiped with body |
+
+#### Test Results
+
+```
+Self-Destruct Tests:     44 passed in 1.89s
+```
+
+#### Git Commit
+
+```
+test(self-destruct): verify comprehensive test suite and update progress log
+```
+
+**Files Changed**:
+- `tests/test_self_destruct.py` — Comprehensive test suite (44 tests)
+- `PROGRESS_LOG.md` — Progress log update

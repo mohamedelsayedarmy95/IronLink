@@ -68,10 +68,15 @@ class Message(Base):
     the plaintext — decryption happens on the client using the recipient's key.
 
     Fable5-Enhancement: self-destruct is implemented at two layers:
-      1. destruct_at column — queried by a scheduled cleanup worker (pg_cron or APScheduler)
-      2. Redis keyspace notification (KEX) on the session key — fires a real-time
-         DELETE event to all connected clients without polling the DB.
-    This dual approach ensures messages vanish even when clients are offline.
+      1. destruct_at column — queried by the cleanup worker, which wipes the
+         ciphertext and media pointers after the lifetime ends.
+      2. A best-effort WebSocket "unsend" frame that tells connected clients
+         to drop the message immediately. Offline clients reconcile on their
+         next history fetch, which excludes expired rows.
+    Direct messages start their timer on the first read (burn-after-reading);
+    group messages start it at send time, because a group has many readers and
+    one shared row. The database/worker layer is the authoritative enforcement;
+    Redis is only used for the notification, never as the timer itself.
     """
 
     __tablename__ = "messages"
@@ -157,7 +162,10 @@ class Message(Base):
     destruct_after_seconds: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
-        comment="Seconds after first read; NULL = no timer",
+        comment=(
+            "TTL: direct messages count from first read, group messages from "
+            "send time; NULL = no timer"
+        ),
     )
     destruct_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
