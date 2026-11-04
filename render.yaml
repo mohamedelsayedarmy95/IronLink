@@ -41,14 +41,14 @@ services:
     branch: fix/boot-crashes-and-backend-merge
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    preDeployCommand: python -m alembic upgrade head
     autoDeploy: true
 
     # preDeployCommand is deliberately absent: it is a paid-plan feature, and so
     # are Shell and One-Off Jobs, which leaves the free tier with no way to run
-    # migrations except at container start. docker-entrypoint.sh runs
-    # `alembic upgrade head` before uvicorn instead. On a paid plan, move it
-    # here and set RUN_MIGRATIONS_ON_START=false so replicas cannot race.
+    # migrations except at container start. docker-entrypoint.sh runs unified
+    # scripts.bootstrap_database (migrations, hardening and runtime checks)
+    # under one session lock before launching Uvicorn without owner credentials.
+    # RUN_MIGRATIONS_ON_START=false retains schema/runtime security checks.
 
     envVars:
       - key: ENV
@@ -79,27 +79,14 @@ services:
       - key: ALLOWED_ORIGINS
         value: "[]"
 
-      # ── Database (injected by Render from the managed instance) ─────────────
-      - key: POSTGRES_HOST
-        fromDatabase:
-          name: ironlink-db
-          property: host
-      - key: POSTGRES_PORT
-        fromDatabase:
-          name: ironlink-db
-          property: port
-      - key: POSTGRES_USER
-        fromDatabase:
-          name: ironlink-db
-          property: user
-      - key: POSTGRES_PASSWORD
-        fromDatabase:
-          name: ironlink-db
-          property: password
-      - key: POSTGRES_DB
-        fromDatabase:
-          name: ironlink-db
-          property: database
+      # Two pinned identities on the SAME database. Do not use fromDatabase
+      # credentials here: adding a Render-managed user changes the default
+      # credential on subsequent Blueprint sync. Provision/grant identities
+      # explicitly before the first boot; see docs/POSTGRES_BOOTSTRAP.md.
+      - key: DATABASE_URL
+        sync: false                  # restricted runtime login, not table owner
+      - key: MIGRATION_DATABASE_URL
+        sync: false                  # schema owner, removed before uvicorn
 
       # ── Redis ──────────────────────────────────────────────────────────────
       - key: REDIS_URL
@@ -124,7 +111,8 @@ services:
         value: ironlink-attachments
 
       # ── Secrets: entered once in the Render UI, never stored in git ─────────
-      # Only DB_ENCRYPTION_KEY is needed for the service to start. The rest may
+      # In addition to the two database URLs, DB_ENCRYPTION_KEY is required.
+      # The remaining optional service credentials may
       # be left blank now and filled in later: without S3 the media endpoints
       # return 503, without CONTACT_HASH_SALT contact discovery returns 503,
       # and without HF_API_TOKEN the AI features fall back to canned

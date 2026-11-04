@@ -32,6 +32,17 @@ import pytest
 import pytest_asyncio
 
 
+def pytest_sessionfinish(session, exitstatus):
+    if os.environ.get("IRONLINK_REQUIRE_POSTGRES_SECURITY") == "1":
+        reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+        # The mandatory invocation contains only security tests. Any skip,
+        # including setup or collection skips, invalidates the entire gate.
+        if (reporter is None or not os.environ.get("IRONLINK_TEST_ADMIN_URL") or
+                session.testscollected == 0 or (reporter and any(
+                    reporter.stats.get(kind) for kind in ("skipped", "xfailed", "deselected")))):
+            session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
 def _test_database_url() -> str | None:
     return os.environ.get("TEST_DATABASE_URL")
 
@@ -77,6 +88,18 @@ async def db():
             # the schema the models describe, and running migrations here would
             # make one unrelated migration bug fail every journey.
             await conn.run_sync(Base.metadata.create_all)
+            # The old retention tests exercise the real bounded SQL function
+            # inside their rollback transaction. This owner-only fixture is not
+            # used as evidence of runtime permissions; test_postgres_bootstrap
+            # verifies those using independent, non-superuser connections.
+            from sqlalchemy import text
+            from app.core.database_bootstrap import retention_function_sql
+            from app.config import settings
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS ironlink_maintenance"))
+            await conn.execute(text(retention_function_sql(settings.AUDIT_LOG_RETENTION_DAYS)))
+            await conn.execute(text(
+                "REVOKE ALL ON FUNCTION ironlink_maintenance.prune_audit_logs(timestamptz) FROM PUBLIC"
+            ))
 
         async with engine.connect() as conn:
             transaction = await conn.begin()

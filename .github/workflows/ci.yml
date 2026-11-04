@@ -96,6 +96,15 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -q --cov=app --cov-report=term-missing --cov-fail-under=55
 
+      # A separate disposable PG16 cluster: never reuse the journey database.
+      # Missing Docker/PostgreSQL, migration errors and any skipped security
+      # test fail this mandatory step. No production credentials are used.
+      - name: PostgreSQL 16 security gate (no skipped tests)
+        run: python -m scripts.test_postgres_bootstrap --security-only
+
+      - name: WebSocket session authorization (real PG16 and Redis, no skipped tests)
+        run: python -m scripts.test_websocket_sessions
+
       # Every migration declares a downgrade, and until this step none had ever
       # been executed — not in CI, not anywhere. An untested downgrade is a
       # plan, not a capability, and the difference only becomes apparent during

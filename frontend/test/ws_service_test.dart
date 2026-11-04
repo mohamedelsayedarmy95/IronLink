@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ironlink/core/api_client.dart';
 import 'package:ironlink/core/outbox_store.dart';
 import 'package:ironlink/core/ws_service.dart';
 
@@ -18,11 +22,87 @@ import 'package:ironlink/core/ws_service.dart';
 /// The queue is a table now rather than a list. That is why every read of it
 /// here is awaited, and it is the whole subject of the last two groups.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => FlutterSecureStorage.setMockInitialValues({
+        'mil_access_token': 'synthetic-access',
+        'mil_refresh_token': 'synthetic-refresh',
+      }));
+
+  test(
+      'server revocation stops reconnects, clears credentials and pending outbox',
+      () async {
+    final ws = WsService.forTest();
+    addTearDown(ws.disconnect);
+    ws.send({
+      'type': 'text',
+      'content': 'never resend after revoke',
+      'client_ref': 'old-session'
+    });
+    await ws.debugSettled;
+    ws.debugWantConnection = true;
+    ws.debugHandleDisconnect();
+    ws.debugSettle({'type': 'session_revoked'});
+    await Future<void>.delayed(Duration.zero);
+    await ws.debugSettled;
+    expect(await ws.debugOutbox, isEmpty);
+    expect(ws.debugReconnectScheduled, isFalse);
+    expect(await ApiClient().accessToken, isNull);
+    expect(await ApiClient().refreshToken, isNull);
+  });
+
+  test('revocation discards a ticket response already in flight', () async {
+    final api = _PendingTicketApi();
+    final ws = WsService.forTest(api: api);
+    addTearDown(ws.dispose);
+    final opening = ws.connect();
+    await api.started.future;
+    ws.send({'type': 'text', 'client_ref': 'before-revoke'});
+    final ended = ws.status.firstWhere((s) => s == WsStatus.signInRequired);
+    ws.debugSettle({'type': 'session_revoked'});
+    ws.send({'type': 'text', 'client_ref': 'after-revoke'});
+    await ended;
+    api.response.complete({'ticket': 'synthetic-late-ticket'});
+    await opening;
+    expect(ws.isConnected, isFalse);
+    expect(ws.debugReconnectScheduled, isFalse);
+    expect(await ws.debugOutbox, isEmpty);
+    expect(await api.accessToken, isNull);
+  });
+
+  test('ticket rejection ends the session, temporary failure retains recovery',
+      () async {
+    for (final status in [401, 403, 503]) {
+      FlutterSecureStorage.setMockInitialValues({
+        'mil_access_token': 'synthetic-access',
+        'mil_refresh_token': 'synthetic-refresh',
+      });
+      final api = _PendingTicketApi();
+      final ws = WsService.forTest(api: api);
+      ws.send({'type': 'text', 'client_ref': 'queued'});
+      await ws.debugSettled;
+      final opening = ws.connect();
+      await api.started.future;
+      final request = RequestOptions(path: '/auth/ws-ticket');
+      api.response.completeError(DioException(
+        requestOptions: request,
+        response:
+            Response<dynamic>(requestOptions: request, statusCode: status),
+        type: DioExceptionType.badResponse,
+      ));
+      await opening;
+      expect(ws.debugReconnectScheduled, status == 503);
+      expect(await ws.debugOutbox, status == 503 ? hasLength(1) : isEmpty);
+      expect(await api.accessToken, status == 503 ? isNotNull : isNull);
+      await ws.dispose();
+    }
+  });
+
   group('what happens to a message sent while disconnected', () {
     test('it is kept rather than dropped', () async {
       final ws = WsService.forTest();
 
-      ws.send({'type': 'text', 'to': 'bob', 'content': 'x', 'client_ref': 'r1'});
+      ws.send(
+          {'type': 'text', 'to': 'bob', 'content': 'x', 'client_ref': 'r1'});
 
       expect(await ws.debugOutbox, hasLength(1),
           reason: 'a message written offline must survive to be sent');
@@ -176,7 +256,8 @@ void main() {
       final store = InMemoryOutboxStore();
 
       final before = WsService.forTest(outbox: store);
-      before.send({'type': 'text', 'content': 'survive me', 'client_ref': 'r1'});
+      before
+          .send({'type': 'text', 'content': 'survive me', 'client_ref': 'r1'});
       await before.debugSettled;
 
       // A new service over the same storage is what a relaunch looks like.
@@ -260,4 +341,18 @@ void main() {
       expect(ws.debugReconnectScheduled, isFalse);
     });
   });
+}
+
+class _PendingTicketApi extends ApiClient {
+  final started = Completer<void>();
+  final response = Completer<Map<String, dynamic>>();
+
+  @override
+  Future<Response<T>> authedPost<T>(String path, {Object? data}) async {
+    if (!started.isCompleted) started.complete();
+    return Response<T>(
+      requestOptions: RequestOptions(path: path),
+      data: await response.future as T,
+    );
+  }
 }

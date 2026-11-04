@@ -11,6 +11,8 @@ from fastapi import WebSocket
 from redis.asyncio import Redis
 
 from app.core.redis import redis_sessions as redis_client
+from app.core.session_auth import SessionInvalid
+from app.services.ws_session import AuthorizationUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,8 @@ class ConnectionManager:
     """WebSocket connection registry — local sockets + Redis shared state.
 
     Redis keys (DB index 2 — REDIS_DB_SESSIONS):
-      ws:conn:{connection_id}  → JSON {user_id, connected_at}   (TTL-refreshed)
+      ws:conn:{connection_id}  → JSON {user_id, session_id, connection_id,
+                               owner_id, connected_at} (TTL-refreshed)
       ws:user:{user_id}        → SET of connection_ids           (multi-device)
       ws:online                → SET of user_ids currently online
 
@@ -33,27 +36,39 @@ class ConnectionManager:
     def __init__(self, redis: Redis) -> None:
         self._redis = redis
         self._local: dict[str, WebSocket] = {}
+        self.owner_id = secrets.token_hex(16)
 
-    async def register(self, user_id: UUID, websocket: WebSocket) -> str:
+    async def register(self, user_id: UUID, websocket: WebSocket, *, session_id: UUID) -> str:
         connection_id = secrets.token_hex(16)
-        self._local[connection_id] = websocket
 
         pipe = self._redis.pipeline()
         pipe.set(
             f"ws:conn:{connection_id}",
             json.dumps({
                 "user_id": str(user_id),
+                "session_id": str(session_id),
+                "connection_id": connection_id,
+                "owner_id": self.owner_id,
                 "connected_at": datetime.now(timezone.utc).isoformat(),
             }),
             ex=self.CONN_TTL_SECONDS,
         )
         pipe.sadd(f"ws:user:{user_id}", connection_id)
+        pipe.expire(f"ws:user:{user_id}", self.CONN_TTL_SECONDS)
         pipe.sadd("ws:online", str(user_id))
         await pipe.execute()
+        self._local[connection_id] = websocket
         return connection_id
 
     async def heartbeat(self, connection_id: str) -> None:
-        await self._redis.expire(f"ws:conn:{connection_id}", self.CONN_TTL_SECONDS)
+        value = await self._redis.get(f"ws:conn:{connection_id}")
+        if value is None:
+            raise ConnectionError('WebSocket registration expired')
+        user_id = json.loads(value)['user_id']
+        pipe = self._redis.pipeline()
+        pipe.expire(f"ws:conn:{connection_id}", self.CONN_TTL_SECONDS)
+        pipe.expire(f"ws:user:{user_id}", self.CONN_TTL_SECONDS)
+        await pipe.execute()
 
     async def unregister(self, user_id: UUID, connection_id: str) -> None:
         self._local.pop(connection_id, None)
@@ -100,7 +115,12 @@ class ConnectionManager:
                     ws_payload = {"type": "ocr_alert", "file_id": file_id, "keyword": keyword}
                     conns = await self._redis.smembers(f"ws:user:{user_id}")
                     for conn_id in conns:
-                        await self.send_local(conn_id, ws_payload)
+                        try:
+                            await self.send_local(conn_id, ws_payload)
+                        except (SessionInvalid, AuthorizationUnavailable, RuntimeError, OSError, TimeoutError):
+                            # A stale or unavailable device cannot suppress
+                            # delivery to another valid session of this user.
+                            continue
                 except Exception as e:
                     logger.error(f"Error processing OCR alert: {e}")
         finally:

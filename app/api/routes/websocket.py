@@ -5,12 +5,15 @@ import json
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, WebSocketException, status
+from redis.exceptions import RedisError
 from sqlalchemy import select
+import structlog
 
 from app.core import observability
 from app.core.database import AsyncSessionLocal
 from app.core.redis import redis_pubsub, redis_sessions
+from app.core.session_auth import SessionIdentity, SessionInvalid
 from app.models import User
 from app.services import (
     group_message_service,
@@ -19,11 +22,13 @@ from app.services import (
     reaction_service,
 )
 from app.services.message_service import UnsendDenied
-from app.services.ws_manager import ConnectionManager
+from app.services.ws_manager import connection_manager
+from app.services import ws_session
 
 router = APIRouter(tags=["websocket"])
 
-manager = ConnectionManager(redis_sessions)
+manager = connection_manager
+logger = structlog.get_logger('websocket')
 
 
 BROADCAST_CHANNEL = "chan:broadcast"
@@ -47,24 +52,82 @@ async def publish_broadcast(payload: dict) -> None:
 # sender's API replica publishes once; whichever replica holds the recipient's
 # socket relays it. Multi-device comes free — every device of the user is
 # subscribed to the same channel and receives the frame simultaneously.
-async def _relay_loop(websocket: WebSocket, user_id: UUID, connection_id: str) -> None:
+async def _relay_loop(websocket: ws_session.SessionSocket, ready: asyncio.Event) -> None:
+    user_id = websocket.identity.user_id
     pubsub = redis_pubsub.pubsub()
-    await pubsub.subscribe(user_channel(user_id), BROADCAST_CHANNEL)
+    channels = {user_channel(user_id), BROADCAST_CHANNEL}
     try:
+        await pubsub.subscribe(*channels)
+        pending = set(channels)
         async for item in pubsub.listen():
+            if item['type'] == 'subscribe':
+                pending.discard(item['channel'])
+                if not pending:
+                    ready.set()
+                continue
             if item["type"] != "message":
                 continue
-            frame = json.loads(item["data"])
-            # Targeted force-disconnect for remote device kick
+            try:
+                frame = json.loads(item['data'])
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(frame, dict):
+                continue
             if frame.get("type") == "session_revoked":
-                await websocket.send_json(frame)
+                if frame.get('session_id') == str(websocket.identity.session_id):
+                    await websocket.close(invalid=True)
+                    return
+                # A different device of this user keeps its own authorization.
+                continue
+            if frame.get('type') == 'account_suspended':
+                # A delayed account event must not sign out a newly
+                # authenticated valid session after account reactivation.
+                await websocket.authorize()
                 continue
             await websocket.send_json(frame)
-    except Exception:
-        pass
     finally:
-        await pubsub.unsubscribe(user_channel(user_id))
-        await pubsub.aclose()
+        try:
+            async with asyncio.timeout(ws_session.IO_TIMEOUT_SECONDS):
+                await pubsub.unsubscribe(*channels)
+                await pubsub.aclose()
+        except (RedisError, TimeoutError):
+            pass
+
+
+async def _periodic_authorization(websocket: ws_session.SessionSocket, connection_id: str) -> None:
+    while True:
+        await asyncio.sleep(ws_session.SESSION_CHECK_INTERVAL_SECONDS)
+        await websocket.authorize()
+        async with asyncio.timeout(ws_session.IO_TIMEOUT_SECONDS):
+            await manager.heartbeat(connection_id)
+
+
+async def _receive_loop(websocket: ws_session.SessionSocket, connection_id: str) -> None:
+    while True:
+        raw = await websocket.websocket.receive_text()
+        try:
+            frame = json.loads(raw)
+            if not isinstance(frame, dict):
+                raise ValueError
+        except ValueError:
+            await websocket.send_json({'type': 'error', 'detail': 'invalid JSON frame'})
+            continue
+        # Ping only acknowledges transport liveness. Every authenticated action,
+        # including typing/presence/receipts/unknown actions, checks authority.
+        if frame.get('type') != 'ping':
+            await websocket.authorize()
+        await _handle_frame(websocket, websocket.identity.user_id, connection_id, frame)
+
+
+async def _ticket_from_query(websocket: WebSocket) -> str:
+    # Cache parsed parameters, then remove the query from the shared ASGI scope
+    # BEFORE Uvicorn logs accept/reject/close, including version-validation errors.
+    parameters = websocket.query_params
+    websocket.scope['query_string'] = b''
+    values = parameters.getlist('ticket')
+    if len(values) != 1 or not 16 <= len(values[0]) <= 64:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    return values[0]
 
 
 # ── Protocol version ─────────────────────────────────────────────────────────
@@ -100,16 +163,25 @@ WS_PROTOCOL_TOO_OLD = 4426
 @router.websocket("/ws/chat")
 async def chat_socket(
     websocket: WebSocket,
-    ticket: str = Query(..., min_length=16, max_length=64),
+    ticket: str = Depends(_ticket_from_query),
     # Absent means 1. Every client built before versioning existed omits it,
     # and rejecting those would be a breaking change introduced by the very
     # mechanism added to avoid breaking changes.
     v: int = Query(PROTOCOL_VERSION, ge=1, le=1000),
 ) -> None:
     # One-time ticket auth (see auth.py — JWT never travels in the query string)
-    user_id_raw = await redis_sessions.getdel(f"ws:ticket:{ticket}")
-    if user_id_raw is None:
+    try:
+        async with asyncio.timeout(ws_session.AUTHORIZATION_TIMEOUT_SECONDS):
+            value = await redis_sessions.getdel(f'ws:ticket:{ticket}')
+        if value is None:
+            raise SessionInvalid()
+        identity = SessionIdentity.from_ticket(value)
+        await ws_session.validate(identity)
+    except SessionInvalid:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    except (RedisError, TimeoutError, ws_session.AuthorizationUnavailable):
+        await websocket.close(code=1013)
         return
 
     if v < MIN_CLIENT_PROTOCOL:
@@ -121,14 +193,32 @@ async def chat_socket(
         )
         return
 
-    user_id = UUID(user_id_raw)
     await websocket.accept()
-    connection_id = await manager.register(user_id, websocket)
-    observability.websocket_connections.inc()
-    relay_task = asyncio.create_task(_relay_loop(websocket, user_id, connection_id))
-
+    connection = ws_session.SessionSocket(websocket, identity)
+    connection_id = None
+    tasks = []
     try:
-        await websocket.send_json({
+        async with asyncio.timeout(ws_session.AUTHORIZATION_TIMEOUT_SECONDS):
+            connection_id = await manager.register(identity.user_id, connection,
+                                                   session_id=identity.session_id)
+        observability.websocket_connections.inc()
+        ready = asyncio.Event()
+        relay = asyncio.create_task(_relay_loop(connection, ready))
+        tasks.append(relay)
+        # Await subscription ACKs before welcome, so a newly connected peer
+        # cannot miss its first delivery simply because subscription is pending.
+        waiter = asyncio.create_task(ready.wait())
+        tasks.append(waiter)
+        done, _ = await asyncio.wait([relay, waiter], timeout=ws_session.AUTHORIZATION_TIMEOUT_SECONDS,
+                                     return_when=asyncio.FIRST_COMPLETED)
+        if relay in done:
+            relay.result()
+            return
+        if waiter not in done:
+            raise ws_session.AuthorizationUnavailable()
+        async with asyncio.timeout(ws_session.IO_TIMEOUT_SECONDS):
+            online_users = await manager.online_count()
+        await connection.send_json({
             "type": "welcome",
             # Told rather than assumed. A client newer than the server can see
             # it is talking to an older one and hold back the frames that
@@ -139,29 +229,43 @@ async def chat_socket(
                 "min_supported": MIN_CLIENT_PROTOCOL,
             },
             "connection_id": connection_id,
-            "online_users": await manager.online_count(),
+            "online_users": online_users,
             "server_time": datetime.now(timezone.utc).isoformat(),
         })
 
-        while True:
-            raw = await websocket.receive_text()
-            try:
-                frame = json.loads(raw)
-            except json.JSONDecodeError:
-                await websocket.send_json({"type": "error", "detail": "invalid JSON frame"})
-                continue
-            await _handle_frame(websocket, user_id, connection_id, frame)
-
+        receiver = asyncio.create_task(_receive_loop(connection, connection_id))
+        verifier = asyncio.create_task(_periodic_authorization(connection, connection_id))
+        tasks.extend([receiver, verifier])
+        done, _ = await asyncio.wait([relay, receiver, verifier], return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            task.result()
+    except SessionInvalid:
+        await connection.close(invalid=True)
     except WebSocketDisconnect:
         pass
+    except (RedisError, TimeoutError, OSError, ws_session.AuthorizationUnavailable):
+        logger.warning('ws_authorization_or_transport_unavailable')
+        await connection.close()
+    except Exception as exc:
+        logger.error('ws_handler_failed', error_type=type(exc).__name__)
+        await connection.close()
     finally:
-        relay_task.cancel()
-        await manager.unregister(user_id, connection_id)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await connection.close()
         # In the `finally`, so a connection dropped by a crashing handler
         # is still subtracted. A gauge that only decrements on the clean
         # path climbs forever and eventually reads as an outage that is
         # not happening.
-        observability.websocket_connections.dec()
+        if connection_id is not None:
+            try:
+                async with asyncio.timeout(ws_session.IO_TIMEOUT_SECONDS):
+                    await manager.unregister(identity.user_id, connection_id)
+            except (RedisError, TimeoutError):
+                logger.warning('ws_registry_cleanup_unavailable')
+            finally:
+                observability.websocket_connections.dec()
 
 
 
@@ -192,7 +296,6 @@ async def _handle_frame(
 
     # ── Heartbeat / presence ──────────────────────────────────────────────────
     if frame_type == "ping":
-        await manager.heartbeat(connection_id)
         await websocket.send_json({"type": "pong"})
         return
 

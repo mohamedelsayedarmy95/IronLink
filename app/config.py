@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+import os
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlparse
@@ -16,6 +17,11 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.database_config import (
+    DatabaseConfigurationError, discrete_url, postgres_url, same_target, sync_url,
+)
+from app.core.bootstrap_environment import validate_privileged_environment
+
 
 class Settings(BaseSettings):
     """Central configuration — all values resolved from environment / .env file.
@@ -29,6 +35,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     # ── Application ────────────────────────────────────────────────────────────
@@ -131,9 +138,8 @@ class Settings(BaseSettings):
         return v
 
     # ── Database ───────────────────────────────────────────────────────────────
-    # Full connection string (e.g. from Render/Supabase). If provided, takes precedence
-    # over the individual POSTGRES_* components. Render provides postgresql:// but
-    # asyncpg requires postgresql+asyncpg://, so we auto-convert.
+    # URL or discrete runtime settings. Explicit conflicting sources fail;
+    # reserved credential characters are encoded by the shared URL resolver.
     DATABASE_URL: str = Field(default="", description="Full PostgreSQL connection string (asyncpg dialect)")
 
     POSTGRES_USER: str = "ironlink_user"
@@ -142,46 +148,80 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "ironlink"
 
-    @field_validator("DATABASE_URL", mode="before")
-    @classmethod
-    def _fix_postgres_url(cls, v: str) -> str:
-        """Convert postgresql:// to postgresql+asyncpg:// for asyncpg compatibility."""
-        if isinstance(v, str) and v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return v
+    # A separately provisioned schema-owner identity, never a runtime fallback.
+    # Local Docker may use the two migration components on the runtime target.
+    MIGRATION_DATABASE_URL: str = ""
+    MIGRATION_POSTGRES_USER: str = ""
+    MIGRATION_POSTGRES_PASSWORD: str = ""
 
     # Pool tuned for 500 concurrent users; overflow allows burst headroom.
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 30
     DB_POOL_PRE_PING: bool = True
 
-    @field_validator("POSTGRES_PASSWORD", mode="before")
-    @classmethod
-    def _require_pg_password(cls, v: str) -> str:
-        if not v:
-            raise ValueError("POSTGRES_PASSWORD must be set in the environment")
-        return v
+    def runtime_database_url(self):
+        if not self.DATABASE_URL:
+            return discrete_url(user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD,
+                                host=self.POSTGRES_HOST, port=self.POSTGRES_PORT,
+                                database=self.POSTGRES_DB)
+        url = postgres_url(self.DATABASE_URL)
+        components = {
+            "POSTGRES_USER": url.username, "POSTGRES_PASSWORD": url.password,
+            "POSTGRES_HOST": url.host, "POSTGRES_PORT": url.port,
+            "POSTGRES_DB": url.database,
+        }
+        for name, expected in components.items():
+            if name in self.model_fields_set and getattr(self, name) not in ("", None):
+                actual = getattr(self, name)
+                if name == "POSTGRES_HOST":
+                    actual, expected = actual.lower(), expected.lower()
+                if actual != expected:
+                    raise DatabaseConfigurationError(f"DATABASE_URL conflicts with {name}")
+        return url
+
+    def migration_connection_url(self):
+        runtime = self.runtime_database_url()
+        if self.MIGRATION_DATABASE_URL:
+            migration = postgres_url(self.MIGRATION_DATABASE_URL)
+            for actual, expected in (
+                (self.MIGRATION_POSTGRES_USER, migration.username),
+                (self.MIGRATION_POSTGRES_PASSWORD, migration.password),
+            ):
+                if actual and actual != expected:
+                    raise DatabaseConfigurationError("Conflicting migration credentials")
+        elif self.MIGRATION_POSTGRES_USER and self.MIGRATION_POSTGRES_PASSWORD:
+            migration = discrete_url(
+                user=self.MIGRATION_POSTGRES_USER, password=self.MIGRATION_POSTGRES_PASSWORD,
+                host=runtime.host, port=runtime.port, database=runtime.database,
+            )
+        else:
+            raise DatabaseConfigurationError(
+                "A separate MIGRATION_DATABASE_URL or both MIGRATION_POSTGRES_USER "
+                "and MIGRATION_POSTGRES_PASSWORD are required for bootstrap"
+            )
+        if not same_target(runtime, migration):
+            raise DatabaseConfigurationError("Migration and runtime must target the same PostgreSQL database")
+        if runtime.username == migration.username:
+            raise DatabaseConfigurationError("Migration and runtime must use independent PostgreSQL identities")
+        return migration
+
+    @model_validator(mode="after")
+    def _validate_database_configuration(self) -> Settings:
+        validate_privileged_environment(os.environ)
+        self.runtime_database_url()
+        if self.MIGRATION_DATABASE_URL or self.MIGRATION_POSTGRES_USER or self.MIGRATION_POSTGRES_PASSWORD:
+            self.migration_connection_url()
+        return self
 
     @property
     def database_url(self) -> str:
         """Async database URL for SQLAlchemy + asyncpg."""
-        if self.DATABASE_URL:
-            return self.DATABASE_URL
-        return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+        return self.runtime_database_url().render_as_string(hide_password=False)
 
     @property
     def sync_database_url(self) -> str:
-        """Used by Alembic (sync driver)."""
-        if self.DATABASE_URL:
-            # Convert asyncpg dialect to psycopg2 for sync operations
-            return self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
-        return (
-            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+        """Runtime URL for synchronous PostgreSQL tooling."""
+        return sync_url(self.runtime_database_url()).render_as_string(hide_password=False)
 
     # ── Redis ──────────────────────────────────────────────────────────────────
     REDIS_HOST: str = "redis"
@@ -416,10 +456,6 @@ class Settings(BaseSettings):
     HF_API_TOKEN: str = ""
     HF_API_URL: str = "https://api-inference.huggingface.co/models"
     HF_TIMEOUT_SECONDS: float = 30.0
-
-    # ── Audit ─────────────────────────────────────────────────────────────────
-    AUDIT_LOG_RETENTION_DAYS: int = 365    # 1 year minimum; immutable append-only
-
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

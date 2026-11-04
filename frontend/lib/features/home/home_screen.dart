@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -17,6 +19,8 @@ import '../keyword_alert/screens/alert_center_screen.dart';
 import '../keyword_alert/widgets/smart_alert_ticker.dart';
 import '../../l10n/app_localizations.dart';
 import '../auth/auth_repository.dart';
+import '../auth/bloc/auth_bloc.dart';
+import '../auth/screens/auth_screen.dart';
 import '../auth/screens/splash_screen.dart';
 import '../auth/sign_out_service.dart';
 import '../broadcast/broadcast_banner.dart';
@@ -78,6 +82,8 @@ class _HomeView extends StatefulWidget {
 
 class _HomeScreenState extends State<_HomeView> {
   int _tab = 0;
+  StreamSubscription<WsStatus>? _sessionStatus;
+  bool _endingSession = false;
 
   List<({IconData icon, String label})> _tabs(L t) => [
         (icon: IronIcons.chats, label: t.tabChats),
@@ -89,11 +95,43 @@ class _HomeScreenState extends State<_HomeView> {
   @override
   void initState() {
     super.initState();
+    _sessionStatus = context.read<WsService>().status.listen((status) {
+      if (status == WsStatus.signInRequired) unawaited(_sessionInvalidated());
+    });
     // Open the real WebSocket as soon as the user lands on Home
     context.read<WsService>().connect();
     // FCM: register token + wire notification-tap routing
     context.read<PushService>().init();
     _publishEncryptionKeys();
+  }
+
+  @override
+  void dispose() {
+    _sessionStatus?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _sessionInvalidated() async {
+    if (_endingSession || !mounted) return;
+    _endingSession = true;
+    final message = L.of(context).failureUnauthorized;
+    await SignOutService(
+      api: context.read<ApiClient>(),
+      messages: context.read<MessageStore>(),
+      socket: context.read<WsService>(),
+      signal: context.read<SignalService>(),
+      alerts: context.read<AlertStore>(),
+      keywordAlerts: context.read<KeywordAlertService?>(),
+      messageSafety: context.read<MessageSafety>(),
+    ).signOut(revokeServer: false);
+    if (!mounted) return;
+    context.read<AuthBloc>().add(const SessionInvalidated());
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      (_) => false,
+    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Generates this device's Signal keys on first launch and publishes the
@@ -363,19 +401,19 @@ class _HomeScreenState extends State<_HomeView> {
                     myId: widget.user.id,
                   ),
                 2 => Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(tabs[_tab].icon,
-                              size: 64, color: IronColors.goldDim),
-                          const SizedBox(height: 16),
-                          Text(
-                            t.comingSoon,
-                            style: const TextStyle(color: IronColors.textLo),
-                          ),
-                        ],
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(tabs[_tab].icon,
+                            size: 64, color: IronColors.goldDim),
+                        const SizedBox(height: 16),
+                        Text(
+                          t.comingSoon,
+                          style: const TextStyle(color: IronColors.textLo),
+                        ),
+                      ],
                     ),
+                  ),
                 // The OCR tab now opens alert history rather than the old
                 // global keyword list. Keywords are per-conversation, so they
                 // are managed from inside a chat; what belongs at app level is
