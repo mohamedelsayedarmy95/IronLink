@@ -48,7 +48,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 import structlog
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, or_, select, text
 
 from app.config import settings
 from app.core import observability
@@ -125,15 +125,23 @@ class RetentionWorker:
             # than right now", which is what a naive cutoff would compute.
             return 0
 
+        # The runtime identity has no DELETE on audit_logs. The owner-installed
+        # function bounds both batch size and cutoff by the database policy;
+        # a caller cannot shorten retention by passing a future time.
         cutoff = at - timedelta(days=days)
-        return await self._delete_in_batches(
-            lambda: select(AuditLog.id)
-            .where(AuditLog.created_at < cutoff)
-            .order_by(AuditLog.created_at)
-            .limit(BATCH_SIZE),
-            lambda ids: delete(AuditLog).where(AuditLog.id.in_(ids)),
-            table="audit_logs",
-        )
+        total = 0
+        for _ in range(MAX_BATCHES):
+            async with self._session_factory() as db:
+                deleted = await db.scalar(text(
+                    "SELECT ironlink_maintenance.prune_audit_logs(:cutoff)"
+                ), {"cutoff": cutoff})
+                await db.commit()
+            deleted = int(deleted or 0)
+            total += deleted
+            observability.retention_deleted.labels(table="audit_logs").inc(deleted)
+            if deleted < BATCH_SIZE:
+                break
+        return total
 
     async def _sweep_sessions(self, at: datetime) -> int:
         days = settings.SESSION_RETENTION_DAYS

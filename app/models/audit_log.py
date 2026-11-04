@@ -55,13 +55,13 @@ class AuditAction(str, Enum):
 
 
 class AuditLog(Base):
-    """Immutable security audit trail.
+    """Security audit trail, append-only to direct runtime DML.
 
-    Fable5-Enhancement: This table uses PostgreSQL Row Security + a dedicated
-    audit_writer role that has INSERT but no UPDATE/DELETE. The application
-    connects as audit_writer for log inserts; no application code path can
-    delete or modify rows. Retention is enforced by pg_cron archiving to cold
-    storage (S3/MinIO), not by deleting rows.
+    Runtime may SELECT/INSERT, but cannot UPDATE/DELETE/TRUNCATE or assume the
+    schema-owner identity. Bootstrap verifies these effective privileges plus
+    RLS. A narrowly scoped owner-installed function deletes expired records for
+    retention; it cannot delete more recent records. The schema owner remains
+    trusted. Foreign-key anonymization on user deletion is intentional.
 
     JSONB `before_state` / `after_state` let security reviewers reconstruct the
     exact record state at change time without a separate change-history table.
