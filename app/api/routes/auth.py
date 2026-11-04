@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_session, get_current_user
 from app.api.schemas import (
     DeleteAccountIn,
     FirebaseRegisterIn,
@@ -29,6 +29,8 @@ from app.api.schemas import (
 from app.config import settings
 from app.core.database import get_db
 from app.core.redis import redis_otp, redis_sessions
+from app.core.session_auth import SessionIdentity
+from app.services.ws_session import notify_revocation
 import structlog
 
 from app.core.security import (
@@ -554,6 +556,7 @@ async def refresh_access_token(
                 error_code="refresh_token_reuse",
             ))
             await db.commit()
+            await notify_revocation(replayed.user_id, replayed.id)
             logger.warning(
                 "refresh_token_reuse", session_id=str(replayed.id)
             )
@@ -640,6 +643,8 @@ async def logout(
     ))
     await db.commit()
 
+    await notify_revocation(user.id, session.id)
+
 
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user)) -> UserOut:
@@ -653,11 +658,14 @@ async def me(user: User = Depends(get_current_user)) -> UserOut:
 
 
 @router.post("/ws-ticket", response_model=WsTicketOut)
-async def create_ws_ticket(user: User = Depends(get_current_user)) -> WsTicketOut:
+async def create_ws_ticket(
+    user: User = Depends(get_current_user),
+    session: UserSession = Depends(get_current_session),
+) -> WsTicketOut:
     ticket = secrets.token_urlsafe(32)
     await redis_sessions.set(
         f"ws:ticket:{ticket}",
-        str(user.id),
+        SessionIdentity(user.id, session.id, user.token_version).ticket_value(),
         ex=WS_TICKET_TTL_SECONDS,
     )
     return WsTicketOut(
@@ -760,11 +768,8 @@ async def revoke_session(
 ) -> None:
     """Remote-kick a specific device.
 
-    Fable5-Enhancement: revocation is per-DEVICE, not per-user. The refresh
-    token dies immediately (revoked_at); the live WebSocket on that device is
-    told to disconnect via a targeted 'session_revoked' Pub/Sub frame — each
-    client knows its own session_id (returned at login) and closes itself when
-    the ids match. Other devices of the same user are untouched.
+    Commit the authoritative per-device state first, then notify socket owners.
+    The server closes affected sockets; clients do not enforce authorization.
     """
     session = await db.scalar(
         select(UserSession).where(
@@ -787,11 +792,7 @@ async def revoke_session(
     ))
     await db.commit()
 
-    from app.api.routes.websocket import publish
-    await publish(user.id, {
-        "type": "session_revoked",
-        "session_id": str(session_id),
-    })
+    await notify_revocation(user.id, session_id)
 
 
 def _classify_device(user_agent: str) -> str:

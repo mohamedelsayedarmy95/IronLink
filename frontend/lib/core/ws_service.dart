@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:dio/dio.dart' show DioException;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'api_client.dart';
@@ -22,6 +23,7 @@ enum WsStatus {
   /// into a rejection — draining the battery and telling the user nothing
   /// except that the app is offline, which is not the thing they need to know.
   outdated,
+  signInRequired,
 }
 
 /// Real WebSocket transport — ticket handshake then persistent socket.
@@ -56,6 +58,9 @@ class WsService {
   int _attempt = 0;
   bool _wantConnection = false;
   bool _connecting = false;
+  bool _sessionEnded = false;
+  bool _disposed = false;
+  int _generation = 0;
 
   /// Bounded. A device offline for a long time should not accumulate an
   /// unbounded queue, and frames that old are better resent by the user than
@@ -93,12 +98,18 @@ class WsService {
 
   /// Opens the socket and keeps it open until [disconnect].
   Future<void> connect() async {
+    if (_disposed) return;
+    _sessionEnded =
+        false; // Only an explicit new connect may start another session.
     _wantConnection = true;
     await _open();
   }
 
   /// Stops reconnecting. Called on sign-out.
   Future<void> disconnect() async {
+    _generation++;
+    _sessionEnded = true;
+    _connecting = false;
     _wantConnection = false;
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
@@ -106,14 +117,55 @@ class WsService {
     // account's unsent messages and must not survive into the next session.
     // Anything that merely drops the socket must go through
     // _handleDisconnect, which leaves the queue alone.
-    await _outbox.clear();
-    await _channel?.sink.close();
+    final channel = _channel;
     _channel = null;
-    _status.add(WsStatus.offline);
+    await channel?.sink.close();
+    await _clearOutbox();
+    if (!_disposed) _status.add(WsStatus.offline);
+  }
+
+  Future<void> _clearOutbox() {
+    final pending = _writes;
+    return _writes = () async {
+      try {
+        await pending;
+      } finally {
+        await _outbox.clear();
+      }
+    }();
+  }
+
+  Future<void> _endSession() async {
+    if (_sessionEnded || _disposed) return;
+    _sessionEnded = true;
+    _generation++;
+    _wantConnection = false;
+    _connecting = false;
+    _reconnectTimer?.cancel();
+    _pingTimer?.cancel();
+    final channel = _channel;
+    _channel = null;
+    try {
+      await channel?.sink.close();
+      await _clearOutbox();
+    } finally {
+      try {
+        await _api.clearTokens();
+      } finally {
+        if (!_disposed) _status.add(WsStatus.signInRequired);
+      }
+    }
   }
 
   Future<void> _open() async {
-    if (_connecting || _channel != null || !_wantConnection) return;
+    if (_connecting ||
+        _channel != null ||
+        !_wantConnection ||
+        _sessionEnded ||
+        _disposed) {
+      return;
+    }
+    final generation = _generation;
     _connecting = true;
     _status.add(WsStatus.connecting);
 
@@ -121,6 +173,9 @@ class WsService {
       final res =
           await _api.authedPost<Map<String, dynamic>>('/auth/ws-ticket');
       final ticket = res.data!['ticket'] as String;
+      if (generation != _generation || !_wantConnection || _sessionEnded) {
+        return;
+      }
 
       final channel = WebSocketChannel.connect(
         Uri.parse('$_wsBase/ws/chat?ticket=$ticket'),
@@ -129,6 +184,10 @@ class WsService {
       // rather than surfacing as a stream error after we have already
       // reported success.
       await channel.ready;
+      if (generation != _generation || !_wantConnection || _sessionEnded) {
+        await channel.sink.close();
+        return;
+      }
 
       _channel = channel;
       _attempt = 0;
@@ -136,6 +195,9 @@ class WsService {
 
       channel.stream.listen(
         (raw) {
+          if (generation != _generation || _channel != channel || _disposed) {
+            return;
+          }
           final frame = jsonDecode(raw as String) as Map<String, dynamic>;
           // Every frame goes to one stream and nowhere else. This used to
           // special-case 'ocr_alert' and push it into a singleton bloc, which
@@ -153,21 +215,34 @@ class WsService {
           _frames.add(frame);
         },
         onDone: () {
+          if (generation != _generation || _channel != channel || _disposed) {
+            return;
+          }
+          if (channel.closeCode == 4421) {
+            unawaited(_endSession());
+            return;
+          }
           // A server that refused the protocol will refuse it again on every
           // attempt. Retrying is not resilience here, it is a loop.
           if (channel.closeCode == _closedTooOld) {
             _wantConnection = false;
             _channel = null;
+            _pingTimer?.cancel();
             _status.add(WsStatus.outdated);
             return;
           }
           _handleDisconnect();
         },
-        onError: (_) => _handleDisconnect(),
+        onError: (_) {
+          if (generation == _generation && _channel == channel && !_disposed) {
+            _handleDisconnect();
+          }
+        },
         cancelOnError: true,
       );
 
-      // Heartbeat keeps the Redis registration alive (server TTL is 90s)
+      // Transport liveness; the server independently verifies the session and
+      // refreshes its Redis registration without trusting client heartbeats.
       _pingTimer?.cancel();
       _pingTimer = Timer.periodic(
         const Duration(seconds: 45),
@@ -175,11 +250,21 @@ class WsService {
       );
 
       unawaited(_flushOutbox());
+    } on DioException catch (error) {
+      if (generation != _generation || _disposed) return;
+      _channel = null;
+      if (error.response?.statusCode == 401 ||
+          error.response?.statusCode == 403) {
+        await _endSession();
+      } else {
+        _scheduleReconnect();
+      }
     } catch (_) {
+      if (generation != _generation || _disposed) return;
       _channel = null;
       _scheduleReconnect();
     } finally {
-      _connecting = false;
+      if (generation == _generation) _connecting = false;
     }
   }
 
@@ -189,7 +274,7 @@ class WsService {
   /// it every client that dropped together comes back together, and the
   /// reconnect storm is what keeps the server down.
   void _scheduleReconnect() {
-    if (!_wantConnection) return;
+    if (!_wantConnection || _sessionEnded || _disposed) return;
     _reconnectTimer?.cancel();
     _status.add(WsStatus.offline);
     _reconnectTimer = Timer(_nextBackoff(), _open);
@@ -218,6 +303,12 @@ class WsService {
   /// server's processing loses the frame with no error on either side. The
   /// entry is removed when the server acknowledges it, not when it is written.
   void send(Map<String, dynamic> frame) {
+    if (_sessionEnded || _disposed) {
+      final ref = frame['client_ref'] as String?;
+      if (ref != null && !_disposed) _dropped.add(ref);
+      return;
+    }
+    final generation = _generation;
     if (_isEphemeral(frame['type'] as String?)) {
       if (_channel != null) _write(frame);
       return;
@@ -230,6 +321,7 @@ class WsService {
     // the chat draws its optimistic bubble immediately. The chain is what
     // keeps two sends in the same tick from reversing their own order.
     _writes = _writes.then((_) async {
+      if (generation != _generation || _sessionEnded || _disposed) return;
       await _outbox.add(raw, clientRef: ref);
       for (final lost in await _outbox.trimTo(_maxOutbox)) {
         _dropped.add(lost);
@@ -238,7 +330,9 @@ class WsService {
         _write(frame);
       } else if (_wantConnection) {
         // A send is the clearest signal the user expects a live connection.
-        await _open();
+        // The store write queue must not wait on network authentication:
+        // invalidation needs to drain and clear it while a ticket is in flight.
+        unawaited(_open());
       }
     });
   }
@@ -253,6 +347,10 @@ class WsService {
   /// the user cannot explain.
   void _settle(Map<String, dynamic> frame) {
     final type = frame['type'];
+    if (type == 'session_revoked') {
+      unawaited(_endSession());
+      return;
+    }
     if (type != 'ack' && type != 'error') return;
 
     final ref = frame['client_ref'] as String?;
@@ -269,6 +367,7 @@ class WsService {
       type == 'presence';
 
   void _write(Map<String, dynamic> frame) {
+    if (_sessionEnded || _disposed) return;
     try {
       _channel?.sink.add(jsonEncode(frame));
     } catch (_) {
@@ -284,10 +383,16 @@ class WsService {
   /// idempotency.py`. Without that guarantee this loop would turn every
   /// reconnect into a burst of duplicates.
   Future<void> _flushOutbox() async {
-    if (_channel == null) return;
+    if (_channel == null || _sessionEnded || _disposed) return;
+    final generation = _generation;
 
     for (final entry in await _outbox.load()) {
-      if (_channel == null) return; // dropped again mid-flush
+      if (_channel == null ||
+          generation != _generation ||
+          _sessionEnded ||
+          _disposed) {
+        return;
+      }
 
       if (entry.attempts >= _maxAttempts) {
         await _outbox.removeBySeq(entry.seq);
@@ -429,8 +534,8 @@ class WsService {
   // members are inert without a connection.
 
   @visibleForTesting
-  WsService.forTest({OutboxStore? outbox})
-      : _api = ApiClient(),
+  WsService.forTest({OutboxStore? outbox, ApiClient? api})
+      : _api = api ?? ApiClient(),
         _wsBase = 'ws://test.invalid',
         _outbox = outbox ?? InMemoryOutboxStore();
 
@@ -464,6 +569,7 @@ class WsService {
       send({'type': 'unsend', 'message_id': messageId});
 
   void _handleDisconnect() {
+    if (_sessionEnded || _disposed) return;
     _pingTimer?.cancel();
     _channel = null;
     _frames.add({'type': '_disconnected'});
@@ -474,8 +580,14 @@ class WsService {
   }
 
   Future<void> dispose() async {
+    _disposed = true;
+    _wantConnection = false;
+    _generation++;
+    _reconnectTimer?.cancel();
     _pingTimer?.cancel();
     await _channel?.sink.close();
     await _frames.close();
+    await _status.close();
+    await _dropped.close();
   }
 }

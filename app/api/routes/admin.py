@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -14,7 +14,9 @@ from app.core.database import get_db
 from app.models import AuditLog, Broadcast, Message, User
 from app.models.audit_log import AuditAction
 from app.models.user import UserRole, UserStatus
+from app.models.user_session import UserSession
 from app.services import push_service
+from app.services.ws_session import notify_revocation
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -115,11 +117,14 @@ async def set_user_status(
 
     if body.action == "suspend":
         target.status = UserStatus.SUSPENDED
-        # Nuclear invalidation: every token on every device dies instantly
+        # Persist account and refresh-session invalidation in one transaction.
         target.token_version += 1
+        await db.execute(
+            update(UserSession)
+            .where(UserSession.user_id == target.id, UserSession.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
         action = AuditAction.USER_SUSPENDED
-        # Live sockets get told to drop immediately
-        await publish(target.id, {"type": "account_suspended"})
     else:
         target.status = UserStatus.ACTIVE
         action = AuditAction.USER_REACTIVATED
@@ -134,6 +139,8 @@ async def set_user_status(
         success=True,
     ))
     await db.commit()
+    if body.action == "suspend":
+        await notify_revocation(target.id)
     await db.refresh(target)
     return AdminUserOut.model_validate(target)
 

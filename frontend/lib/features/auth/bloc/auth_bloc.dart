@@ -13,6 +13,10 @@ sealed class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+class SessionInvalidated extends AuthEvent {
+  const SessionInvalidated();
+}
+
 class PhoneSubmitted extends AuthEvent {
   const PhoneSubmitted(this.phoneNumber);
   final String phoneNumber;
@@ -222,6 +226,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<MilitaryIdSubmitted>(_onMilitaryIdSubmitted);
     on<ResendOtpRequested>(_onResendRequested);
     on<StepBackRequested>(_onStepBack);
+    on<SessionInvalidated>((event, emit) {
+      _countdown?.cancel();
+      emit(const AuthState());
+    });
     on<_CodeSent>(_onCodeSent);
     on<_PhoneAutoVerified>(_onPhoneAutoVerified);
     on<_PhoneVerificationFailed>((e, emit) => emit(state.copyWith(
