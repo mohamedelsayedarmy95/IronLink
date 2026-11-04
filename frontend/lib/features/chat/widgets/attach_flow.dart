@@ -4,9 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/crypto/attachment_crypto.dart';
+import '../../../core/media/metadata_scrubber.dart';
 import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
-import '../../../core/ws_service.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../core/icons.dart';
 
 /// Result handed back to the chat room after a successful upload.
 class AttachmentReady {
@@ -14,101 +17,97 @@ class AttachmentReady {
     required this.mediaKey,
     required this.mimeType,
     this.caption,
+    this.key,
   });
 
   final String mediaKey;
   final String mimeType;
   final String? caption;
+
+  /// Set when the body was encrypted before upload. The chat bloc puts this
+  /// inside the Signal envelope; without it the stored object is unreadable
+  /// to everyone, including the recipient.
+  final AttachmentKey? key;
 }
 
 /// Gold attach sheet: gallery / camera / PDF / (voice lives on the input bar).
 Future<AttachmentReady?> showAttachFlow(
   BuildContext context, {
   required MediaService media,
+  required bool encrypted,
 }) async {
-  // Obtain WsService from providers to listen for OCR alerts
-  final ws = context.read<WsService>();
-  StreamSubscription? ocrSub;
-
-  ocrSub = ws.frames.listen((frame) {
-    if (frame['type'] == 'ocr_alert') {
-      final fileId = frame['file_id'] as String?;
-      final keyword = frame['keyword'] as String?;
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Ключевое слово "$keyword" найдено в загруженном файле $fileId'),
-            backgroundColor: MilColors.navySurface,
-          ),
-        );
-      }
-    }
-  });
-
-  try {
-    final source = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: MilColors.navySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _AttachOption(
-                icon: Icons.photo_library_outlined,
-                label: 'Контент галереи',
-                onTap: () => Navigator.pop(sheetContext, 'gallery'),
-              ),
-              _AttachOption(
-                icon: Icons.camera_alt_outlined,
-                label: 'Камера',
-                onTap: () => Navigator.pop(sheetContext, 'camera'),
-              ),
-              _AttachOption(
-                icon: Icons.picture_as_pdf_outlined,
-                label: 'Файл PDF',
-                onTap: () => Navigator.pop(sheetContext, 'pdf'),
-              ),
-            ],
-          ),
+  // There was a WebSocket listener here that popped a snackbar naming a
+  // matched keyword while the user was choosing a file to send. Three things
+  // were wrong with it, so it is gone rather than repaired.
+  //
+  // It leaked into the wrong surface: this is the *sender's* attach sheet, and
+  // the sender never learns another person's keyword.
+  //
+  // It was subscribed inside a `try` whose `finally` cancelled it, while the
+  // return below handed back a Future without awaiting it — so the `finally`
+  // ran the instant the preview opened, and the subscription was dead for
+  // exactly the period it existed to cover. It had never worked.
+  //
+  // And alerts are raised on-device now, surfaced by the ticker and the alert
+  // centre, which are the two places that own them.
+  final source = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: IronColors.navySurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _AttachOption(
+              icon: IronIcons.gallery,
+              label: L.of(context).attachGallery,
+              onTap: () => Navigator.pop(sheetContext, 'gallery'),
+            ),
+            _AttachOption(
+              icon: IronIcons.camera,
+              label: L.of(context).attachCamera,
+              onTap: () => Navigator.pop(sheetContext, 'camera'),
+            ),
+            _AttachOption(
+              icon: IronIcons.document,
+              label: L.of(context).attachDocument,
+              onTap: () => Navigator.pop(sheetContext, 'pdf'),
+            ),
+          ],
         ),
       ),
-    );
-    if (source == null || !context.mounted) return null;
+    ),
+  );
+  if (source == null || !context.mounted) return null;
 
-    if (source == 'pdf') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: MilColors.navySurface,
-        content: Text('Выбор PDF будет реализован в следующем обновлении',
-            style: TextStyle(color: MilColors.textHi)),
-      ));
-      return null;
-    }
-
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
-      imageQuality: 92,
-    );
-    if (picked == null || !context.mounted) return null;
-
-    // Preview + caption before sending, as specified
-    return Navigator.of(context).push<AttachmentReady>(
-      MaterialPageRoute(
-        builder: (_) => _ImagePreviewScreen(
-          file: File(picked.path),
-          media: media,
-        ),
-      ),
-    );
-  } finally {
-    ocrSub?.cancel();
+  if (source == 'pdf') {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(L.of(context).attachPdfComingSoon),
+    ));
+    return null;
   }
+
+  final picker = ImagePicker();
+  final picked = await picker.pickImage(
+    source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
+    imageQuality: 92,
+  );
+  if (picked == null || !context.mounted) return null;
+
+  // Preview + caption before sending, as specified
+  return await Navigator.of(context).push<AttachmentReady>(
+    MaterialPageRoute(
+      builder: (_) => _ImagePreviewScreen(
+        file: File(picked.path),
+        media: media,
+        encrypted: encrypted,
+      ),
+    ),
+  );
 }
 
 class _AttachOption extends StatelessWidget {
@@ -134,13 +133,13 @@ class _AttachOption extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 26,
-              backgroundColor: MilColors.navyDeep,
-              child: Icon(icon, color: MilColors.gold),
+              backgroundColor: IronColors.navyDeep,
+              child: Icon(icon, color: IronColors.gold),
             ),
             const SizedBox(height: 8),
             Text(label,
                 style:
-                    const TextStyle(color: MilColors.textLo, fontSize: 12)),
+                    const TextStyle(color: IronColors.textLo, fontSize: 12)),
           ],
         ),
       ),
@@ -149,10 +148,15 @@ class _AttachOption extends StatelessWidget {
 }
 
 class _ImagePreviewScreen extends StatefulWidget {
-  const _ImagePreviewScreen({required this.file, required this.media});
+  const _ImagePreviewScreen({
+    required this.file,
+    required this.media,
+    required this.encrypted,
+  });
 
   final File file;
   final MediaService media;
+  final bool encrypted;
 
   @override
   State<_ImagePreviewScreen> createState() => _ImagePreviewScreenState();
@@ -171,6 +175,28 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
   Future<void> _send() async {
     setState(() => _progress = 0);
     try {
+      final caption =
+          _caption.text.trim().isEmpty ? null : _caption.text.trim();
+
+      if (widget.encrypted) {
+        // Encrypted before it leaves the device, so what reaches storage is
+        // opaque. The server is told so explicitly — otherwise it would
+        // re-compress the "image" and destroy it.
+        final encrypted = await widget.media.uploadEncrypted(
+          widget.file,
+          mimeType: 'image/jpeg',
+          onProgress: (p) => setState(() => _progress = p),
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop(AttachmentReady(
+          mediaKey: encrypted.upload.mediaKey,
+          mimeType: 'image/jpeg',
+          caption: caption,
+          key: encrypted.key,
+        ));
+        return;
+      }
+
       final result = await widget.media.upload(
         widget.file,
         mimeType: 'image/jpeg',
@@ -180,13 +206,19 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
       Navigator.of(context).pop(AttachmentReady(
         mediaKey: result.mediaKey,
         mimeType: result.mimeType,
-        caption: _caption.text.trim().isEmpty ? null : _caption.text.trim(),
+        caption: caption,
       ));
     } catch (e) {
       if (!mounted) return;
       setState(() => _progress = null);
+      debugPrint('[attach] upload failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Ошибка загрузки — будет повторена автоматически ($e)'),
+        // A format the scrubber cannot strip is refused rather than sent, so
+        // it needs its own sentence: "upload failed" would send the user to
+        // check their connection over something the connection had no part in.
+        content: Text(e is UnscrubbableMedia
+            ? L.of(context).attachUnsupportedFormat
+            : L.of(context).uploadFailed),
       ));
     }
   }
@@ -198,7 +230,7 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: MilColors.textHi),
+          icon: const Icon(IronIcons.close, color: IronColors.textHi),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -212,8 +244,8 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
           if (_progress != null)
             LinearProgressIndicator(
               value: _progress,
-              color: MilColors.gold,
-              backgroundColor: MilColors.navySurface,
+              color: IronColors.gold,
+              backgroundColor: IronColors.navySurface,
             ),
           SafeArea(
             child: Padding(
@@ -224,23 +256,23 @@ class _ImagePreviewScreenState extends State<_ImagePreviewScreen> {
                     child: TextField(
                       controller: _caption,
                       enabled: _progress == null,
-                      decoration: const InputDecoration(
-                          hintText: 'Введите подпись…'),
+                      decoration: InputDecoration(
+                          hintText: L.of(context).captionHint),
                     ),
                   ),
                   const SizedBox(width: 10),
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: MilColors.gold,
+                    backgroundColor: IronColors.gold,
                     child: _progress != null
                         ? const Padding(
                             padding: EdgeInsets.all(10),
                             child: CircularProgressIndicator(
-                                color: MilColors.navyDeep, strokeWidth: 2),
+                                color: IronColors.navyDeep, strokeWidth: 2),
                           )
                         : IconButton(
-                            icon: const Icon(Icons.send,
-                                color: MilColors.navyDeep),
+                            icon: const Icon(IronIcons.send,
+                                color: IronColors.navyDeep),
                             onPressed: _send,
                           ),
                   ),

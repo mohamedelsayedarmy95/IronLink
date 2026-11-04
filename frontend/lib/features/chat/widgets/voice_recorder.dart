@@ -1,208 +1,316 @@
-import 'dart:typed_data';
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
-import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
+
+import '../../../core/crypto/attachment_crypto.dart';
+import '../../../core/icons.dart';
+import '../../../core/media_service.dart';
 import '../../../core/theme.dart';
+import '../../../l10n/app_localizations.dart';
+import 'waveform.dart';
 
+/// A recorded voice note, once it is actually stored.
+class VoiceNote {
+  const VoiceNote({
+    required this.mediaKey,
+    required this.duration,
+    required this.waveform,
+    this.attachmentKey,
+  });
+
+  final String mediaKey;
+  final double duration;
+  final List<double> waveform;
+
+  /// Set when the audio was encrypted before upload.
+  final AttachmentKey? attachmentKey;
+}
+
+/// Hold to record, release to send.
+///
+/// The previous version never uploaded anything: it invented a media key from
+/// a timestamp and a waveform from `List.generate`, then deleted the audio.
+/// Every voice note it produced pointed at an object that did not exist.
 class VoiceRecorder extends StatefulWidget {
-  final Function(String mediaKey, double duration, List<double> waveform) onSend;
-  final VoidCallback onCancel;
-
   const VoiceRecorder({
-    Key? key,
+    super.key,
+    required this.media,
+    required this.encrypted,
     required this.onSend,
     required this.onCancel,
-  }) : super(key: key);
+  });
+
+  final MediaService media;
+
+  /// Encrypts the audio before upload. A voice note discloses at least as
+  /// much as the message it replaces, so it follows the chat's setting.
+  final bool encrypted;
+
+  final void Function(VoiceNote note) onSend;
+  final VoidCallback onCancel;
 
   @override
   State<VoiceRecorder> createState() => _VoiceRecorderState();
 }
 
 class _VoiceRecorderState extends State<VoiceRecorder> {
-  final Record _audioRecorder = Record();
-  final FlutterFFmpeg _flutterFFmpeg = FlutterFFmpeg();
-  bool _isRecording = false;
-  double _duration = 0;
-  Timer? _timer;
-  List<double> _waveform = [];
-  String? _recordingPath;
+  final _recorder = AudioRecorder();
+
+  bool _recording = false;
+  bool _uploading = false;
+  double _seconds = 0;
+  String? _path;
+
+  Timer? _ticker;
+  StreamSubscription<Amplitude>? _amplitudes;
+
+  /// dBFS readings taken while recording, turned into bars on stop. Real
+  /// measurements — the bars have to correspond to the audio, or they are
+  /// decoration pretending to be information.
+  final _readings = <double>[];
+
+  /// Live preview, resampled from whatever has been captured so far.
+  List<double> _preview = const [];
+
+  static const _minSeconds = 1.0;
+  static const _maxSeconds = 300.0; // 5 minutes
 
   @override
-  void initState() {
-    super.initState();
-    _initRecorder();
+  void dispose() {
+    _ticker?.cancel();
+    _amplitudes?.cancel();
+    _recorder.dispose();
+    super.dispose();
   }
 
-  Future<void> _initRecorder() async {
-    if (await _audioRecorder.hasPermission()) {
-      // Permission granted
-    } else {
-      // Request permission - in a real app, we'd handle this properly
-      await _audioRecorder.requestPermission();
-    }
-  }
-
-  void _startRecording() async {
+  Future<void> _start() async {
+    if (_recording || _uploading) return;
     try {
-      final path = await _getTempPath(suffix: '.aac');
-      _recordingPath = path;
-      await _audioRecorder.record(
+      if (!await _recorder.hasPermission()) return;
+
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 32000,
+          sampleRate: 22050,
+          numChannels: 1, // speech; stereo doubles the size for nothing
+        ),
         path: path,
-        encoder: AudioEncoder.AAC,
-        bitRate: 16000,
-        samplingRate: 16000,
       );
-      setState(() => _isRecording = true);
-      _startDurationTimer();
-      _startWaveformUpdate();
+
+      _readings.clear();
+      _amplitudes = _recorder
+          .onAmplitudeChanged(const Duration(milliseconds: 100))
+          .listen((a) {
+        _readings.add(a.current);
+        if (mounted) {
+          setState(() => _preview = Waveform.fromDecibels(_readings));
+        }
+      });
+
+      setState(() {
+        _path = path;
+        _recording = true;
+        _seconds = 0;
+        _preview = const [];
+      });
+
+      _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) {
+        if (!mounted) return;
+        setState(() => _seconds += 0.1);
+        // A recording left running by a stuck gesture would otherwise grow
+        // until the upload is rejected for size.
+        if (_seconds >= _maxSeconds) _stop(send: true);
+      });
     } catch (e) {
-      debugPrint('Error starting recording: $e');
+      debugPrint('[voice] start failed: $e');
+      if (mounted) setState(() => _recording = false);
     }
   }
 
-  Future<void> _stopRecording() async {
-    if (!_isRecording) return;
+  Future<void> _stop({required bool send}) async {
+    if (!_recording) return;
 
-    _timer?.cancel();
-    await _audioRecorder.stop();
-    setState(() => _isRecording = false);
+    _ticker?.cancel();
+    await _amplitudes?.cancel();
+    _amplitudes = null;
 
-    if (_recordingPath == null) return;
+    final path = await _recorder.stop();
+    final duration = _seconds;
+    if (mounted) setState(() => _recording = false);
 
-    final file = File(_recordingPath!);
-    final duration = await _audioRecorder.getDuration(_recordingPath!);
-
-    if (duration.inSeconds < 1) {
-      // Too short -> cancel
-      await file.delete();
+    final file = File(path ?? _path ?? '');
+    if (!send || path == null || duration < _minSeconds) {
+      // Too short to be intentional — usually a mis-tap on the mic.
+      if (await file.exists()) await file.delete();
       widget.onCancel();
       return;
     }
 
-    // Compress audio to OPUS using flutter_ffmpeg
-    final compressedPath = await _getTempPath(suffix: '.opus');
-    final rc = await _flutterFFmpeg.execute(
-        '-i ${_recordingPath!} -c:a libopus -b:a 16k -vbr off $compressedPath');
+    if (mounted) setState(() => _uploading = true);
+    try {
+      final waveform = Waveform.fromDecibels(_readings);
 
-    if (rc == 0) {
-      // Upload compressed file
-      await _uploadVoiceMessage(File(compressedPath), duration.inSeconds.toDouble());
-    } else {
-      // Fallback: upload raw AAC
-      await _uploadVoiceMessage(file, duration.inSeconds.toDouble());
-    }
-
-    // Cleanup
-    await file.delete();
-    if (File(compressedPath).existsSync()) await File(compressedPath).delete();
-
-    setState(() {
-      _recordingPath = null;
-      _waveform = [];
-    });
-  }
-
-  Future<String> _getTempPath({String suffix = '.aac'}) async {
-    final dir = await getTemporaryDirectory();
-    return '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}$suffix';
-  }
-
-  Future<void> _uploadVoiceMessage(File file, double duration) async {
-    // In a real implementation, we would upload to the server here
-    // For now, we'll simulate by generating a fake media key and mock waveform
-    // The actual upload would happen via the media API
-
-    // Simulate media key (in reality, this comes from the server after upload)
-    final mediaKey = 'voice_${DateTime.now().millisecondsSinceEpoch}.opus';
-
-    // Generate mock waveform data (in reality, we'd extract this from the audio)
-    final waveform = List.generate(20, (_) => 0.5 + 0.5 * (_.isEven ? 1 : -1));
-
-    // Notify parent to send the voice message
-    widget.onSend(mediaKey, duration, waveform);
-  }
-
-  void _startDurationTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() => _duration++);
-    });
-  }
-
-  void _startWaveformUpdate() {
-    // Update waveform every 0.1s during recording (mock data)
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!_isRecording) {
-        timer.cancel();
-        return;
+      if (widget.encrypted) {
+        final result = await widget.media.uploadEncrypted(
+          file,
+          mimeType: 'audio/mp4',
+        );
+        widget.onSend(VoiceNote(
+          mediaKey: result.upload.mediaKey,
+          duration: duration,
+          waveform: waveform,
+          attachmentKey: result.key,
+        ));
+      } else {
+        final result = await widget.media.upload(file, mimeType: 'audio/mp4');
+        widget.onSend(VoiceNote(
+          mediaKey: result.mediaKey,
+          duration: duration,
+          waveform: waveform,
+        ));
       }
-      setState(() {
-        // Simulate waveform with random data (in real app, use audio meters)
-        _waveform = List.generate(20, (_) => 0.5 + 0.5 * (_.isEven ? 1 : -1) * (0.3 + 0.7 * (_.isEven ? 1 : 0)));
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _audioRecorder.dispose();
-    _timer?.cancel();
-    super.dispose();
+    } catch (e) {
+      debugPrint('[voice] upload failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L.of(context).voiceUploadFailed)),
+        );
+      }
+      widget.onCancel();
+    } finally {
+      // Deleted only after the upload, not before it. The old code removed
+      // the file regardless, so a failed send lost the recording outright.
+      if (await file.exists()) await file.delete();
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_isRecording)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            decoration: BoxDecoration(
-              color: MilColors.errorRed,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.mic, color: MilColors.white),
-                const SizedBox(width: 8),
-                Text(
-                  '${_duration.toStringAsFixed(0)}s',
-                  style: const TextStyle(color: MilColors.white, fontSize: 16),
-                ),
-              ],
-            ),
-          )
-        else
-          GestureDetector(
-            onLongPressStart: (_) => _startRecording(),
-            onLongPressEnd: (_) => _stopRecording(),
-            onLongPressCancel: () => _stopRecording(),
-            child: Container(
-              width: 50,
-              height: 50,
+    final t = L.of(context);
+
+    if (_uploading) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: IronColors.accentText),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onLongPressStart: (_) => _start(),
+      onLongPressEnd: (_) => _stop(send: true),
+      onLongPressCancel: () => _stop(send: false),
+      child: Semantics(
+        button: true,
+        label: t.recordVoiceNote,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_recording) ...[
+              Text(
+                _formatDuration(_seconds),
+                style: const TextStyle(
+                    color: IronColors.errorRed, fontSize: 13),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 90,
+                height: 28,
+                child: _Bars(values: _preview, color: IronColors.errorRed),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: MilColors.gold,
+                color: _recording ? IronColors.errorRed : IronColors.gold,
               ),
-              child: const Icon(Icons.mic, color: MilColors.navyDeep),
+              child: Icon(
+                IronIcons.mic,
+                color: _recording ? IronColors.white : IronColors.navyDeep,
+              ),
             ),
-          ),
-        if (_isRecording)
-          SizedBox(
-            height: 100,
-            child: AudioWaveforms(
-              size: Size(double.infinity, 80),
-              waveformData: _waveform,
-              waveColor: MilColors.gold,
-              waveWidth: 4,
-              showLerpLine: false,
-              enableCache: true,
-            ),
-          ),
-      ],
+          ],
+        ),
+      ),
     );
   }
+}
+
+String _formatDuration(double seconds) {
+  final total = seconds.floor();
+  final m = (total ~/ 60).toString().padLeft(2, '0');
+  final s = (total % 60).toString().padLeft(2, '0');
+  return '$m:$s';
+}
+
+/// The bars themselves, shared by the recorder and the player.
+class _Bars extends StatelessWidget {
+  const _Bars({required this.values, required this.color, this.progress = 1});
+
+  final List<double> values;
+  final Color color;
+
+  /// 0..1 — bars past this point are dimmed, showing playback position.
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.isEmpty) return const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          for (var i = 0; i < values.length; i++)
+            Expanded(
+              child: Container(
+                height: 3 + values[i] * (constraints.maxHeight - 3),
+                margin: const EdgeInsets.symmetric(horizontal: 0.5),
+                decoration: BoxDecoration(
+                  color: i / values.length <= progress
+                      ? color
+                      : color.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Exposed so the player draws exactly the same bars as the recorder.
+class VoiceBars extends StatelessWidget {
+  const VoiceBars({
+    super.key,
+    required this.values,
+    required this.color,
+    this.progress = 1,
+  });
+
+  final List<double> values;
+  final Color color;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) =>
+      _Bars(values: values, color: color, progress: progress);
 }

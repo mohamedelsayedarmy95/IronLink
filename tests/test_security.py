@@ -71,15 +71,32 @@ class TestRefreshTokens:
 class TestAccessTokens:
     def test_create_and_decode(self):
         user_id = uuid.uuid4()
-        token = create_access_token(user_id, token_version=3, role="officer")
+        session_id = uuid.uuid4()
+        token = create_access_token(
+            user_id, token_version=3, role="officer", session_id=session_id
+        )
         payload = decode_access_token(token)
         assert payload is not None
         assert payload["sub"] == str(user_id)
         assert payload["ver"] == 3
         assert payload["role"] == "officer"
+        assert payload["sid"] == str(session_id)
+
+    def test_the_token_names_its_session(self):
+        """Without sid, authentication cannot tell one device from another,
+        so revoking a session has no effect on requests — which is exactly
+        how remote-kick used to be unenforced."""
+        token = create_access_token(
+            uuid.uuid4(), token_version=1, role="soldier",
+            session_id=uuid.uuid4(),
+        )
+        assert "sid" in decode_access_token(token)
 
     def test_tampered_token_rejected(self):
-        token = create_access_token(uuid.uuid4(), token_version=1, role="soldier")
+        token = create_access_token(
+            uuid.uuid4(), token_version=1, role="soldier",
+            session_id=uuid.uuid4(),
+        )
         tampered = token[:-4] + "XXXX"
         assert decode_access_token(tampered) is None
 

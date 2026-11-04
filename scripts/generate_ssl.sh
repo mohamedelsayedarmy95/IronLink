@@ -3,6 +3,11 @@
 # Production must use a CA-issued certificate (Let's Encrypt or internal military CA).
 set -euo pipefail
 
+# Git Bash on Windows rewrites /C=EG/... in the OpenSSL -subj argument into a
+# Windows path (C:/Program Files/Git/C=EG/...), which OpenSSL rejects. Disable
+# MSYS path conversion for this script. Harmless on Linux/macOS.
+export MSYS_NO_PATHCONV=1
+
 SSL_DIR="$(dirname "$0")/../nginx/ssl"
 mkdir -p "$SSL_DIR"
 

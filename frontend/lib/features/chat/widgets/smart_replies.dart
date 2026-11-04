@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../../core/theme.dart';
 
 class SmartReplies extends StatelessWidget {
@@ -19,17 +18,17 @@ class SmartReplies extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      color: MilColors.navySurface.withOpacity(0.7),
+      color: IronColors.navySurface.withOpacity(0.7),
       child: Wrap(
         spacing: 8,
         runSpacing: 4,
         children: suggestions.map((suggestion) {
-          return Chip(
+          return ActionChip(
             label: Text(
               suggestion,
-              style: const TextStyle(color: MilColors.textHi),
+              style: const TextStyle(color: IronColors.textHi),
             ),
-            backgroundColor: MilColors.navyDeep,
+            backgroundColor: IronColors.navyDeep,
             onPressed: () => onTap(suggestion),
           );
         }).toList(),

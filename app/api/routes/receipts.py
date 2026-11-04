@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import BaseModel
+from sqlalchemy import select
 
 from app.api.deps import get_current_user
 from app.core.redis import redis_pubsub
@@ -60,6 +61,7 @@ async def _verify_chat_participant(
 @router.post(
     "/chats/{chat_id}/messages/{message_id}/delivered",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
 )
 async def mark_message_delivered(
     chat_id: UUID = Path(...),
@@ -112,6 +114,7 @@ async def mark_message_delivered(
 @router.post(
     "/chats/{chat_id}/messages/{message_id}/read",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
 )
 async def mark_message_read(
     chat_id: UUID = Path(...),
@@ -154,6 +157,7 @@ async def mark_message_read(
 @router.post(
     "/chats/{chat_id}/typing",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
 )
 async def update_typing(
     chat_id: UUID = Path(...),

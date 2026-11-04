@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import WebSocket
 from redis.asyncio import Redis
 
-from app.core.redis import redis as redis_client
+from app.core.redis import redis_sessions as redis_client
 
 logger = logging.getLogger(__name__)
 

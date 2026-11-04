@@ -1,0 +1,41 @@
+# Gitleaks configuration.
+#
+# The scan blocks the build, and it should. What it must not do is block it for
+# something that is not a secret — an allowlist entry that nobody can justify
+# is how a scanner gets disabled, and a disabled scanner is worse than none
+# because the dashboard still shows it as covered.
+#
+# So there is exactly one entry here, it names a file, and it says why.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API key"
+regex = '''(?i)(?:key|api|token|secret|client|passwd|password|auth|access)(?:[0-9a-z\-_\t .]{0,20})(?:[\s|']|[\s|"]){0,3}(?:=|>|:{1,3}=|\|\||:|<=|=>|:=|\?=)(?:'|\"|\s|=|\x60){0,5}([0-9a-z\-_.=]{10,150})(?:['|\"|\n|\r|\s|\x60|;]|$)'''
+[rules.allowlist]
+paths = ['''render\.yaml''']
+# WHY THIS FILE CONTAINS NO SECRETS
+#
+# render.yaml is a Render blueprint. Where it looks like it is setting a
+# credential it is declaring a *reference* that Render resolves at deploy time:
+#
+#     - key: REDIS_URL
+#       fromService:
+#         name: ironlink-redis
+#         property: connectionString
+#
+# `connectionString` is the name of a property to fetch, not a connection
+# string. Likewise `fromDatabase: property: password` names where the password
+# comes from and never contains one.
+#
+# Every value that genuinely is a secret is declared `sync: false`, which makes
+# Render prompt for it once at apply time and store it encrypted. That is
+# stated at the top of the file, and it is the reason nothing sensitive has
+# ever been written into it.
+#
+# Scoped to this path and this rule rather than allowlisted globally, so a real
+# key committed anywhere else — including elsewhere in this file under a
+# different rule — still fails the build.
+regexTarget = "line"

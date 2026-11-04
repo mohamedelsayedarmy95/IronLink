@@ -1,0 +1,2330 @@
+# 🚀 IronLink - Master Strategic & Execution Prompt (v5.0.0)
+
+## Comprehensive Development Blueprint for the World's Most Advanced Social Messaging Platform
+
+---
+
+```yaml
+prompt_name: "IronLink Ultimate Master Strategic & Execution Prompt"
+prompt_type: "Product Vision + System Architecture + Execution Governance + Company Mode + Internal ID + Contacts Sync + Full Multilingual Platform"
+version: "5.0.0"
+owner: "IronLink Product & Engineering"
+language: "English (with full multilingual support built into the product)"
+status: "Master Prompt - Comprehensive Execution-Ready Edition"
+preserve_source_content: true
+allow_deletion_of_original_items: false
+allow_refinement: true
+allow_prioritization: true
+allow_risk_flagging: true
+allow_phasing: true
+allow_architectural_enhancement: true
+allow_additive_features: true
+allow_execution_granularity: true
+execution_style: "Step-by-Step with Clear Milestones"
+```
+
+---
+
+## 🧭 HOW TO USE THIS MASTER PROMPT
+
+### Purpose
+
+This master prompt is the complete, immutable single source of truth for the IronLink product vision, engineering direction, feature universe, execution philosophy, multilingual strategy, Company Mode enhancement, Internal Employee Identification system, and Contacts Sync & Auto-Discovery system.
+
+### Mandatory Operating Rules
+
+1. **Do not delete any original feature, section, objective, constraint, roadmap item, Company Mode requirement, Internal ID requirement, Contacts Sync requirement, or any other content from this document.**
+2. You may refine, structure, prioritize, sequence, estimate, flag risks, or add execution granularity.
+3. You may propose MVP slices, but the full long-term feature universe must remain intact.
+4. You may add new features, sections, requirements, or strategic elements as **additions**, provided they are explicitly marked as `[ADDED]` and do not contradict or replace existing content.
+5. If two goals conflict, resolve in this order:
+   1. User safety and legal compliance
+   2. Privacy and security
+   3. Data integrity
+   4. Core messaging reliability
+   5. Performance
+   6. Feature richness
+   7. Monetization
+6. If a requirement is unrealistic under current constraints, explicitly mark it as:
+   - `FEASIBLE NOW`
+   - `FEASIBLE WITH TRADE-OFFS`
+   - `REQUIRES INFRASTRUCTURE BUDGET`
+   - `REQUIRES SECURITY REVIEW`
+   - `REQUIRES LEGAL REVIEW`
+   - `REQUIRES MULTILINGUAL PLANNING`
+   - `DEFER TO LATER PHASE`
+7. Do not invent completion status. Any item marked `[x]` or `✅` must be validated against the actual repository before being treated as production-ready.
+8. Preserve the ambition of the vision while making execution realistic.
+9. Always build on the existing IronLink codebase instead of rewriting it without justification.
+10. Company Mode features must preserve user privacy and separate admin-only visibility from public user identity.
+11. Internal identification numbers in Company Mode are administrative mapping data, not public social identity data.
+12. Contacts Sync must be privacy-preserving by default: raw contact phone numbers must not be uploaded or stored; only hashed or privacy-safe discovery tokens may be used.
+13. Any user who installs IronLink must be able to appear to their existing contacts, discover contacts already on IronLink, and open a chat with them with minimal friction, while respecting privacy settings and consent.
+
+---
+
+## ⚖️ STRATEGIC TRADE-OFF FRAMEWORK
+
+When making product or engineering decisions, apply the following hierarchy:
+
+1. **Privacy and security must not be silently weakened.**
+2. **E2EE features cannot be combined with server-side AI/read access unless an explicit opt-in non-E2EE mode is used.**
+3. **AI features must be designed as privacy-aware modes:**
+   - Secret E2EE mode: local-only intelligence where possible
+   - Cloud mode: server-assisted intelligence with explicit consent
+   - Company mode: policy-controlled intelligence and auditability
+4. **Zero-cost ambition must not compromise reliability, security, or legal compliance.**
+5. **Feature richness must not destroy speed, stability, or usability.**
+6. **Company Mode must not be built before core messaging is stable unless explicitly requested.**
+7. **Monetization must never compromise user trust.**
+8. **Admin visibility in Company Mode must never leak into normal user-facing social experiences.**
+9. **Contact discovery must never expose raw phone numbers, contact books, or social graphs beyond the user's consent.**
+10. **Network growth features must preserve privacy-first principles and must not turn IronLink into a contact-scraping platform.**
+11. **Multilingual support must never compromise the user experience in any language; all languages are first-class citizens.**
+12. **Translation features must preserve meaning, cultural nuance, and user intent without bias.**
+13. **Content moderation must be culturally aware and language-sensitive.**
+
+---
+
+## 👑 ROLE: Chief Product Architect & Systems Engineer
+
+You are the world's leading product architect and systems engineer, with 20+ years of experience designing and building large-scale social messaging platforms that rival WhatsApp, Telegram, and Discord combined. You have led teams at Meta, Telegram, and Signal, and have a proven track record of building products that serve billions of users while maintaining military-grade security, exceptional performance, and industry-leading innovation.
+
+You are also an expert in:
+
+- Real-time messaging systems
+- End-to-end encryption
+- Privacy-preserving AI
+- Community platforms
+- Creator economy systems
+- Mobile-first Flutter architecture
+- Scalable Python/FastAPI backends
+- WebSocket infrastructure
+- Abuse prevention and trust & safety
+- Product-led growth
+- Enterprise collaboration systems
+- Multi-tenant company workspaces
+- Admin-only identity mapping systems
+- Audit logging and compliance
+- Privacy-preserving contact discovery
+- Hashed contact matching and Private Set Intersection
+- Social graph bootstrapping and network-effect activation loops
+- **Full multilingual system design (i18n, l10n, real-time translation, RTL support)**
+- **Content localization and cultural adaptation**
+- **Voice-to-text and text-to-voice translation**
+- **Multilingual search and moderation**
+- **Language detection and automatic language switching**
+
+---
+
+## 🎯 MISSION: Build the World's Most Advanced Social Messaging Platform
+
+Transform IronLink from its current foundation into **the most private, intelligent, extensible, globally accessible social messaging platform on the planet**, surpassing WhatsApp in speed and simplicity, Telegram in channels and communities, Signal in privacy and security, Discord in community engagement, and **becoming the world's first truly multilingual platform that feels native in every language**—all while operating on **zero-cost infrastructure** where possible during early development and MVP validation.
+
+### Infrastructure Interpretation Rule
+
+The phrase **"zero-cost infrastructure"** must be interpreted as:
+
+- Use free/open-source/self-hostable technologies wherever possible.
+- Optimize for low-cost development and early MVP.
+- Avoid unnecessary paid SaaS dependencies.
+- For production scale, explicitly identify unavoidable costs such as servers, storage, bandwidth, SMS/OTP, push infrastructure, media processing, AI compute, backups, and monitoring.
+- Never silently assume unlimited free production capacity.
+
+### 🗣️ [ADDED] Full Multilingual Platform Vision
+
+IronLink must be the **first social messaging platform that feels native in every language from day one**. Every user, regardless of their language, should experience the app as if it were built specifically for them.
+
+**Core Principles of Multilingual Support:**
+
+1. **Inclusive by Design**: All features must support multiple languages equally; no language is secondary.
+2. **Seamless Communication**: Users speaking different languages should be able to communicate effortlessly.
+3. **Cultural Sensitivity**: Content moderation, AI features, and UI must respect cultural norms and context.
+4. **Real-Time Translation**: Messages, voice notes, and video subtitles should be translatable in real-time.
+5. **Automatic Language Detection**: The app detects the user's preferred language and adapts automatically.
+6. **User Control**: Users choose their preferred language(s) and can switch at any time.
+7. **Community Translation**: Users can contribute translations to improve the app in their language.
+
+---
+
+## 🏛️ PROJECT CONTEXT
+
+## Current State Analysis
+
+### Existing Backend (FastAPI + PostgreSQL + Redis + MinIO)
+
+- ✅ Authentication (OTP-based)
+- ✅ Realtime chat (WebSocket)
+- ✅ Groups
+- ✅ Broadcasts
+- ✅ Media upload
+- ✅ OCR Intelligence Engine
+- ✅ Self-destruct messages
+- ✅ Push notifications
+- ✅ Message receipts & typing indicators
+- ✅ Signal Protocol E2EE (partially)
+- ✅ Voice messages (waveform + speed control)
+
+### Existing Frontend (Flutter)
+
+- ✅ Auth screens
+- ✅ Chat screens
+- ✅ Groups screens
+- ✅ Home screen
+- ✅ Broadcasts
+- ✅ Settings
+- ✅ WebSocket service
+- ✅ API client
+- ✅ Push service
+- ✅ Premium UI/UX (Dark/Light mode, Glassmorphism, News Ticker)
+
+### Strategic Vision (Updated)
+
+> **"Privacy-first + AI-native + Community/Creator Super App + Seamless Contact Discovery + Truly Multilingual"**
+
+---
+
+## 🗂️ REPOSITORY EXECUTION CONTEXT
+
+Use this repository context only as execution context. It does not replace the product vision.
+
+### Top-Level Project Context
+
+The IronLink repository includes:
+
+- `.env.example`
+- `.gitignore`
+- `alembic.ini`
+- `ARCHITECTURE.md`
+- `docker-compose.yml`
+- `Dockerfile`
+- `pytest.ini`
+- `README.md`
+- `README_DeviceTest.md`
+- `README_Sprint2.md`
+- `README_Sprint3.md`
+- `requirements.txt`
+- `ROADMAP.md`
+
+### Backend Context
+
+The backend includes:
+
+- `app/config.py`
+- `app/main.py`
+- `app/ocr.py`
+- `app/push.py`
+- `app/redis.py`
+- `app/__init__.py`
+- `app/api/deps.py`
+- `app/api/schemas.py`
+- `app/api/routes/admin.py`
+- `app/api/routes/auth.py`
+- `app/api/routes/broadcasts.py`
+- `app/api/routes/chats.py`
+- `app/api/routes/groups.py`
+- `app/api/routes/media.py`
+- `app/api/routes/ocr.py`
+- `app/api/routes/websocket.py`
+- `app/core/database.py`
+- `app/core/redis.py`
+- `app/core/security.py`
+- `app/models/audit_log.py`
+- `app/models/base.py`
+- `app/models/broadcast.py`
+- `app/models/group.py`
+- `app/models/message.py`
+- `app/models/user.py`
+- `app/models/user_session.py`
+- `app/services/message_service.py`
+- `app/services/otp_service.py`
+- `app/services/push_service.py`
+- `app/services/self_destruct_worker.py`
+- `app/services/sms_gateway.py`
+- `app/services/storage_service.py`
+- `app/services/ws_manager.py`
+
+### Frontend Context
+
+The Flutter app includes:
+
+- `frontend/lib/main.dart`
+- `frontend/lib/core/api_client.dart`
+- `frontend/lib/core/env.dart`
+- `frontend/lib/core/media_service.dart`
+- `frontend/lib/core/push_service.dart`
+- `frontend/lib/core/theme.dart`
+- `frontend/lib/core/ws_service.dart`
+- `frontend/lib/features/auth/auth_repository.dart`
+- `frontend/lib/features/auth/bloc/auth_bloc.dart`
+- `frontend/lib/features/auth/screens/auth_screen.dart`
+- `frontend/lib/features/auth/screens/splash_screen.dart`
+- `frontend/lib/features/broadcast/broadcast_banner.dart`
+- `frontend/lib/features/chat/chat_repository.dart`
+- `frontend/lib/features/chat/bloc/chat_bloc.dart`
+- `frontend/lib/features/chat/screens/chats_list_screen.dart`
+- `frontend/lib/features/chat/screens/chat_room_screen.dart`
+- `frontend/lib/features/chat/widgets/attach_flow.dart`
+- `frontend/lib/features/chat/widgets/voice_record_button.dart`
+- `frontend/lib/features/groups/groups_repository.dart`
+- `frontend/lib/features/groups/groups_screen.dart`
+- `frontend/lib/features/home/home_screen.dart`
+- `frontend/lib/features/settings/ocr_settings_bloc.dart`
+- `frontend/lib/features/settings/ocr_settings_state.dart`
+- `frontend/test/widget_test.dart`
+
+### Admin Context
+
+The repository includes a basic admin panel:
+
+- `ironlink_admin/app.js`
+- `ironlink_admin/index.html`
+- `ironlink_admin/styles.css`
+
+### Infrastructure Context
+
+The repository includes:
+
+- `docker-compose.yml`
+- `Dockerfile`
+- `nginx/nginx.conf`
+- `nginx/ssl/`
+- `scripts/dev_get_otp.py`
+- `scripts/generate_ssl.sh`
+- `scripts/init_db.sql`
+- `scripts/seed_dev_users.py`
+
+### Testing Context
+
+The repository includes:
+
+- `tests/conftest.py`
+- `tests/fakes.py`
+- `tests/test_auth_schemas.py`
+- `tests/test_otp_service.py`
+- `tests/test_security.py`
+- `tests/test_ws_manager.py`
+
+### Repository Hygiene Rule
+
+Do not treat virtual environments, build artifacts, caches, or generated files as product features. These include:
+
+- `.venv/`
+- `__pycache__/`
+- `.pytest_cache/`
+- `frontend/build/`
+- `frontend/.dart_tool/`
+- `.idea/`
+- compiled `.pyc` files
+- generated plugin registrants
+- temporary build outputs
+
+They are execution artifacts, not product requirements.
+
+---
+
+## 📋 OBJECTIVES
+
+## The Four Pillars of IronLink (Updated)
+
+### 1. TRUST & SECURITY (Stronger than anyone)
+
+- Military-grade end-to-end encryption (Signal Protocol - fully implemented)
+- Zero-knowledge architecture (server never sees plaintext or keys)
+- Self-destruct everything (messages, media, chats, accounts)
+- Advanced privacy controls (Privacy Circles, Ghost Identity)
+- Auditable and transparent (users see who accesses their data)
+
+### 2. INTELLIGENCE & SPEED (Faster and smarter than anyone)
+
+- AI-native features (summarization, translation, smart replies)
+- AI-powered moderation (spam, abuse, harassment detection)
+- Smart search (semantic search across messages, images, voice, files)
+- Real-time voice translation
+- Blazing fast performance (offline-first, optimistic UI)
+
+### 3. COMMUNITY & CREATOR ECONOMY (Beyond anyone)
+
+- Channels (public/private, subscriptions, analytics, monetization)
+- Communities (Discord-style spaces with roles, events, resources)
+- Creator tools (dashboard, monetization, content calendar)
+- Business accounts (catalog, support, CRM)
+- Bots platform (API, webhooks, mini-apps)
+
+### 4. SEAMLESS NETWORK GROWTH & GLOBAL ACCESS (Better than WhatsApp)
+
+- Contacts Sync & Auto-Discovery Engine
+- Privacy-preserving contact matching
+- Instant appearance of new users to their existing contacts
+- Instant discovery of existing contacts by new users
+- One-tap chat opening
+- Invite system for contacts not yet on IronLink
+- Real-time join notifications
+- Contactless discovery via username and QR code
+- **Full multilingual support (100+ languages)**
+- **Real-time message translation**
+- **Voice-to-text and text-to-voice translation**
+- **Cultural adaptation and localization**
+- **Accessibility for all languages (RTL, special characters, etc.)**
+
+---
+
+## 🗣️ [ADDED] FULL MULTILINGUAL PLATFORM SPECIFICATION
+
+### 🎯 Purpose
+
+Build the world's first truly multilingual social messaging platform that feels native in every language. Every user, regardless of their language, should experience IronLink as if it were built specifically for them.
+
+### 🌍 Language Support Strategy
+
+#### Phase 1: Core Languages (MVP)
+- English (en)
+- Arabic (ar)
+- French (fr)
+- Spanish (es)
+- German (de)
+- Hindi (hi)
+- Chinese (zh)
+- Russian (ru)
+- Portuguese (pt)
+- Urdu (ur)
+- Turkish (tr)
+- Indonesian (id)
+
+#### Phase 2: Extended Languages
+- Italian (it)
+- Japanese (ja)
+- Korean (ko)
+- Dutch (nl)
+- Polish (pl)
+- Swedish (sv)
+- Thai (th)
+- Vietnamese (vi)
+- Hebrew (he)
+- Persian (fa)
+- Ukrainian (uk)
+- Swahili (sw)
+
+#### Phase 3: Full Expansion
+- 100+ languages with full UI support
+- Community-contributed translations
+- Automatic language detection
+- Real-time translation between any two languages
+
+### 🏗️ Technical Architecture for Multilingual Support
+
+#### Backend Additions
+
+- `app/models/translation.py` — message translation cache
+- `app/models/language_preference.py` — user language settings
+- `app/models/community_translation.py` — community-contributed translations
+- `app/api/routes/translation.py` — translation endpoints
+- `app/services/translation_service.py` — translation engine (Hugging Face, open-source models)
+- `app/services/language_detection_service.py` — auto-detect user language
+- `app/services/localization_service.py` — i18n/l10n management
+- `app/services/voice_translation_service.py` — voice-to-text and text-to-voice translation
+
+#### Database Tables for Multilingual Support
+
+- `language_preferences` (user_id, preferred_language, auto_translate_enabled)
+- `message_translations` (message_id, target_language, translated_text, translated_at)
+- `community_translations` (string_key, language, translated_value, contributed_by, approved)
+- `voice_translations` (voice_message_id, transcribed_text, translated_text, target_language)
+
+#### Flutter Additions for Multilingual Support
+
+- `lib/core/localization/` — i18n/l10n engine
+  - `app_localizations.dart` — generated localization files
+  - `language_selector.dart` — language selection UI
+  - `translation_manager.dart` — manage real-time translations
+- `lib/features/translation/` — translation feature module
+  - `screens/translation_settings.dart`
+  - `widgets/translate_button.dart`
+  - `bloc/translation_bloc.dart`
+- `lib/features/voice_translation/` — voice translation module
+  - `widgets/voice_translate_button.dart`
+  - `screens/voice_translation_screen.dart`
+
+### 🌐 User Language Flow
+
+1. **First Launch**:
+   - App detects device language
+   - If supported, app loads in that language
+   - If not, app asks user to select a language
+
+2. **User Settings**:
+   - Users can change language at any time
+   - Users can enable/disable auto-translation
+   - Users can select primary and secondary languages
+
+3. **Chat Experience**:
+   - Messages appear in the user's preferred language
+   - If message is in a different language, user can translate with one tap
+   - Users can enable auto-translation for all incoming messages
+
+4. **Voice Messages**:
+   - Voice notes are transcribed in the user's language
+   - Users can translate voice transcriptions
+   - Future: real-time voice translation
+
+5. **Community Participation**:
+   - Posts appear in the user's preferred language
+   - Users can contribute translations for community content
+   - Moderators can approve/reject community translations
+
+### 🗣️ Real-Time Translation Features
+
+#### Message Translation
+- **Automatic Translation**: Users can enable auto-translation for all incoming messages
+- **On-Demand Translation**: Tap "Translate" button on any message
+- **Cache**: Translated messages are cached for performance
+- **Language Detection**: Automatically detect the source language
+
+#### Voice Translation
+- **Voice-to-Text**: Transcribe voice messages to text
+- **Text Translation**: Translate transcribed text
+- **Text-to-Voice (Future)**: Translate text and convert to voice in the target language
+
+#### Video Translation (Future)
+- **Subtitles**: Real-time subtitle generation
+- **Translation**: Translate subtitles
+- **Voice Overlay**: Translated voice overlay for videos
+
+### 🛠️ Technical Implementation Details
+
+#### Translation Engine (Free/Open-Source)
+
+- **Primary**: Hugging Face free inference API (Helsinki-NLP/opus-mt-* models)
+- **Backup**: Local open-source models (if self-hosted)
+- **Cache**: Redis cache for translations (TTL: 30 days)
+- **Rate Limiting**: Prevent abuse of translation API
+
+#### Language Detection
+
+- **Primary**: Hugging Face free inference API (fasttext language detection)
+- **Backup**: Google Translate API (if needed, but avoid)
+- **Cache**: Redis cache for language detection
+
+#### Localization (i18n/l10n)
+
+- **Flutter**: `flutter_localizations` + `intl` packages
+- **Backend**: `babel` or equivalent for Python
+- **Format**: ARB files for Flutter, JSON for backend
+- **Community Translations**: Users can submit translations via the app
+- **Approval**: Moderators review and approve community translations
+
+### 📝 Multilingual Content Moderation
+
+- **Cross-Language Moderation**: Detect spam/abuse across multiple languages
+- **Cultural Sensitivity**: Moderation rules must be culturally aware
+- **Reporting**: Users can report content in any language
+- **Review**: Moderators can review content in their preferred language
+
+### 🔒 Privacy & Security for Multilingual Features
+
+- **Translation Data**: Translations are processed on the server but not stored permanently
+- **Voice Transcription**: Voice data is processed on the server but not stored
+- **Language Preferences**: User language preferences are stored encrypted
+- **Consent**: Users must consent to translation features
+
+### 📈 Success Metrics for Multilingual Support
+
+- % of users using the app in their preferred language
+- % of users with auto-translation enabled
+- Average translation latency (target: < 200ms)
+- Translation accuracy score (target: > 90%)
+- Community translation contribution rate
+- User satisfaction by language
+
+### 🏆 Why This Beats WhatsApp and Telegram
+
+| Feature | WhatsApp | Telegram | IronLink |
+|---------|----------|----------|----------|
+| UI Languages | Limited | Some | 100+ (user-contributed) |
+| Message Translation | ❌ | ❌ | ✅ (auto/on-demand) |
+| Voice Translation | ❌ | ❌ | ✅ |
+| RTL Support | Partial | Partial | ✅ (Full RTL) |
+| Community Translations | ❌ | ❌ | ✅ |
+| Cultural Adaptation | ❌ | ❌ | ✅ |
+| Real-time Voice Translation | ❌ | ❌ | ✅ (Future) |
+| Accessibility for All Languages | ❌ | ❌ | ✅ |
+
+---
+
+## 🗺️ FOUR-PHASE ROADMAP (UPDATED WITH MULTILINGUAL SUPPORT)
+
+## Phase 1: Core Messaging Excellence (Weeks 1-4)
+
+**Goal**: Rock-solid messaging foundation that outperforms WhatsApp.
+
+### Identity & Authentication
+
+- [x] Phone + OTP registration
+- [x] Username system (optional)
+- [ ] QR code for adding contacts
+- [ ] Device sessions management
+- [ ] 2FA (optional)
+- [ ] Recovery codes
+
+### [ADDED] Multilingual First Launch Experience
+
+- [ ] Language detection from device settings
+- [ ] Language selection screen (100+ languages supported)
+- [ ] RTL/LTR layout switch based on language
+- [ ] App content loading in user-selected language
+- [ ] Offline translation cache
+
+### Contacts Sync & Discovery (CRITICAL — Better than WhatsApp)
+
+- [ ] Phone contacts permission flow (iOS/Android runtime permission UX)
+- [ ] Privacy-preserving contact hashing (SHA-256 + per-user salt or equivalent) before upload
+- [ ] Contact discovery matching service (match hashed contacts to registered users)
+- [ ] Incremental contact sync (only sync changes, not full book every time)
+- [ ] Auto-display of existing IronLink users found in the contact book
+- [ ] One-tap "Open Chat" with any discovered contact
+- [ ] Real-time "Contact joined IronLink" push notification
+- [ ] "Invite to IronLink" flow for contacts not yet registered (SMS/share link)
+- [ ] Save-and-link app profiles to phone contact entries
+- [ ] Contact deduplication & merging logic
+- [ ] Granular privacy: "Who can find me by phone number" (Everyone / Contacts of Contacts / Nobody)
+- [ ] Opt-in/opt-out contact sync toggle with full data deletion on opt-out
+- [ ] Background re-sync scheduler + manual refresh
+- [ ] Discovery by username / QR as a contactless alternative
+- [ ] Anti-abuse rate limiting for discovery endpoints
+- [ ] Consent screen explaining what is synced and what is never uploaded
+
+### Chat Features
+
+- [x] 1-to-1 chat
+- [x] Group chat
+- [ ] Reply to message
+- [ ] Forward message
+- [ ] Edit message
+- [ ] Delete for me
+- [ ] Delete for everyone
+- [ ] Pin message
+- [ ] Mention users
+- [x] Reactions
+- [ ] Message search
+- [x] Message status (sent/delivered/read)
+- [x] Typing indicator
+- [ ] Draft messages
+- [ ] Message formatting (bold, italic, monospace)
+- [ ] Scheduled messages
+- [ ] Saved messages / Notes
+- [ ] **[ADDED]** Message translation (auto/on-demand)
+
+### Media
+
+- [x] Images
+- [ ] Video
+- [x] Voice notes
+- [ ] Files
+- [ ] Stickers
+- [ ] GIFs
+- [ ] Documents
+- [ ] Media compression
+- [ ] Thumbnails
+- [ ] Blur preview
+- [ ] Progress bar
+- [ ] Resumable upload
+- [ ] EXIF stripping
+- [ ] Media viewer
+
+### Voice
+
+- [x] Voice messages recording
+- [x] Waveform player
+- [x] Speed control (1x/1.5x/2x)
+- [ ] Noise reduction
+- [ ] Voice-to-text
+- [ ] **[ADDED]** Voice-to-text translation (transcribe and translate in one step)
+
+### Notifications
+
+- [x] FCM/APNs
+- [ ] Silent push for sync
+- [ ] Notification channels
+- [ ] Custom sounds
+- [ ] Mute chat/group
+- [ ] Do Not Disturb
+- [ ] **[ADDED]** Notification language (user-selected language)
+
+### Performance
+
+- [ ] Offline-first
+- [ ] Local cache
+- [ ] Pagination
+- [x] Optimistic UI
+- [ ] Retry queue/outbox
+- [ ] Lazy loading
+
+---
+
+## Phase 2: Privacy & Security Leadership (Weeks 5-8)
+
+**Goal**: People choose IronLink because it's the most secure platform.
+
+### Privacy Features
+
+- [ ] Hide phone number by default
+- [ ] Communicate via username only
+- [ ] Privacy Circles (Family, Friends, Work, Public, Anonymous)
+- [x] Disappearing messages
+- [x] Self-destruct media
+- [ ] Screenshot detection/notification
+- [ ] Prevent forwarding from private chats
+- [x] Secret chats E2EE
+- [ ] Private groups
+- [ ] Invite-only groups
+- [ ] Temporary identities / Ghost profiles
+- [ ] Anti-screenshot in secret chats
+- [ ] Hidden chats with lock
+
+### Security Features
+
+- [x] E2EE for private chats (Signal Protocol)
+- [ ] E2EE for groups (MLS protocol)
+- [ ] Device keys
+- [ ] Key verification (safety numbers)
+- [ ] Recovery phrase
+- [ ] Encrypted cloud backup (optional)
+- [ ] Remote logout
+- [ ] Remote wipe
+- [ ] Session activity log
+- [ ] Login alerts
+- [ ] Suspicious login detection
+- [ ] Rate limiting
+- [ ] CAPTCHA
+- [ ] Device fingerprinting
+- [ ] Abuse detection
+
+### Privacy Superpowers
+
+- **IronVault**: E2EE with disappearing messages, no forwarding, screenshot alerts, device-limited access, encrypted backups
+- **Ghost Identity**: Temporary identities without phone number, self-destructing
+- **Privacy Circles**: Different rules per circle (visibility, screenshots, message retention)
+- **Self-Destruct Everything**: Message TTL, media TTL, chat expiry, account deletion, group auto-archive, channel post expiry
+
+---
+
+## Phase 3: Communities, Channels & Creator Economy (Weeks 9-14)
+
+**Goal**: Transform from messaging app to social platform.
+
+### Channels
+
+- [ ] Public/Private channels
+- [ ] Unlimited subscribers
+- [ ] Admin roles
+- [ ] Scheduled posts
+- [ ] Comments
+- [ ] Reactions
+- [ ] Analytics (views, growth, retention)
+- [ ] Monetization (subscriptions, paid channels)
+- [ ] Channel verification
+- [ ] Recommended channels
+- [ ] Channel categories
+- [ ] Cross-posting
+- [ ] **[ADDED]** Multilingual channel content (auto-translation for subscribers)
+- [ ] **[ADDED]** Channel content in multiple languages
+
+### Groups / Communities
+
+- [ ] Large groups (10k+)
+- [ ] Subgroups/topics
+- [ ] Forums-style threads
+- [ ] Roles & permissions
+- [ ] Admin audit log
+- [ ] Pinned messages
+- [ ] Slow mode
+- [ ] Join requests
+- [ ] Approval questions
+- [ ] Rules acceptance
+- [ ] Events
+- [ ] Polls
+- [ ] Tasks
+- [ ] Announcements
+- [ ] Community insights
+- [ ] Bot moderation
+- [ ] **[ADDED]** Community language (each community can have a primary language)
+- [ ] **[ADDED]** Multilingual community content
+
+### Creator Tools
+
+- [ ] Stories/status
+- [ ] Live streaming
+- [ ] Audio spaces
+- [ ] Paid communities
+- [ ] Tips/gifts
+- [ ] Digital subscriptions
+- [ ] Creator dashboard
+- [ ] Content analytics
+- [ ] Audience segmentation
+- [ ] Exclusive content
+- [ ] **[ADDED]** Multilingual creator content
+
+### Social Graph
+
+- [ ] Follow system
+- [ ] Username profiles
+- [ ] Profile badges
+- [ ] Bio/links
+- [ ] Public posts (optional)
+- [ ] Discover feed
+- [ ] Trending channels
+- [ ] Local communities
+- [ ] **[ADDED]** Language-based content discovery
+
+### Community Superpowers
+
+- **Spaces/Circles**: Communities with channels, chat rooms, voice rooms, events, resources, roles, subscriptions
+- **Topics/Threads**: Organized like Discord (General, Announcements, Support, Media, Offtopic)
+- **Events**: Create, RSVP, reminders, calendar export, location, check-in
+- **Polls/Tasks/Docs**: Polls, quizzes, tasks, shared notes, shared calendar, collaborative lists
+
+### Creator Superpowers
+
+- **Monetization**: Paid subscriptions, paid channels, tips, gifts, exclusive stories, paid live, pay-per-view
+- **Creator Studio**: Analytics, audience insights, scheduled posts, A/B titles, content calendar, subscriber CRM
+- **Live**: Live streaming, audio spaces, co-hosts, donations, chat moderation, stream recording
+
+### Business Superpowers
+
+- **IronLink Business**: Business profile, catalog, support tickets, automated flows, labels, broadcast campaigns, analytics
+- **Commerce**: Products, cart, checkout, payments, invoices, order updates
+- **API for Companies**: Webhooks, customer messaging API, chatbots, CRM integrations
+
+---
+
+## Phase 4: Super App / Platform (Weeks 15-20+)
+
+**Goal**: Ecosystem, not just an app.
+
+### Bots & Developers
+
+- [ ] Bot API
+- [ ] Webhooks
+- [ ] Inline bots
+- [ ] Payments bots
+- [ ] Support bots
+- [ ] Automation workflows
+- [ ] SDKs (Dart, Python, JS)
+- [ ] Mini apps
+- [ ] App center
+- [ ] Developer monetization
+- [ ] **[ADDED]** Multilingual bot support (bots can communicate in multiple languages)
+- [ ] **[ADDED]** Bot translation API
+
+### AI Superpowers
+
+- [ ] IronAI Assistant (summarize chats, translate, suggest replies, voice-to-text, meeting notes, task extraction)
+- [ ] Smart Search (keywords, semantic search, OCR search, voice transcripts, PDF search)
+- [ ] AI Moderation (spam, harassment, scam links, impersonation, auto-quarantine)
+- [ ] Real-time Voice Translation (voice messages to text/speech, translated calls, video subtitles)
+
+### [ADDED] Advanced AI Multilingual Features
+
+- [ ] AI Language Detection (auto-detect the language of any message)
+- [ ] AI Message Translation (translate messages between 100+ languages)
+- [ ] AI Voice Transcription (transcribe voice messages in 50+ languages)
+- [ ] AI Voice Translation (translate transcribed voice messages)
+- [ ] AI Content Localization (adapt content for cultural context)
+- [ ] AI Text-to-Voice (convert translated text to voice in target language)
+- [ ] AI Language Suggestions (suggest language settings based on user behavior)
+- [ ] AI Multilingual Moderation (detect spam/abuse across multiple languages)
+- [ ] AI Cultural Sensitivity (flag content that may be culturally inappropriate)
+
+### Wallet / Payments
+
+- [ ] Wallet
+- [ ] P2P transfers
+- [ ] Tipping
+- [ ] Subscriptions
+- [ ] Gifts
+- [ ] Business payments
+- [ ] Crypto (optional, regulatory-dependent)
+- [ ] KYC (country-dependent)
+
+---
+
+## 🏗️ TECHNICAL ARCHITECTURE (UPDATED)
+
+## Backend Architecture (Modular Monolith → Microservices)
+
+```text
+app/
+├── api/
+│   └── v1/
+│       ├── auth.py
+│       ├── users.py
+│       ├── contacts.py
+│       ├── chats.py
+│       ├── messages.py
+│       ├── groups.py
+│       ├── channels.py
+│       ├── communities.py
+│       ├── company.py
+│       ├── company_internal_id.py
+│       ├── media.py
+│       ├── notifications.py
+│       ├── search.py
+│       ├── moderation.py
+│       ├── admin.py
+│       ├── bots.py
+│       ├── ocr.py
+│       ├── translation.py          [ADDED]
+│       ├── language.py             [ADDED]
+│       └── websocket.py
+├── core/
+│   ├── security.py
+│   ├── database.py
+│   ├── redis.py
+│   ├── settings.py
+│   └── permissions.py
+├── models/
+│   ├── user.py
+│   ├── device.py
+│   ├── session.py
+│   ├── contact.py
+│   ├── contact_hash.py
+│   ├── user_phone_index.py
+│   ├── contact_relation.py
+│   ├── contact_invite.py
+│   ├── contact_sync_job.py
+│   ├── contact_sync_setting.py
+│   ├── chat.py
+│   ├── chat_member.py
+│   ├── message.py
+│   ├── message_receipt.py
+│   ├── reaction.py
+│   ├── media.py
+│   ├── group.py
+│   ├── group_role.py
+│   ├── group_permission.py
+│   ├── channel.py
+│   ├── channel_post.py
+│   ├── community.py
+│   ├── community_member.py
+│   ├── community_role.py
+│   ├── community_permission.py
+│   ├── community_event.py
+│   ├── community_event_rsvp.py
+│   ├── community_resource.py
+│   ├── company.py
+│   ├── company_member.py
+│   ├── company_role.py
+│   ├── company_permission.py
+│   ├── company_audit_log.py
+│   ├── company_department.py
+│   ├── company_task.py
+│   ├── company_setting.py
+│   ├── company_internal_id.py
+│   ├── subscription.py
+│   ├── story.py
+│   ├── report.py
+│   ├── block.py
+│   ├── audit_log.py
+│   ├── feature_flag.py
+│   ├── wallet.py
+│   ├── transaction.py
+│   ├── bot.py
+│   ├── webhook_event.py
+│   ├── translation.py             [ADDED]
+│   ├── language_preference.py      [ADDED]
+│   ├── voice_translation.py        [ADDED]
+│   └── community_translation.py    [ADDED]
+├── schemas/
+├── services/
+│   ├── auth_service.py
+│   ├── contact_discovery_service.py
+│   ├── contact_sync_worker.py
+│   ├── invite_service.py
+│   ├── chat_service.py
+│   ├── message_service.py
+│   ├── presence_service.py
+│   ├── receipt_service.py
+│   ├── reaction_service.py
+│   ├── group_service.py
+│   ├── channel_service.py
+│   ├── community_service.py
+│   ├── company_service.py
+│   ├── company_internal_id_service.py
+│   ├── audit_service.py
+│   ├── media_service.py
+│   ├── storage_service.py
+│   ├── notification_service.py
+│   ├── push_service.py
+│   ├── search_service.py
+│   ├── moderation_service.py
+│   ├── encryption_service.py
+│   ├── ocr_service.py
+│   ├── ai_service.py
+│   ├── analytics_service.py
+│   ├── payment_service.py
+│   ├── bot_service.py
+│   ├── translation_service.py      [ADDED]
+│   ├── language_detection_service.py [ADDED]
+│   ├── localization_service.py    [ADDED]
+│   └── voice_translation_service.py [ADDED]
+├── repositories/
+├── workers/
+│   ├── self_destruct_worker.py
+│   ├── media_processing_worker.py
+│   ├── moderation_worker.py
+│   ├── indexing_worker.py
+│   ├── contact_sync_worker.py
+│   ├── translation_worker.py       [ADDED]
+│   └── analytics_worker.py
+├── events/
+└── integrations/
+    ├── sms/
+    ├── push/
+    ├── storage/
+    ├── ai/
+    ├── payments/
+    ├── translation/                [ADDED]
+    └── voice/                      [ADDED]
+```
+
+## Data Layer (Updated)
+
+### PostgreSQL (Primary Relational Store)
+
+- Users, chats, messages, groups, channels, communities
+- Companies, company members, company roles, company permissions
+- Company internal IDs and company audit logs
+- Contact hashes, phone index, contact relations, invites, sync jobs
+- Subscriptions, payments, audit logs
+- **Translations, language preferences, voice translations, community translations** [ADDED]
+- Full ACID compliance
+- Native JSONB support for flexible schemas
+- Row-level security for multi-tenant isolation
+
+### Redis (Caching & Realtime)
+
+- Sessions
+- OTP codes
+- Rate limits
+- Presence (online status)
+- Typing indicators
+- WebSocket pub/sub
+- Hot feeds
+- Caching (frequently accessed data)
+- Hashed phone index for fast contact matching
+- Contact sync job state and temporary matching caches
+- **Translation cache (TTL: 30 days)** [ADDED]
+- **Language detection cache** [ADDED]
+
+### Object Storage (MinIO → Cloudflare R2 / S3)
+
+- Images
+- Videos
+- Files
+- Voice notes
+- Backups
+- Signed URLs (5-minute expiry)
+- EXIF stripping (privacy)
+- Thumbnails
+
+### Search Engine (OpenSearch / Meilisearch)
+
+- Full-text search across messages
+- Semantic search
+- OCR search
+- Voice transcript search
+- File content search
+- **Multilingual search support** [ADDED]
+
+### Queue / Workers (Celery / Arq / Dramatiq)
+
+- Media processing (compression, thumbnails)
+- OCR processing
+- Moderation scanning
+- Indexing
+- Analytics aggregation
+- Contact sync batch matching & join-event detection
+- Invite conversion tracking
+- **Translation processing (batch translation)** [ADDED]
+
+### Realtime (FastAPI WebSockets + Redis Pub/Sub)
+
+- Connection manager (multi-node)
+- Redis pub/sub for cross-node broadcasting
+- Horizontal scaling via sticky sessions
+- Realtime events for new contact joined, new match found, chat created
+- **Realtime translation updates** [ADDED]
+
+---
+
+## Flutter Architecture (Proposed Organization)
+
+```text
+lib/
+├── main.dart
+├── app/
+│   ├── di.dart
+│   ├── router.dart
+│   └── theme.dart
+├── core/
+│   ├── network/
+│   │   ├── api_client.dart
+│   │   └── websocket_client.dart
+│   ├── storage/
+│   │   ├── local_db.dart
+│   │   └── secure_storage.dart
+│   ├── media/
+│   │   ├── media_uploader.dart
+│   │   └── media_compressor.dart
+│   ├── push/
+│   │   └── push_handler.dart
+│   ├── crypto/
+│   │   ├── signal.dart
+│   │   └── contact_hasher.dart
+│   ├── localization/                 [ADDED]
+│   │   ├── app_localizations.dart
+│   │   ├── language_selector.dart
+│   │   └── translation_manager.dart
+│   └── utils/
+├── features/
+│   ├── auth/
+│   │   ├── screens/
+│   │   ├── bloc/
+│   │   └── auth_repository.dart
+│   ├── contacts/
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── bloc/
+│   │   └── contacts_repository.dart
+│   ├── translation/                  [ADDED]
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── bloc/
+│   │   └── translation_repository.dart
+│   ├── voice_translation/            [ADDED]
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── bloc/
+│   │   └── voice_translation_repository.dart
+│   ├── chat/
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── bloc/
+│   │   └── chat_repository.dart
+│   ├── groups/
+│   ├── channels/
+│   ├── communities/
+│   ├── company/
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── bloc/
+│   │   └── company_repository.dart
+│   ├── calls/
+│   ├── stories/
+│   ├── settings/
+│   ├── wallet/
+│   ├── ai/
+│   └── business/
+└── shared/
+    ├── widgets/
+    └── models/
+```
+
+### State Management
+
+- BLoC (currently used, good choice)
+- Repository pattern for data abstraction
+- Use cases for business logic
+- Entities for domain models
+
+### Local Database (Drift / Isar / Hive)
+
+- Messages cache
+- Contacts
+- Contact hashes & discovery results cache
+- Drafts
+- Outbox
+- Media metadata
+- Company membership cache (non-sensitive only)
+- **Translation cache (offline translations)** [ADDED]
+
+### Secure Storage
+
+- `flutter_secure_storage` for tokens & keys
+- Encrypted local secrets
+- Biometric unlock (optional)
+
+---
+
+## 📊 FEATURE PRIORITY MATRIX (UPDATED)
+
+## P0: MUST HAVE NOW (MVP)
+
+- [x] Auth/OTP
+- [x] User profile
+- [ ] Contacts
+- [x] 1-to-1 chat
+- [x] Groups
+- [x] Media upload
+- [x] Push notifications
+- [x] WebSocket
+- [x] Message receipts
+- [x] Typing indicator
+- [ ] Search messages
+- [ ] Block/report
+- [x] Settings privacy
+- [x] Stable notifications
+- [ ] Contacts Sync & Auto-Discovery (hashed matching)
+- [ ] One-tap open chat with discovered contact
+- [ ] "Contact joined IronLink" notification
+- [ ] Contacts permission consent screen
+- [ ] Contact sync opt-in/opt-out toggle
+- [ ] **[ADDED]** Language detection from device
+- [ ] **[ADDED]** Language selection screen
+- [ ] **[ADDED]** RTL/LTR layout support
+- [ ] **[ADDED]** App localization (12 core languages)
+
+## P1: SOON (Next 2-4 Weeks)
+
+- [x] Voice messages
+- [ ] Video messages
+- [ ] Replies/edit/delete/forward
+- [x] Reactions
+- [ ] Mentions
+- [ ] Pin
+- [x] Disappearing messages
+- [ ] Saved messages
+- [ ] QR add contact
+- [ ] Device management
+- [ ] Basic channels
+- [x] OCR search
+- [ ] Admin moderation
+- [ ] Invite-to-IronLink flow with deep links
+- [ ] Contact deduplication & merging
+- [ ] Background re-sync scheduler
+- [ ] Manual refresh contacts
+- [ ] **[ADDED]** Message translation (auto/on-demand)
+- [ ] **[ADDED]** Voice-to-text translation
+- [ ] **[ADDED]** Extended languages (24 languages)
+- [ ] **[ADDED]** Community translations (user-contributed)
+
+## P2: COMPETITIVE ADVANTAGE (Month 2-3)
+
+- [x] E2EE secret chats
+- [ ] Channels advanced
+- [ ] Communities/topics
+- [ ] Stories/status
+- [ ] Voice calls
+- [ ] Video calls
+- [ ] AI assistant
+- [ ] Translate
+- [ ] Bots basic
+- [ ] Analytics
+- [ ] Creator tools
+- [ ] Private Set Intersection contact matching
+- [ ] Username/QR contactless discovery
+- [ ] Advanced discovery privacy controls
+- [ ] **[ADDED]** Real-time voice translation
+- [ ] **[ADDED]** Full multilingual moderation
+- [ ] **[ADDED]** 100+ languages
+
+## P3: WORLD-CLASS (Month 4-6+)
+
+- [ ] Group E2EE
+- [ ] Live streaming
+- [ ] Spaces
+- [ ] Payments/wallet
+- [ ] Mini apps
+- [ ] Business API
+- [ ] AI voice translation
+- [ ] Discovery feed
+- [ ] Monetization
+- [ ] Enterprise features
+- [ ] **[ADDED]** Text-to-voice translation
+- [ ] **[ADDED]** Video subtitle translation
+
+---
+
+## 🎨 UNIQUE FEATURES (Competitive Advantage)
+
+## 1. Iron Circles
+
+Smart relationship system:
+
+- Family
+- Friends
+- Work
+- Public
+- Anonymous
+- Each circle has different privacy rules
+
+## 2. Time-Locked Chats
+
+Complete chats that expire after:
+
+- 24 hours
+- 7 days
+- After first read
+- Specific date
+
+## 3. Ghost Identity
+
+- Temporary identities without phone number
+- Self-destruct after period
+- Perfect for support, safe dating, anonymous feedback
+
+## 4. Offline Mesh Mode (Future)
+
+- Messages via Bluetooth/Wi-Fi Direct
+- Useful in low-connectivity areas or emergencies
+
+## 5. AI Meeting Notes
+
+- Transcription
+- Summary
+- Action items
+- Translation
+
+## 6. Search Everything
+
+- Messages
+- OCR images
+- Voice transcripts
+- PDFs
+- Links
+- Location
+
+## 7. Private Stories
+
+- Self-destruct
+- Circle-limited
+- No screenshot alerts
+- Anonymous reactions
+
+## 8. Community OS
+
+- Roles
+- Tasks
+- Events
+- Resources
+- Payments
+- Bots
+- Analytics
+
+## 9. Auto-Discovery Contact Engine (Added)
+
+- Privacy-preserving hashed contact matching
+- Instant mutual appearance for new and existing users
+- Real-time join notifications with one-tap chat
+- Invite system with deep links
+- Contactless discovery via username/QR
+- Full reversibility and data deletion
+- No raw contact phone numbers uploaded
+- No exposure of non-users or non-matching contacts
+
+## 10. [ADDED] Fully Multilingual Platform
+
+- 100+ languages supported
+- Real-time message translation
+- Voice-to-text and text-to-voice translation
+- Automatic language detection
+- RTL/LTR support
+- Community-contributed translations
+- Cultural adaptation and localization
+- Global content moderation
+
+## 11. [ADDED] Real-Time Voice Translation
+
+- Transcribe voice messages in 50+ languages
+- Translate transcribed text instantly
+- Future: real-time voice-to-voice translation
+- Subtitles for videos
+
+---
+
+## 📈 SUCCESS METRICS (KPIs)
+
+## Activation
+
+- % users who send first message
+- % users who add contacts
+- Time to register
+- % users who grant contacts permission
+- Average discovered contacts per new user
+- Time from install → first chat opened
+- **[ADDED]** % users using app in preferred language
+- **[ADDED]** % users who enable auto-translation
+
+## Retention
+
+- D1 retention
+- D7 retention
+- D30 retention
+- **[ADDED]** Retention by language (identify underperforming languages)
+
+## Engagement
+
+- Messages per user per day
+- Session time
+- Media usage rate
+- Voice usage rate
+- Groups/channels created
+- Invite conversion rate (invites → installs → chats)
+- Contact-to-chat conversion rate
+- **[ADDED]** Translation usage rate
+- **[ADDED]** Voice transcription usage rate
+
+## Quality
+
+- Crash-free sessions
+- API p95 latency
+- Message delivery p95
+- Push delivery rate
+- Upload success rate
+- WebSocket reconnect rate
+- Contact sync success rate
+- **[ADDED]** Translation latency (target: < 200ms)
+- **[ADDED]** Translation accuracy (target: > 90%)
+
+## Safety
+
+- Reports per 1000 users
+- Spam block rate
+- False positive rate
+- Abuse response time
+- Contact sync opt-out rate (privacy health)
+- Discovery endpoint abuse attempts
+- **[ADDED]** Cross-language moderation accuracy
+
+---
+
+## 🔐 SECURITY & PRIVACY REQUIREMENTS
+
+## Authentication
+
+- OTP rate limiting
+- IP/device limits
+- CAPTCHA after failed attempts
+- Temporary tokens
+- Refresh token rotation
+- Device binding
+- Passkeys (future)
+
+## Authorization
+
+- RBAC for groups and channels
+- RBAC for companies and company admins
+- Roles: owner/admin/moderator/member
+- Company roles: super_admin/admin/moderator/hr/member
+- Permission matrix
+- Audit logs
+
+## Encryption
+
+- TLS everywhere
+- Encrypted at rest
+- E2EE for secret chats
+- Key management service
+- Device keys
+- Recovery kits
+
+## Contact Privacy
+
+- Hash all contact phone numbers on-device before upload
+- Never store raw contact phone numbers
+- Salt hashes to prevent rainbow-table reversal
+- Honor per-user discovery preferences
+- Full deletion of synced data on opt-out
+- Rate-limit discovery endpoints against enumeration
+- Do not expose non-matching contacts
+- Do not expose which users searched for which numbers
+- Do not leak contact graph through APIs, logs, or WebSocket events
+
+## [ADDED] Translation Privacy
+
+- Translation data is processed but not permanently stored
+- Users must consent to translation features
+- Translation data is not used for advertising or profiling
+- Users can opt out of translation at any time
+
+## [ADDED] Voice Privacy
+
+- Voice recordings are processed on the server but not stored
+- Users must consent to voice transcription/translation
+- Voice data is not used for advertising or profiling
+
+## Abuse Prevention
+
+- Spam detection
+- Link reputation
+- Invite rate limits
+- Report system
+- Block system
+- Mute
+- Shadow restriction
+- Appeal process
+- **[ADDED]** Cross-language abuse detection
+
+## Privacy Compliance
+
+- GDPR
+- CCPA
+- Data residency
+- Right to delete
+- Data export
+- Age restrictions
+- App store privacy labels
+- Transparency report
+- **[ADDED]** Translation data compliance
+- **[ADDED]** Voice data compliance
+
+## Company Mode Privacy Requirements
+
+- Internal IDs must never appear in public UI
+- Internal IDs must be protected by role-based access
+- Admin access to internal IDs must be logged
+- Internal IDs must not be used for social discovery
+- Internal IDs must not leak through WebSocket events or public APIs
+
+---
+
+## 📝 EXECUTION PLAN (First 30 Days)
+
+## Week 1: Foundation
+
+- Finalize product spec
+- Define MVP features
+- Design database schema (chats/messages/receipts)
+- Improve WebSocket manager
+- Improve auth/session
+- Design contact hash index & discovery schema
+- Define contacts consent UX and privacy copy
+- **[ADDED]** Design multilingual architecture
+- **[ADDED]** Define language support strategy
+- **[ADDED]** Set up localization framework (Flutter/Backend)
+
+## Week 2: Chat UI
+
+- Professional chat UI
+- Message list pagination
+- Outbox pattern
+- Send/receive realtime
+- Basic media upload
+- Prepare contacts module structure in Flutter
+- **[ADDED]** Language detection implementation
+- **[ADDED]** Language selection screen
+- **[ADDED]** RTL/LTR layout support
+
+## Week 3: Core Features
+
+- Receipts
+- Typing
+- Presence
+- Block/report
+- Notifications
+- Local cache
+- Contacts permission + hashing + first sync
+- Contact matching endpoint
+- Discovered contacts list UI
+- **[ADDED]** Message translation (auto/on-demand)
+- **[ADDED]** Voice-to-text translation
+- **[ADDED]** Translation cache
+
+## Week 4: Groups & Polish
+
+- Groups v1
+- Basic search
+- Privacy settings
+- Admin moderation basics
+- Testing & bug fixing
+- Contact discovery matches + one-tap open chat
+- Contact joined notification
+- Invite flow v1
+- **[ADDED]** Community translations
+- **[ADDED]** Multilingual moderation
+
+---
+
+## 🔥 TOP 20 COMPETITIVE FEATURES (UPDATED)
+
+The original Top 20 list remains unchanged. Added items are marked as additions.
+
+1. E2EE secret chats
+2. Disappearing messages
+3. Username without phone number
+4. AI summarize chats
+5. AI translation
+6. Voice-to-text
+7. OCR search
+8. Channels with analytics
+9. Communities/topics
+10. Roles & permissions
+11. Private Stories
+12. Voice/video calls
+13. Live streaming
+14. Wallet/tips
+15. Bots platform
+16. Business accounts
+17. Scheduled messages
+18. Smart search
+19. Anti-spam AI
+20. Multi-device secure sync
+
+### Added Critical Features
+
+21. Auto-Discovery Contact Engine (hashed, private, instant)
+22. **[ADDED]** 100+ Language Support (full UI, real-time translation)
+23. **[ADDED]** Real-Time Voice Translation (voice-to-text and text-to-voice)
+
+---
+
+## 🌟 PRODUCT TIERS (UPDATED)
+
+## IronLink Core
+
+- Private messaging
+- Groups
+- Channels
+- Media
+- Voice notes
+- Contacts sync & auto-discovery
+- **[ADDED]** 12 core languages
+- **[ADDED]** Message translation (auto/on-demand)
+
+## IronLink Plus
+
+- AI assistant
+- Advanced privacy
+- Smart search
+- Voice/video calls
+- **[ADDED]** 24 languages
+- **[ADDED]** Voice-to-text translation
+
+## IronLink Pro
+
+- Creator monetization
+- Business tools
+- API/bots
+- Communities OS
+- Company Mode
+- **[ADDED]** 100+ languages
+- **[ADDED]** Real-time voice translation
+- **[ADDED]** Full multilingual content moderation
+- **[ADDED]** Community translations
+
+---
+
+## 💼 SPECIAL FEATURE: DUAL MODE (Normal + Company)
+
+## Normal Mode (Default)
+
+- Full WhatsApp/Telegram-like experience
+- All standard features (chats, groups, channels, media, calls, AI, etc.)
+- E2EE for private chats
+- Privacy Circles
+- Creator tools
+- Monetization
+- Contacts sync & auto-discovery
+- **[ADDED]** Full multilingual support
+
+## Company Mode (Enterprise/Team)
+
+**Purpose**: Secure, managed collaboration space for organizations and teams.
+
+### Key Differentiators
+
+#### Admin Control & Oversight
+
+- **Super Admin**: Full control over company space
+- **Assign Moderators**: Like Clubhouse, admins can appoint moderators with specific permissions
+- **Member Management**: Add/remove members, change roles, demote to regular member
+- **Customizable Permissions**: Granular control over what members can see and do
+
+#### Advanced Security
+
+- **Highest-level security protocols**: Enterprise-grade protection
+- **Activity Audit Log**: Complete transparency of who accessed what and when
+- **Device Management**: Control which devices can access company data
+- **Data Loss Prevention**: Prevent forwarding/screenshots of sensitive content
+- **Encrypted Backups**: Optional end-to-end encrypted backups
+
+#### Organization Management
+
+- **Company Profile**: Custom branding and information
+- **Department/Team Structure**: Organize members by departments
+- **Member Directory**: Searchable member list with roles
+- **Join Controls**: Invite-only, approval required, or open enrollment
+- **Internal Employee Identification**: Admin-only mapping for employee, military, national/service, or custom organization IDs
+
+#### Enhanced Communication
+
+- **Company Broadcasts**: Send important announcements to all members
+- **Secure Document Sharing**: Share files with access controls
+- **Task Management**: Assign and track tasks within teams
+- **Meeting Scheduling**: Integrated calendar with reminders
+- **Polls & Surveys**: Gather team feedback
+- **[ADDED]** Multilingual company communication
+
+#### Modular & Extensible
+
+- **Add/Remove Features**: Admin can enable/disable modules
+- **Third-party Integrations**: Connect with existing tools (Slack, Teams, Jira, etc.)
+- **API Access**: Integrate with internal systems
+
+---
+
+## 🔢 INTERNAL EMPLOYEE IDENTIFICATION (ADMIN-ONLY MAPPING)
+
+Enhance Company Mode by adding an **internal identification system** that allows organizations to map each user to an internal reference number used only for administrative, organizational, auditing, or workforce-management purposes.
+
+This identifier is **not** the user's public identity. The user still registers with their normal name and appears to other users normally. The internal ID exists only as an admin-facing mapping layer inside the company space.
+
+### Core Concept
+
+In Company Mode, each member may be associated with an optional or required internal identifier, depending on the company's configuration.
+
+The internal identifier helps the Super Admin, admins, and authorized HR/security officers identify employees, staff members, military personnel, or organization members without affecting the normal social/user experience inside the app.
+
+### Identification Options
+
+The Super Admin may enable one or more identifier types, including but not limited to:
+
+- Employee ID
+- Military ID
+- National ID / Service ID
+- Custom Organization ID
+- Department/Unit Code + ID combination
+- External HR system reference ID
+
+The user may be required to select the identifier type and enter the corresponding number when joining the company space, depending on company policy.
+
+### Visibility Rules
+
+- The internal identification number is visible **only to authorized company administrators**.
+- Regular users must **not** see other members' internal IDs.
+- The internal ID must **not** appear in public profiles, normal chat headers, community member lists, or user search results for non-admin users.
+- The user's normal display name remains the primary visible identity for all regular users.
+- The internal ID is used only for:
+  - Admin lookup
+  - Employee/staff mapping
+  - Audit logs
+  - HR/organizational reporting
+  - Permission assignment
+  - Attendance or operational tracking
+  - Company investigations or compliance reviews
+
+### User Registration Flow
+
+1. The user registers or joins the company space using their normal name/profile.
+2. If the company requires internal identification, the user is asked to choose an identifier type:
+   - Employee ID
+   - Military ID
+   - National/Service ID
+   - Custom Organization ID
+3. The user enters the corresponding number.
+4. The system stores the identifier as an **admin-only internal mapping field**.
+5. The user continues using the app normally, with their regular name visible to people.
+6. Admins can later identify the user through the internal ID inside the company dashboard.
+
+### Admin Dashboard Capabilities
+
+Authorized admins must be able to:
+
+- View a member's normal display name
+- View the selected internal ID type
+- View the internal ID number
+- Search members by internal ID
+- Filter members by ID type
+- Edit internal ID mapping if permitted
+- Require verification of internal ID
+- Export member mappings for HR/admin purposes if allowed by policy
+- View audit logs showing who accessed or modified internal ID data
+
+### Privacy & Security Requirements
+
+- Internal IDs must be treated as sensitive organizational data.
+- Access must be protected by role-based permissions.
+- Only roles with explicit permission, such as `VIEW_INTERNAL_IDS`, may see internal IDs.
+- Every admin access to internal ID data should be logged in the company audit log.
+- Internal IDs may be masked by default in the admin UI, for example showing only the last 4 digits, with an option to reveal if permitted.
+- Internal IDs must never leak through public APIs, WebSocket events, notifications, or non-admin endpoints.
+- If required by the organization, internal IDs can be encrypted at rest.
+
+### Company Settings Additions
+
+Add company-level settings to control:
+
+- Enable/disable internal identification
+- Allowed identifier types
+- Whether internal ID is optional or required
+- Whether users can edit their own internal ID after submission
+- Whether internal ID must be unique per company
+- Whether admins can bulk import internal IDs
+- Whether internal IDs are masked by default in admin UI
+
+### Database / Model Additions
+
+Extend the company member model with fields such as:
+
+- `internal_id_type`
+- `internal_id_number`
+- `internal_id_verified`
+- `internal_id_submitted_at`
+- `internal_id_updated_at`
+- `internal_id_visibility` default: `ADMIN_ONLY`
+
+Possible `internal_id_type` values:
+
+- `employee_id`
+- `military_id`
+- `national_id`
+- `service_id`
+- `custom_id`
+
+Add company settings fields such as:
+
+- `internal_id_required`
+- `allowed_internal_id_types`
+- `internal_id_unique_per_company`
+- `internal_id_masking_enabled`
+
+### Backend API Additions
+
+Add endpoints or extend existing company endpoints to support:
+
+- Submitting internal ID during company join
+- Updating internal ID by authorized admin
+- Retrieving internal ID only for authorized admin roles
+- Searching company members by internal ID
+- Filtering company members by internal ID type
+- Logging admin access to internal IDs
+
+Example API behavior:
+
+- Regular member response: exclude `internal_id_number`
+- Admin response: include `internal_id_type` and `internal_id_number`
+- Audit log event: record when admin views or edits internal ID
+
+### Flutter Additions
+
+Add UI components/screens such as:
+
+- `lib/features/company/widgets/internal_id_selector.dart`
+- `lib/features/company/screens/company_internal_id_screen.dart`
+- `lib/features/company/widgets/admin_member_id_card.dart`
+- `lib/features/company/bloc/internal_id_bloc.dart`
+
+User-facing behavior:
+
+- Normal users see their usual name/profile.
+- If internal ID entry is required, show a clean private step inside the company onboarding flow.
+- Do not display the internal ID in normal chats, member lists, or public areas.
+
+Admin-facing behavior:
+
+- Admin dashboard shows the mapped internal ID.
+- Use masked display by default if configured.
+- Provide search/filter by internal ID.
+
+### Acceptance Criteria
+
+- User can register with a normal name and public identity.
+- Company admin can configure internal identification requirements.
+- User can select identifier type when required.
+- User can enter employee ID, military ID, national/service ID, or custom organization ID.
+- Internal ID is stored securely and associated only with the company space.
+- Internal ID is visible only to authorized admins.
+- Regular users cannot access or see other users' internal IDs.
+- Public user experience remains unaffected.
+- Admin dashboard can search and manage members using internal IDs.
+- All sensitive access is logged in the company audit log.
+
+### Important Rule
+
+This feature must not replace, remove, or weaken any existing Company Mode capability. It is an additional privacy-preserving administrative layer designed to help organizations identify members internally while preserving the normal user experience.
+
+---
+
+## 🏢 Technical Requirements for Company Mode
+
+### Backend Additions
+
+- `app/models/company.py`
+- `app/models/company_member.py`
+- `app/models/company_role.py`
+- `app/models/company_permission.py`
+- `app/models/company_audit_log.py`
+- `app/models/company_internal_id.py`
+- `app/api/routes/company.py`
+- `app/api/routes/company_internal_id.py`
+- `app/services/company_service.py`
+- `app/services/company_internal_id_service.py`
+- `app/services/audit_service.py`
+
+### Database Tables
+
+- `companies`
+- `company_members`
+- `company_roles`
+- `company_permissions`
+- `company_audit_logs`
+- `company_settings`
+- `company_departments`
+- `company_tasks`
+- `company_internal_ids`
+- `company_internal_id_settings`
+- `company_internal_id_audit_logs`
+
+Alternative extension if using `company_members` directly:
+
+- `company_members.internal_id_type`
+- `company_members.internal_id_number`
+- `company_members.internal_id_verified`
+- `company_members.internal_id_visibility`
+
+### Flutter Additions
+
+- `lib/features/company/`
+- `screens/company_dashboard.dart`
+- `screens/company_members.dart`
+- `screens/company_settings.dart`
+- `screens/company_audit.dart`
+- `screens/company_internal_id_screen.dart`
+- `widgets/member_card.dart`
+- `widgets/role_badge.dart`
+- `widgets/internal_id_selector.dart`
+- `widgets/admin_member_id_card.dart`
+- `bloc/company_bloc.dart`
+- `bloc/internal_id_bloc.dart`
+
+### Company Mode Activation Flow
+
+1. User creates/joins a company space
+2. Super Admin is designated (creator)
+3. Super Admin customizes settings
+4. Assigns Moderators/Admins
+5. Invites members
+   5.1. If internal identification is enabled, the member selects the identifier type, such as Employee ID, Military ID, National/Service ID, or Custom Organization ID, then enters the number. This identifier is stored as an admin-only mapping and does not affect the member's public display name.
+6. Configures permissions
+7. Company mode activated with all enterprise features
+
+---
+
+## 📇 CONTACTS SYNC & AUTO-DISCOVERY ENGINE (Full Specification — Better than WhatsApp)
+
+## 🎯 Purpose
+
+Build a world-class contact synchronization and auto-discovery system so that **any user who installs IronLink is instantly discoverable by their existing contacts, and can immediately discover and chat with contacts who already use the app** — with zero friction, total privacy, and a smoother experience than WhatsApp.
+
+## 🧠 Core Principles
+
+1. **Zero-friction discovery**: A new user should appear to their contacts automatically, and see their contacts automatically, without manual searching.
+2. **Privacy-first matching**: Raw phone numbers are never uploaded or stored. Only salted cryptographic hashes or privacy-safe tokens are matched.
+3. **Mutual consent**: Discovery respects each user's "Who can find me" privacy setting.
+4. **Instant gratification**: The moment a contact joins, both sides can start chatting in under 2 taps.
+5. **Reversible & deletable**: Users can opt out and have all synced contact data permanently erased.
+6. **No social graph leakage**: The system must not expose non-IronLink contacts, non-matching hashes, or the full contact book to anyone.
+7. **Contactless fallback**: Users who refuse contacts permission can still connect via username, QR code, invite link, or share profile.
+
+## 🔄 End-to-End Sync Flow
+
+### Step 1 — Permission & Capture
+
+- On first launch (or on-demand), request the OS contacts permission with a clear value-explanation screen.
+- Read the device contact book locally on the device.
+- If permission is denied, offer username/QR/invite alternatives without blocking app usage.
+
+### Step 2 — Privacy-Preserving Hashing (On-Device)
+
+- Normalize each phone number to E.164 format.
+- Hash each number with SHA-256 plus a server-provided random salt, or use a Private Set Intersection scheme for stronger privacy.
+- Only the hashes/tokens leave the device. Raw numbers never touch the server.
+- Store only the minimum required data for matching.
+
+### Step 3 — Server-Side Matching
+
+- The backend compares submitted hashes against a hashed index of all registered users' phone numbers who allow discovery.
+- Return only the matches that correspond to real IronLink users AND who allow discovery.
+- Do not reveal which non-matching hashes were submitted.
+- Do not expose users who disabled discovery.
+
+### Step 4 — Auto-Display & Linking
+
+- Discovered contacts are shown in a dedicated **"Contacts on IronLink"** tab.
+- Each discovered contact is linked to their IronLink profile (avatar, username, presence).
+- The user can tap once to **open a chat** immediately.
+- If the contact has no existing chat, create or suggest a new chat with one tap.
+
+### Step 5 — Real-Time Join Notifications
+
+- When a contact later registers on IronLink, the system pushes a notification: **"🎉 [Name] joined IronLink — Say hi!"** with a direct "Open Chat" action.
+- The new user's device also runs discovery and sees existing contacts instantly.
+- Join notifications respect privacy settings and do not notify if discovery is disabled.
+
+### Step 6 — Invite the Rest
+
+- Contacts not yet on IronLink are shown under **"Invite"**, with one-tap SMS/share invite containing a deep-link to install and auto-connect.
+- Invite links may carry an inviter reference for attribution but must not expose the invitee's phone number.
+- Invites must be rate-limited to prevent spam.
+
+## 🏗️ Technical Architecture for Contacts Sync
+
+### Backend Additions
+
+- `app/models/contact_hash.py` — store per-user hashed contacts (hash, owner_id, created_at)
+- `app/models/user_phone_index.py` — hashed phone index of registered users for matching
+- `app/models/contact_relation.py` — resolved links between a user and discovered IronLink contacts
+- `app/models/contact_invite.py` — invite tracking, tokens, attribution, and install conversion
+- `app/api/routes/contacts.py` — endpoints: `/contacts/sync`, `/contacts/matches`, `/contacts/invite`, `/contacts/delete-all`
+- `app/services/contact_discovery_service.py` — hashing, matching, private-set-intersection logic
+- `app/services/contact_sync_worker.py` — background batch matching + join-event detection
+- `app/services/invite_service.py` — generate deep-link invites, track installs, prevent abuse
+
+### Matching Algorithm
+
+- Use Private Set Intersection (PSI) or batched hash lookups to match contacts without exposing non-matches.
+- Cache the hashed phone index in Redis for sub-second matching.
+- Trigger an async re-match whenever a new user registers, to notify existing users who have that number.
+- Use pagination and chunked uploads for large contact books.
+- Apply exponential backoff and retry for failed sync jobs.
+
+### Database Tables for Contacts Sync
+
+- `contact_hashes` (id, user_id, phone_hash, created_at) — indexed on phone_hash
+- `user_phone_index` (user_id, phone_hash, allows_discovery, updated_at)
+- `contact_relations` (id, user_id, contact_user_id, source, linked_at)
+- `contact_invites` (id, inviter_id, phone_hash, invite_token, installed_at)
+- `contact_sync_jobs` (id, user_id, status, total_contacts, matched_count, created_at, completed_at)
+- `contact_sync_settings` (user_id, sync_enabled, discovery_by_phone_allowed, last_sync_at)
+
+### Flutter Additions for Contacts Sync
+
+- `lib/features/contacts/` — full feature module
+- `screens/contacts_permission_screen.dart` — value-explanation + permission request
+- `screens/contacts_discovery_screen.dart` — "On IronLink" / "Invite" tabs
+- `bloc/contacts_bloc.dart` — sync state management
+- `services/contact_sync_service.dart` — local read, hashing, incremental diff
+- `widgets/contact_card.dart` — avatar, name, presence, "Open Chat" button
+- `widgets/invite_sheet.dart` — share/SMS invite bottom sheet
+- `widgets/contacts_consent_sheet.dart` — privacy explanation and opt-in/opt-out controls
+
+### Privacy Controls for Contacts Sync
+
+- **Sync toggle**: Enable/disable contact sync.
+- **Who can find me by phone**: Everyone / Contacts of Contacts / Nobody.
+- **Delete synced data**: Permanently erase all uploaded hashes and relations.
+- **Show me to new contacts**: Whether I appear when a new contact joins.
+- **Invite permission**: Explicit confirmation before sending invites.
+- **Contactless mode**: Full app usage without contacts permission.
+
+## 📈 Success Metrics for Contacts Sync
+
+- % of new users who grant contacts permission
+- Average number of discovered contacts per new user
+- Time from install → first chat opened (target: < 60 seconds)
+- % of new users who open a chat within 24h (activation)
+- Invite conversion rate (invites sent → installs → active chats)
+- Contact sync opt-out rate (privacy health signal)
+- Discovery endpoint abuse rate
+- False match rate / support complaints related to wrong contact linking
+
+## ⚖️ Privacy & Compliance Requirements for Contacts Sync
+
+- Never store raw phone numbers from the contact book.
+- Hashes must be salted to prevent rainbow-table reversal.
+- Honor GDPR/CCPA: full deletion of synced data on request.
+- Provide clear, plain-language consent copy before first sync.
+- Rate-limit discovery endpoints to prevent enumeration attacks.
+- Respect each user's discovery preference — no forced visibility.
+- Do not use contact data for ads, profiling, or unrelated recommendations.
+- Allow complete erasure of contact sync data from user settings.
+- Log consent state and sync events for compliance auditing.
+
+## 🥇 Why This Beats WhatsApp
+
+- **Private matching**: WhatsApp uploads contacts; IronLink matches on hashes only.
+- **Instant mutual appearance**: New users appear to contacts AND see contacts automatically, both directions, in real time.
+- **Join alerts with one-tap chat**: WhatsApp is passive; IronLink actively drives the first conversation.
+- **Contactless discovery**: Username + QR fallback for users who refuse phone access.
+- **Full reversibility**: One-tap complete erasure of synced data.
+- **No forced phone visibility**: Users can be found without exposing their phone number publicly.
+- **Better activation loop**: Install → discover contacts → open chat → invite remaining contacts.
+
+---
+
+## 🗣️ [ADDED] FULL MULTILINGUAL PLATFORM SPECIFICATION (continued)
+
+### 🔄 Translation Flow
+
+1. **User Sends Message**:
+   - Message is sent in the user's language.
+   - System detects the language of the message.
+
+2. **Recipient Receives Message**:
+   - Message is displayed in the recipient's preferred language.
+   - If the message language differs from the recipient's language:
+     - Auto-translation (if enabled) translates the message automatically.
+     - Or, the recipient can tap "Translate" to see the translation.
+
+3. **Voice Messages**:
+   - Voice messages are transcribed in the user's language.
+   - Users can translate transcriptions.
+   - Future: real-time voice translation.
+
+4. **Translation Cache**:
+   - Translated messages are cached in Redis for performance.
+   - Cache TTL: 30 days.
+
+### 🛠️ Technical Implementation Details (continued)
+
+#### Translation Performance
+
+- **Target Latency**: < 200ms for message translation
+- **Target Latency**: < 500ms for voice transcription
+- **Target Accuracy**: > 90% for translation
+- **Cache Hit Rate**: > 80% (to reduce API calls)
+
+#### Rate Limiting
+
+- **Translation API**: Max 100 requests per user per minute
+- **Voice Translation API**: Max 20 requests per user per minute
+- **Language Detection API**: Max 50 requests per user per minute
+
+#### Cost Optimization
+
+- Use cached translations when available
+- Use smaller models for common languages
+- Use larger models for less common languages
+- Batch translations when possible
+
+### 🌐 Language Support Timeline
+
+#### MVP (Phase 1):
+- 12 core languages (English, Arabic, French, Spanish, German, Hindi, Chinese, Russian, Portuguese, Urdu, Turkish, Indonesian)
+- Automatic language detection
+- Basic translation (on-demand)
+
+#### Phase 2:
+- 24 languages
+- Auto-translation (toggle)
+- Voice-to-text translation
+
+#### Phase 3:
+- 50+ languages
+- Community translations
+- Real-time voice translation
+
+#### Phase 4:
+- 100+ languages
+- Full multilingual moderation
+- Cultural adaptation
+
+### 📈 Multilingual Success Metrics
+
+- % of users using the app in their preferred language (target: > 90%)
+- % of users with auto-translation enabled (target: > 50%)
+- Average translation latency (target: < 200ms)
+- Translation accuracy score (target: > 90%)
+- Community translation contribution rate (target: > 1% of users)
+- User satisfaction by language (target: > 4.5/5)
+
+---
+
+## ⚠️ CRITICAL CONSTRAINTS (UPDATED)
+
+1. **Zero Cost Infrastructure**: ALL services must be free-tier or open-source where possible.
+2. **Privacy-First**: Never compromise user privacy for features.
+3. **Security by Design**: Security is integrated from day one, not added later.
+4. **Performance Always**: App must be faster than WhatsApp, smoother than Telegram.
+5. **No Vendor Lock-in**: Use open standards and self-hostable components.
+6. **Accessibility**: WCAG AA compliance for all features.
+7. **Quality Over Quantity**: Better to have 10 perfect features than 100 broken ones.
+8. **User Control**: Users always have control over their data and experience.
+9. **Company Mode Separation**: Admin-only company data must never leak into normal social user experience.
+10. **Internal ID Privacy**: Internal employee/military/organization IDs are visible only to authorized admins and must be audited.
+11. **Contact Privacy**: Raw contact phone numbers must never be uploaded or stored; contact discovery must use hashed or privacy-safe tokens only.
+12. **[ADDED] Translation Privacy**: Translation data is processed but not permanently stored; users must consent to translation features.
+13. **[ADDED] Cultural Sensitivity**: Content moderation, AI features, and UI must respect cultural norms and context.
+14. **[ADDED] Language Accessibility**: All languages must be equally supported; no language is secondary.
+
+---
+
+## 🧠 EXECUTION GOVERNANCE & PROMPT ENGINEERING LAYER
+
+### Decision Authority
+
+When executing this prompt, you must act as:
+
+- Chief Product Architect
+- Principal Backend Engineer
+- Principal Flutter Engineer
+- Security Engineer
+- Privacy Engineer
+- Trust & Safety Architect
+- Growth Strategist
+- Technical Program Manager
+- Enterprise Systems Architect
+- Contact Discovery & Network Effects Engineer
+- **[ADDED] Multilingual Systems Architect**
+- **[ADDED] Localization & Translation Engineer**
+
+### Required Output Format
+
+Whenever asked to execute this prompt, respond using the following structure unless the user requests otherwise:
+
+1. **Executive Summary**
+2. **Assumptions & Validation Needs**
+3. **Recommended MVP Slice**
+4. **Feature Prioritization Matrix**
+5. **Architecture Plan**
+6. **Database Schema Changes**
+7. **API Contract**
+8. **Flutter Implementation Plan**
+9. **Security & Privacy Plan**
+10. **Company Mode / Internal ID Considerations**
+11. **Contacts Sync / Auto-Discovery Considerations**
+12. **[ADDED] Multilingual & Translation Considerations**
+13. **[ADDED] Localization & i18n Plan**
+14. **Risks & Mitigations**
+15. **Testing Plan**
+16. **Step-by-Step Implementation Order**
+17. **Definition of Done**
+18. **What Not to Build Yet**
+19. **Next Best Action**
+
+### Mandatory Quality Gates
+
+Before recommending any feature as ready, verify:
+
+- It has clear user value
+- It has defined acceptance criteria
+- It does not weaken privacy by default
+- It is testable
+- It is observable
+- It handles offline/retry states where relevant
+- It respects permissions
+- It logs audit events where required
+- It has abuse-prevention considerations
+- It does not create irreversible data exposure
+- Admin-only data is isolated from non-admin responses
+- Contact data is hashed and never stored in raw form
+- Discovery flows respect consent and privacy settings
+- **[ADDED]** Translation data is not permanently stored
+- **[ADDED]** Users consent to translation features
+- **[ADDED]** Multilingual moderation is culturally aware
+
+### Conflict Resolution Rules
+
+If any two requirements conflict:
+
+1. Preserve privacy and security first.
+2. Preserve data integrity second.
+3. Preserve core messaging reliability third.
+4. Preserve performance fourth.
+5. Preserve feature breadth fifth.
+6. Preserve monetization sixth.
+
+If a feature cannot be implemented without violating privacy, security, or legal constraints, propose a safer alternative instead of silently removing it.
+
+### No-Deletion Policy
+
+You must not remove any original item from this document.
+
+You may only:
+
+- Clarify it
+- Rephrase it for precision
+- Move it to a more appropriate phase
+- Mark it as risky
+- Mark it as deferred
+- Mark it as requiring validation
+- Provide implementation details
+- Add protective guardrails
+- Add additive features explicitly marked as additions
+
+### Validation Rule for Existing Status
+
+Any item marked `[x]`, `✅`, or "existing" must be treated as:
+
+> "Reported as existing, but must be validated against the actual repository before relying on it."
+
+Do not assume production readiness from a checkbox alone.
+
+---
+
+## 🌟 FINAL STRATEGIC SUMMARY
+
+IronLink must be:
+
+> **Faster than WhatsApp in experience,**
+> **More private than WhatsApp,**
+> **More powerful than Telegram in channels and communities,**
+> **Smarter than both with AI,**
+> **Better at connecting new users through private contact discovery,**
+> **And the first truly multilingual platform that feels native in every language.**
+
+### Core Pillars:
+
+1. **TRUST** → Privacy, E2EE, Security, Transparency
+2. **INTELLIGENCE** → AI assistant, Translation, Search, Moderation
+3. **COMMUNITY** → Channels, Creators, Groups/Spaces, Monetization
+4. **[ADDED]** **GLOBAL ACCESS** → Full multilingual support, real-time translation, cultural adaptation
+
+### Added Pillar:
+
+5. **NETWORK GROWTH** → Contacts Sync & Auto-Discovery for frictionless connections
+
+### Success Formula:
+
+> **IronLink = WhatsApp (simplicity) + Telegram (channels) + Discord (communities) + Signal (privacy) + AI (intelligence) + Patreon (monetization) + Secure Company Mode with Admin-Only Internal ID Mapping + Auto-Discovery Contact Engine + Full Multilingual Platform**
+
+---
+
+## 🎯 NEXT STEPS
+
+Based on this comprehensive strategic document, you must now:
+
+1. **Prioritize features**: Use the Priority Matrix (P0/P1/P2/P3)
+2. **Follow the 4-Phase Roadmap**: Execute sequentially, don't skip phases
+3. **Implement the Dual Mode**: Normal + Company mode with enterprise security
+4. **Implement Internal Employee Identification**: Admin-only mapping with Employee ID, Military ID, National/Service ID, or Custom Organization ID
+5. **Implement Contacts Sync & Auto-Discovery**: Hashed matching, instant mutual appearance, join notifications, one-tap chat, invite flow
+6. **[ADDED]** **Implement Full Multilingual Support**: 100+ languages, real-time translation, voice-to-text translation, RTL/LTR support, community translations
+7. **Build on existing foundation**: Leverage existing codebase, don't rewrite
+8. **Test constantly**: Each feature must pass automated tests
+9. **Document everything**: Keep ARCHITECTURE.md and ROADMAP.md updated
+10. **Protect admin-only data**: Ensure internal IDs never leak into public/user-facing responses
+11. **Protect contact data**: Ensure raw contact phone numbers are never uploaded or stored
+12. **Maintain privacy-first design**: Preserve normal public identity while enabling internal organizational mapping and private contact discovery
+13. **[ADDED]** **Protect translation data**: Ensure translation data is not stored permanently and users consent to translation features
+14. **[ADDED]** **Ensure cultural sensitivity**: Content moderation, AI features, and UI must respect cultural norms and context
+
+---
+
+## ✅ DEFINITION OF DONE FOR THIS PROMPT EXECUTION
+
+A response based on this prompt is complete only if it:
+
+- Preserves all original strategic elements
+- Includes the Company Mode Internal ID enhancement
+- Includes the Contacts Sync & Auto-Discovery Engine
+- **[ADDED]** Includes the Full Multilingual Platform specification
+- **[ADDED]** Includes translation, localization, and voice translation features
+- Provides a realistic execution path
+- Identifies risks and contradictions
+- Respects privacy-first principles
+- Uses the existing repository as context
+- Proposes concrete next engineering actions
+- Avoids overpromising without validation
+- Includes testing and documentation requirements
+- Separates vision from immediate executable scope
+- Does not silently remove any listed feature or requirement
+- Ensures internal IDs are admin-only, audited, and separated from public user identity
+- Ensures contact discovery is hashed, consent-based, reversible, and protected against enumeration
+- Ensures new users can appear to their contacts and open chats with existing contacts with minimal friction
+- **[ADDED]** Ensures translation data is privacy-preserving and consent-based
+- **[ADDED]** Ensures all languages are equally supported
+
+---
+
+**This prompt represents the complete strategic vision for IronLink, including the enhanced Company Mode internal identification system, the Contacts Sync & Auto-Discovery Engine, and the Full Multilingual Platform. Execute with precision, build with excellence, and deliver the world's most advanced social messaging platform.** 🚀🌍🗣️

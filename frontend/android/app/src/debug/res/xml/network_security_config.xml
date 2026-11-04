@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DEBUG BUILDS ONLY. Gradle merges src/debug over src/main, so this file
+  replaces the release configuration for debug variants and is absent from
+  anything shipped.
+
+  Cleartext is permitted to a development backend and nowhere else. Production
+  stays TLS-only through the default config in src/main.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false"/>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Dev machine on the LAN (see README_Sprint4_DeviceTest.md) -->
+        <domain includeSubdomains="false">10.140.128.63</domain>
+        <!-- Android emulator loopback alias -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

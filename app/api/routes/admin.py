@@ -220,8 +220,15 @@ async def send_broadcast(
     from app.api.routes.websocket import publish_broadcast
     await publish_broadcast(frame)
 
-    # Offline devices: FCM push
-    tokens = [u.fcm_token for u in targets if u.fcm_token]
+    # Offline devices: FCM push.
+    #
+    # Gathered per session rather than per user. An urgent broadcast that
+    # reaches only whichever device signed in most recently is the one place
+    # the single-column token bug would have mattered most.
+    tokens: list[str] = []
+    for target in targets:
+        tokens.extend(await push_service.tokens_for_user(db, target.id))
+    tokens = list(dict.fromkeys(tokens))
     delivered = await push_service.send_broadcast_push(
         tokens, title=body.title, body=body.body, broadcast_id=str(broadcast.id)
     )

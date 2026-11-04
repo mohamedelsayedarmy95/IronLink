@@ -1,0 +1,378 @@
+"""Tests for group messaging and the membership epoch.
+
+The epoch is the whole basis of group encryption's forward security. A group
+message is encrypted once with a sender key that every member holds, so
+removing someone from the member list does not remove their access — the key
+they already have decrypts everything that sender says afterwards. Access
+ends only when each remaining sender mints a new key, and the epoch is the
+only signal telling them to.
+
+Which makes the interesting tests the ones about what bumps it.
+"""
+from __future__ import annotations
+
+import inspect
+
+import pytest
+
+
+def _source(fn) -> str:
+    return inspect.getsource(fn)
+
+
+# ── Every membership change must bump the epoch ──────────────────────────────
+
+def test_every_place_that_adds_a_member_bumps_the_epoch() -> None:
+    """Derived rather than listed.
+
+    This used to enumerate the functions by name, and the enumeration was
+    wrong: it missed _apply_decision in group_entry, which is the controlled
+    entry system's approval path — the product's main way into a group. That
+    admitted people without moving the epoch, so no existing member was told
+    to mint a new sender key, nobody distributed one to the arrival, and the
+    new member sat in the group unable to read anything.
+
+    A list of names cannot catch the path nobody thought of, so this walks
+    the source instead.
+    """
+    import ast
+    from pathlib import Path
+
+    #: The one place a membership is created with nothing to rotate: the
+    #: creator is the group's only member, so there is no existing sender to
+    #: tell. Named explicitly so the exemption is a decision rather than a
+    #: gap in the check.
+    exempt = {"create_group"}
+
+    offenders = []
+    for path in Path("app").rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        if "GroupMember(" not in source:
+            continue
+
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            body = ast.get_source_segment(source, node) or ""
+            # Constructing the row, not referencing the class in a query.
+            if "GroupMember(" not in body:
+                continue
+            if node.name in exempt or "bump_epoch" in body:
+                continue
+            offenders.append(f"{path.as_posix()}::{node.name}")
+
+    assert not offenders, (
+        "these create a GroupMember without bumping members_epoch, so the "
+        "new member never receives a sender key:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_departures_bump_the_epoch() -> None:
+    """The other direction, and the one that carries the security property:
+    a removed member keeps reading until every sender rotates."""
+    import importlib
+
+    for module, function in [
+        ("app.api.routes.groups", "leave_group"),
+        ("app.api.routes.groups", "remove_member"),
+        ("app.api.routes.group_entry", "ban_from_group"),
+    ]:
+        fn = getattr(importlib.import_module(module), function, None)
+        assert fn is not None, f"{module}.{function} no longer exists"
+        assert "bump_epoch" in _source(fn), (
+            f"{function} removes a member without bumping the epoch"
+        )
+
+
+def test_approving_an_existing_member_does_not_bump() -> None:
+    """Re-approving someone already inside changes nothing about who holds
+    keys, and a needless rotation makes every member re-distribute."""
+    from app.api.routes.group_entry import _apply_decision
+
+    source = _source(_apply_decision)
+    guard = source.index("if already is None:")
+    assert source.index("bump_epoch") > guard
+
+
+def test_deciding_a_request_locks_it() -> None:
+    """Two moderators working the same queue would both read it as pending
+    and both approve; the unique index then turns the second insert into a
+    500 for someone who did nothing wrong."""
+    from app.api.routes.group_entry import _actionable_request
+
+    assert "with_for_update()" in _source(_actionable_request)
+
+
+def test_approving_a_request_bumps_but_rejecting_does_not() -> None:
+    """A rejection changes nothing about who holds keys, and a needless
+    rotation makes every member re-distribute for no reason."""
+    from app.api.routes.groups import decide_request
+
+    source = _source(decide_request)
+    approve_index = source.index("if body.approve:")
+    assert "bump_epoch" in source[approve_index:]
+
+
+def test_unban_does_not_bump() -> None:
+    """Lifting a ban does not restore membership, so nobody gains access."""
+    from app.api.routes.group_entry import unban_from_group
+
+    assert "bump_epoch" not in _source(unban_from_group)
+
+
+def test_epoch_increments_in_sql_not_read_modify_write() -> None:
+    """Two concurrent membership changes must not land on the same epoch —
+    to a client that looks like nothing happened."""
+    from app.services.group_message_service import bump_epoch
+
+    source = _source(bump_epoch)
+    assert "Group.members_epoch + 1" in source
+    assert "returning" in source.lower()
+
+
+def test_epoch_is_exposed_to_clients() -> None:
+    """A client that cannot see the epoch cannot know to rotate."""
+    from app.api.routes.groups import GroupOut
+
+    assert "members_epoch" in GroupOut.model_fields
+
+
+# ── Who may post, and what the server may read ───────────────────────────────
+
+def test_non_members_cannot_post_or_read() -> None:
+    from app.services.group_message_service import history, save_group_message
+
+    assert "assert_member" in _source(save_group_message)
+    assert "assert_member" in _source(history)
+
+
+def test_a_missing_group_and_a_forbidden_one_look_the_same() -> None:
+    """Distinguishing them turns the endpoint into an oracle for which group
+    ids exist."""
+    from app.api.routes.group_messages import group_history, send_group_message
+
+    for fn in (group_history, send_group_message):
+        assert "group not found" in _source(fn)
+
+
+def test_announcement_groups_restrict_posting() -> None:
+    from app.services.group_message_service import save_group_message
+
+    source = _source(save_group_message)
+    assert "only_admins_can_post" in source
+    assert "PostingNotAllowed" in source
+
+
+def test_history_starts_at_the_point_the_member_joined() -> None:
+    """A new member cannot decrypt anything older than their arrival — the
+    sender keys they hold start there. Returning those rows would look like
+    corruption rather than privacy."""
+    from app.services.group_message_service import history
+
+    assert "Message.created_at >= member.joined_at" in _source(history)
+
+
+def test_key_distribution_messages_are_not_shown_as_chat() -> None:
+    from app.services.group_message_service import history
+
+    assert "Message.message_type != SKDM_MESSAGE_TYPE" in _source(history)
+
+
+# ── Blocks and groups ────────────────────────────────────────────────────────
+
+def test_a_block_does_not_silence_someone_in_a_shared_group() -> None:
+    """Blocking is a personal boundary. Letting it mute someone for everyone
+    would make it a way to disrupt a whole conversation."""
+    from app.services.group_message_service import save_group_message
+
+    source = _source(save_group_message)
+    assert "_blocked_between" not in source
+    assert "BlockedDelivery" not in source
+
+
+def test_key_distribution_is_not_withheld_by_a_block() -> None:
+    """Group messages are delivered regardless of a block, so withholding the
+    key that decrypts them would not stop anything — it would just make the
+    group unreadable for one member, with nothing saying why."""
+    from app.api.routes import websocket
+
+    source = _source(websocket._handle_frame)
+    skdm_index = source.index('frame_type == "skdm"')
+    assert "enforce_blocks=False" in source[skdm_index:]
+
+
+def test_blocks_are_still_enforced_for_direct_messages() -> None:
+    """The opt-out above must not have weakened the default."""
+    import inspect as _inspect
+
+    from app.services.message_service import save_message
+
+    source = _source(save_message)
+    assert "enforce_blocks: bool = True" in source
+    signature = _inspect.signature(save_message)
+    assert signature.parameters["enforce_blocks"].default is True
+
+
+# ── Key distribution ─────────────────────────────────────────────────────────
+
+def test_skdm_requires_both_parties_to_be_members() -> None:
+    """Otherwise it is a way to push an arbitrary payload at any user."""
+    from app.api.routes import websocket
+
+    source = _source(websocket._handle_frame)
+    skdm_index = source.index('frame_type == "skdm"')
+    window = source[skdm_index:skdm_index + 1200]
+    assert window.count("assert_member") == 2
+
+
+def test_group_attachments_and_voice_are_routed_like_text() -> None:
+    """Same path, so an attachment cannot end up on a route with different
+    membership checks from the messages around it."""
+    from app.api.routes import websocket
+
+    source = _source(websocket._handle_frame)
+    assert (
+        '("group_text", "group_image", "group_file", "group_voice")' in source
+    )
+
+
+def test_a_group_attachment_carries_no_media_key_on_the_wire() -> None:
+    """The pointer and the key that opens it live inside the envelope, so the
+    server cannot tell which stored object a group message refers to."""
+    from pathlib import Path
+
+    dart = Path("frontend/lib/core/ws_service.dart")
+    if not dart.exists():
+        pytest.skip("frontend not present")
+
+    source = dart.read_text(encoding="utf-8")
+    start = source.index("void sendGroupMedia(")
+    body = source[start:start + 600]
+    assert "'media_key'" not in body
+    assert "'content': content" in body
+
+
+def test_group_fan_out_skips_the_sender() -> None:
+    from app.api.routes import websocket
+
+    source = _source(websocket._handle_frame)
+    assert "if member_id == user_id:" in source
+
+
+def test_the_group_ciphertext_is_identical_for_every_member() -> None:
+    """One encryption per message, not one per member — that is the entire
+    reason sender keys exist rather than N pairwise sends."""
+    from app.api.routes import websocket
+
+    source = _source(websocket._handle_frame)
+    group_index = source.index('"group_message"')
+    window = source[group_index - 400:group_index + 900]
+    # A single event dict, published unchanged to each member.
+    assert "for member_id in recipients:" in window
+    assert window.count("await publish(member_id, event)") == 1
+
+
+# ── Delivery is idempotent ───────────────────────────────────────────────────
+
+def test_a_resent_message_does_not_become_two() -> None:
+    """The client queues frames written while the socket is down and replays
+    them on reconnect. A client that lost the connection between the server
+    storing a message and the ack arriving cannot know which happened, so it
+    resends — correct of it, and the reason the server has to refuse the
+    duplicate."""
+    from app.services.group_message_service import save_group_message
+    from app.services.message_service import save_message
+
+    for fn in (save_message, save_group_message):
+        source = _source(fn)
+        assert "Message.client_ref == client_ref" in source, fn.__name__
+        assert "return existing" in source, fn.__name__
+
+
+def test_the_idempotency_check_runs_before_anything_is_written() -> None:
+    from app.services.message_service import save_message
+
+    source = _source(save_message)
+    assert source.index("return existing") < source.index("db.add(msg)")
+
+
+def test_the_key_is_unique_per_sender_not_globally() -> None:
+    """Two people can independently generate "ref_3"."""
+    from pathlib import Path
+
+    migration = Path(
+        "alembic/versions/0009_message_idempotency.py"
+    ).read_text(encoding="utf-8")
+    assert "['sender_id', 'client_ref']" in migration
+    # Partial: server-generated messages have no client_ref and must not all
+    # collide on NULL.
+    assert "client_ref IS NOT NULL" in migration
+
+
+def test_the_client_also_drops_a_redelivered_message() -> None:
+    """Belt and braces: a reconnect can redeliver a frame the socket already
+    carried, and a duplicate on screen is the symptom users would report."""
+    from pathlib import Path
+
+    for name in ("chat/bloc/chat_bloc.dart", "groups/bloc/group_chat_bloc.dart"):
+        path = Path("frontend/lib/features") / name
+        if not path.exists():
+            pytest.skip("frontend not present")
+        source = path.read_text(encoding="utf-8")
+        assert "state.messages.any((m) => m.id == incomingId)" in source, name
+
+
+# ── Route contract ───────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize(
+    "path,method",
+    [
+        ("/api/v1/groups/{group_id}/messages", "post"),
+        ("/api/v1/groups/{group_id}/messages", "get"),
+        ("/api/v1/groups/{group_id}/members/me", "delete"),
+        ("/api/v1/groups/{group_id}/members/{user_id}", "delete"),
+    ],
+)
+def test_route_registered(path: str, method: str) -> None:
+    from app.main import app
+
+    paths = app.openapi()["paths"]
+    assert path in paths, f"{path} is not registered"
+    assert method in paths[path]
+
+
+def test_an_owner_cannot_leave_without_handing_over() -> None:
+    """A group with no owner has nobody who can manage it."""
+    from app.api.routes.groups import leave_group
+
+    assert "transfer ownership" in _source(leave_group)
+
+
+def test_an_admin_cannot_remove_the_owner() -> None:
+    from app.api.routes.groups import remove_member
+
+    assert "the owner cannot be removed" in _source(remove_member)
+
+
+# ── Migration ────────────────────────────────────────────────────────────────
+
+def test_migration_adds_the_epoch_with_a_default() -> None:
+    """Existing groups need a value, or the column cannot be NOT NULL."""
+    from pathlib import Path
+
+    migration = Path(
+        "alembic/versions/0006_group_members_epoch.py"
+    ).read_text(encoding="utf-8")
+    assert "members_epoch" in migration
+    assert "server_default='1'" in migration
+
+
+# ── Integration checklist ────────────────────────────────────────────────────
+#
+# Needs live Postgres and Redis:
+#   * a group send reaches every member's channel and not the sender's
+#   * two concurrent membership changes produce two distinct epochs
+#   * history excludes messages older than the caller's joined_at
+#   * a banned member's next history request returns 404
+#   * migration 0006 applies cleanly on a database already at 0005

@@ -1,0 +1,12 @@
+# Shell scripts must stay LF. A CRLF line ending on the shebang line makes the
+# Linux kernel look for an interpreter named "/bin/sh\r", which fails with a
+# bare "no such file or directory" that names a file which plainly exists —
+# one of the harder Docker-on-Windows errors to diagnose. This repo is edited
+# from Windows, so pin it rather than rely on each clone's core.autocrlf.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+
+# Same reasoning for anything else consumed by Linux tooling.
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

@@ -1,0 +1,328 @@
+name: CI
+
+# Runs on every pull request, and on main after merge.
+#
+# The repository had no test workflow at all: 765 tests existed and none of
+# them ran anywhere except a developer's machine. That is the same failure mode
+# as the Smart Keyword Alert bugs this suite now guards against — code that
+# nobody had actually executed, believed to work because nothing said otherwise.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch cancels the first. Reviewing a run for a
+# commit that has already been replaced is wasted attention.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# A note on pinning, since the two kinds of dependency here are pinned
+# differently on purpose.
+#
+# Action majors float (@v7). A major is a stable input contract, and letting
+# patches arrive is how Node runtime deprecations get picked up instead of
+# accumulating — GitHub flagged Node 20 on the previous versions of these, and
+# nothing would have surfaced that except a run.
+#
+# The Flutter version does not float. A toolchain that moves on its own turns
+# an unrelated pull request red and sends its author hunting a bug they did not
+# write. Bump it deliberately, everywhere it appears.
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+
+    # A real Postgres, for the end-to-end journeys only.
+    #
+    # The rest of the suite runs against fakes and stays that way — that is
+    # what keeps it fast and what lets it assert on failure paths, since an
+    # unreachable Redis is easier to fake than to arrange. But a fake cannot
+    # answer whether a message survives a send, a retraction and a read back
+    # through the real schema, and the bugs that live between two individually
+    # correct steps are the ones no unit test sees.
+    #
+    # Postgres rather than SQLite because the models use postgresql.UUID and
+    # postgresql.JSONB. A SQLite stand-in would either fail to create the
+    # schema or silently accept what the real database rejects, and a test
+    # passing against a database the product does not use is worse than none.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ironlink_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      # Without this the journey tests skip rather than fail, which is what a
+      # developer without a local Postgres gets. Here it is always set, so they
+      # always run somewhere.
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:ci@localhost:5432/ironlink_test
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'   # matches the Dockerfile base image
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # No Redis or Postgres service here on purpose. The suite uses fakes
+      # (tests/fakes.py) rather than live infrastructure, which is what keeps
+      # it fast and what lets it assert on failure paths — an unreachable Redis
+      # is a case worth testing, and it is easier to fake than to arrange.
+      # Coverage is measured but the floor is deliberately low.
+      #
+      # A high threshold on a suite this size would pass today and become a
+      # tax later: the first person to add a large module with modest tests
+      # gets a red build for a change that improved the codebase. The floor
+      # exists to catch a collapse — someone deleting a test file, or a
+      # refactor that quietly stopped exercising a subsystem — not to grade
+      # the suite. Raise it when it has been comfortably exceeded for a while,
+      # not before.
+      - name: Run tests
+        run: python -m pytest tests/ -q --cov=app --cov-report=term-missing --cov-fail-under=55
+
+      # Every migration declares a downgrade, and until this step none had ever
+      # been executed — not in CI, not anywhere. An untested downgrade is a
+      # plan, not a capability, and the difference only becomes apparent during
+      # a rollback, which is the worst moment to find out.
+      #
+      # A full round trip: head, then all the way back to base, then head
+      # again. Going to base rather than one step back is what catches a
+      # downgrade that drops a table another migration's downgrade still
+      # expects. Returning to head afterwards proves the upgrade path still
+      # works from a downgraded state, which is what an actual rollback and
+      # roll-forward would do.
+      #
+      # A *separate* database on the same server, and that is not fussiness.
+      #
+      # The journey-test fixture builds its schema with create_all, which leaves
+      # the tables in place with no alembic_version row. Alembic then tries to
+      # run 0001 against a database that already has every table and fails with
+      # "relation groups already exists". The first run of this step failed
+      # exactly that way.
+      #
+      # create_all and alembic cannot share a database. Giving the round-trip
+      # its own also means it exercises migrations against a genuinely empty
+      # database, which is what a fresh production deploy does, and makes the
+      # step independent of whether pytest ran before it.
+      - name: Create a database for the migration round-trip
+        env:
+          PGPASSWORD: ci
+        run: psql -h localhost -U postgres -c 'CREATE DATABASE ironlink_migrations'
+
+      - name: Migrations round-trip (upgrade, downgrade to base, upgrade)
+        env:
+          # Alembic builds its URL from these via app.config, and its env.py
+          # deliberately uses the asyncpg driver — see the comment there.
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ironlink_migrations
+          # The config validator refuses to start without these two. Test
+          # values; nothing here is a credential for anything real.
+          DB_ENCRYPTION_KEY: ci_encryption_key_at_least_32_chars_long
+          SECRET_KEY: ci_secret_key_for_jwt_signing_in_tests_only_xxxxxxxx
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+
+  security:
+    name: Security (dependencies + secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history: a secret is only really gone if it was never
+          # committed, so the scan has to see every commit rather than the tip.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pip-audit==2.7.3
+
+      # Known vulnerabilities in what this actually installs.
+      #
+      # Non-blocking for now, and that is a deliberate compromise rather than
+      # an oversight: the first run of a vulnerability scanner on any real
+      # project finds advisories in transitive dependencies nobody can act on
+      # this week, and a red build that cannot be fixed is a red build people
+      # learn to ignore. It reports into the run summary. Turn off
+      # continue-on-error once the backlog is at zero — a gate nobody can pass
+      # is not a gate.
+      - name: Audit dependencies
+        continue-on-error: true
+        run: pip-audit --requirement requirements.txt --desc
+
+      # Secrets, across the whole history.
+      #
+      # This one does block. There is no backlog to work through — either a
+      # credential is in the history or it is not — and a leaked key is not
+      # something to merge past and tidy up later.
+      # Configured by .gitleaks.toml, which carries one narrowly scoped
+      # allowlist entry with its justification written next to it.
+      #
+      # Comments are off. The action tries to write its findings onto the pull
+      # request, the default token cannot, and the resulting "Resource not
+      # accessible by integration" warning reads like a scan failure while
+      # saying nothing about whether anything leaked. The findings are in the
+      # job summary and the SARIF artifact either way.
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  backend-image:
+    name: Backend (image builds)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Render builds this same Dockerfile on every push to the deploy branch.
+      # Finding out here that it no longer builds is better than finding out
+      # from a failed deploy, where the running service stays on the old image
+      # with no obvious reason why.
+      - name: Build image
+        run: docker build -t ironlink-backend:ci .
+
+  frontend:
+    name: Frontend (analyze + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Two passes with different bars, because the repository has pre-existing
+      # lint debt that is not this workflow's business to fail over.
+      #
+      # Repository-wide: infos are tolerated (39 of them today, all in code
+      # that predates this suite), while any *warning* or *error* fails. Every
+      # warning was cleared to make that bar real, and two of them turned out
+      # to be bugs. Do not weaken this to --no-fatal-warnings; clear the
+      # warning instead.
+      - name: Analyze (repository, warnings and errors fatal)
+        run: flutter analyze --no-fatal-infos
+
+      # And a strict pass over the code written against the Smart Keyword Alert
+      # specification, which is clean and must stay clean. If this starts
+      # failing, something was added below the standard the rest of it holds.
+      - name: Analyze (keyword alert, strict)
+        run: flutter analyze lib/features/keyword_alert test/keyword_alert
+
+      - name: Run tests
+        run: flutter test
+
+  android:
+    name: Android (release APK)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # The real google-services.json is gitignored, so a runner has none, and
+      # the Google Services Gradle plugin refuses to configure the project
+      # without it: "File google-services.json is missing." That single missing
+      # file was enough to keep the whole native surface of this app unverified.
+      - name: Put a placeholder Firebase config in place
+        run: cp android/app/google-services.ci.json android/app/google-services.json
+
+      # THIS JOB IS WHY THE OTHERS ARE NOT ENOUGH.
+      #
+      # The app depends on native plugins — ML Kit text recognition, the
+      # Syncfusion PDF reader, Firebase — and until this job existed none of
+      # them had been through an Android build in CI. Unit tests cannot reach a
+      # platform channel, so the entire native surface was unverified.
+      #
+      # A release build rather than debug, deliberately: R8 shrinking is where
+      # native plugins break, by stripping classes reached only reflectively.
+      # A debug build would pass and say nothing about the configuration that
+      # actually ships.
+      #
+      # Signing uses the debug key, because android/app/build.gradle still says
+      # so — there is no release keystore in this repository. That is a real gap
+      # for shipping and no obstacle to verifying the build.
+      #
+      # API_BASE_URL must include the /api/v1 prefix; WS_BASE_URL must not,
+      # since the WebSocket routes are mounted at the application root.
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL=https://ironlink-api.onrender.com/api/v1 \
+            --dart-define=WS_BASE_URL=wss://ironlink-api.onrender.com
+
+      # Confirms the 1.37 MB Arabic model reached the package. A missing asset
+      # does not fail a build — it fails at runtime, on someone's phone, as
+      # "Arabic documents are never read". Which is precisely the silent failure
+      # this feature was rebuilt to eliminate.
+      - name: Verify the Arabic model is bundled
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          if unzip -l "$apk" | grep -q 'tessdata/ara.traineddata'; then
+            echo "::notice::ara.traineddata is present in the APK"
+          else
+            echo "::error::ara.traineddata is missing — Arabic image OCR would silently never work"
+            unzip -l "$apk" | grep -i tessdata || true
+            exit 1
+          fi
+
+      # No artifact upload, deliberately. This APK has a placeholder Firebase
+      # config baked into it: it would look like a working build and fail at
+      # sign-in, and someone would lose an afternoon to that. This job answers
+      # "does it build", which is the question that was unanswered. Build the
+      # shippable APK where the real config lives.
+      - name: Report what was verified
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          size=$(stat -c%s "$apk")
+          echo "::notice::Release APK built: $((size / 1048576)) MB. Compilation, R8 and asset bundling verified; Firebase config is a placeholder, so nothing network-facing was."

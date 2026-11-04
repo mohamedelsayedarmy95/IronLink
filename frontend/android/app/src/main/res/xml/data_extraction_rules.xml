@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ splits what allowBackup used to cover into two channels, and
+  both are refused here.
+
+  cloud-backup  — Auto Backup to the user's Google Drive.
+  device-transfer — direct copy when setting up a new phone.
+
+  The app's private storage holds decrypted messages and Signal private keys.
+  Neither channel is a place for them: the first puts them on a third party's
+  servers, and the second copies the identity of one device onto another,
+  which is not something a ratchet expects.
+
+  Re-registering on the new device is the intended path. It costs the message
+  history that device never had, which is the same trade every serious
+  encrypted messenger makes.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

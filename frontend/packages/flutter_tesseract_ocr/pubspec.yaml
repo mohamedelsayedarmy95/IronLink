@@ -1,0 +1,29 @@
+name: flutter_tesseract_ocr
+description: >-
+  Vendored fork of flutter_tesseract_ocr 0.4.31. On-device Tesseract OCR,
+  used here for Arabic text recognition in images. See VENDORING.md.
+version: 0.4.31+ironlink.1
+publish_to: none
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: io.paratoner.flutter_tesseract_ocr
+        pluginClass: FlutterTesseractOcrPlugin
+      ios:
+        pluginClass: FlutterTesseractOcrPlugin
