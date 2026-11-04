@@ -10,7 +10,7 @@ Integration date: 2026-11-04. This is a scoped integration, not a merge of the s
 
 ## Source accounting
 
-`git diff --name-only 654ddb7` plus `git ls-files --others --exclude-standard` in the source worktree produced 28 paths: 14 tracked paths (13 working-tree modifications plus committed Render changes) and 14 untracked paths. Of these, 26 files were copied byte-for-byte, one was reconciled, and one was excluded. SHA-256 comparisons verified all copied contents. Both protected checkouts' HEAD, branch, status and changed/untracked file hashes were recorded before integration and rechecked afterwards; private preservation metadata stays outside the repository.
+`git diff --name-only 654ddb7` plus `git ls-files --others --exclude-standard` in the source worktree produced 28 paths: 14 tracked paths (13 working-tree modifications plus committed Render changes) and 14 untracked paths. Initially 26 files were copied byte-for-byte, Render was reconciled, and one file was excluded. After GitHub CI exposed a Compose fixture dependency on a local `.env`, the test file was reconciled too: the final source accounting is 25 byte-identical files, two reconciled files, and one exclusion. SHA-256 comparisons verified the copied contents. Both protected checkouts' HEAD, branch, status and changed/untracked file hashes were recorded before integration and rechecked afterwards; private preservation metadata stays outside the repository.
 
 The only committed source change since the historical baseline is the Render change in `86b3676`: pinned database identities plus an obsolete pre-deploy hook. The target's `42f881f` adds only that hook to the historical baseline. Neither commit was cherry-picked or merged.
 
@@ -43,11 +43,13 @@ The only committed source change since the historical baseline is the Render cha
 | `scripts/test_postgres_bootstrap.py` | untracked implementation/documentation | transferred byte-identical |
 | `tests/test_bootstrap_environment.py` | untracked implementation/documentation | transferred byte-identical |
 | `tests/test_database_configuration.py` | untracked implementation/documentation | transferred byte-identical |
-| `tests/test_postgres_bootstrap.py` | untracked implementation/documentation | transferred byte-identical |
+| `tests/test_postgres_bootstrap.py` | untracked implementation/documentation | reconciled: isolated Compose file and synthetic empty .env fixture for clean-checkout CI |
 
 ## Reconciliation and exclusions
 
 `render.yaml` retains the Free service, its existing deployment branch, container-start bootstrap, and separately entered `DATABASE_URL` / `MIGRATION_DATABASE_URL`. The obsolete `preDeployCommand` key is absent. The source's automatic `fromDatabase` runtime credential references were replaced with the source's pinned URL design; no live Render settings or credentials were changed.
+
+GitHub CI run 48 passed the ordinary backend suite (623 passed, 45 dedicated PostgreSQL tests skipped before the mandatory gate) but correctly failed the mandatory gate (123 passed, one failure): the Compose version on the runner required the local API `.env` even with `--no-env-resolution`. The local Compose version bypassed that requirement. The existing test now copies the committed Compose file to pytest's temporary directory, supplies an empty synthetic `.env`, and performs full Compose config validation there without `--no-env-resolution`. Real role initialization/bootstrap checks and the exit-code assertion remain unchanged; developer credentials are not read, and no production configuration changes were needed.
 
 The internal baseline JSON contains local preservation/environment metadata and is unnecessary at runtime or in CI. The original checkout's `.claude/settings.local.json`, Gradle lock and unfinished `MISSION_00_REPORT.md` were not transferred. Ignored secrets, virtual environments, caches and temporary test outputs were never used as transfer sources. The copied MISSION 01A report is historical evidence; its test results and approval boundary are not MISSION 01B results. Current evidence is reported in the pull request and the separately delivered MISSION 01B Arabic report.
 

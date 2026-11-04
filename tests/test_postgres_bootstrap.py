@@ -483,7 +483,7 @@ b.bootstrap(settings)
             process.communicate(timeout=10)
 
 
-def test_local_docker_role_init_and_compose_contract(database):
+def test_local_docker_role_init_and_compose_contract(database, tmp_path):
     token = uuid.uuid4().hex[:12]
     env = os.environ.copy()
     env.update(MIGRATION_POSTGRES_USER="local_owner_" + token,
@@ -509,6 +509,12 @@ def test_local_docker_role_init_and_compose_contract(database):
     bootstrap.bootstrap(local)
     bootstrap.verify_runtime(local)
     env["LOCAL_POSTGRES_ADMIN_PASSWORD"] = secrets.token_urlsafe(24)
-    result = subprocess.run(["docker", "compose", "config", "--quiet", "--no-env-resolution"],
-        cwd=bootstrap.ROOT, env=env, capture_output=True, text=True, timeout=30)
+    # Validate the committed Compose file as a clean checkout, without reading
+    # a developer's .env. Older Compose versions still require env_file to
+    # exist even with --no-env-resolution, so supply an isolated empty fixture.
+    compose_file = tmp_path / "docker-compose.yml"
+    shutil.copyfile(bootstrap.ROOT / "docker-compose.yml", compose_file)
+    (tmp_path / ".env").write_text("", encoding="utf-8")
+    result = subprocess.run(["docker", "compose", "--file", str(compose_file), "config", "--quiet"],
+        cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, "Local Compose configuration validation failed"
