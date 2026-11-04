@@ -41,7 +41,6 @@ services:
     branch: fix/boot-crashes-and-backend-merge
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    preDeployCommand: python -m alembic upgrade head
     autoDeploy: true
 
     # preDeployCommand is deliberately absent: it is a paid-plan feature, and so
