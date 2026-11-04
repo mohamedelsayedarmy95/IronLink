@@ -72,12 +72,12 @@ class SignOutService {
   /// Local erasure happens even if the server call fails: being offline must
   /// not mean the data stays. The server-side revoke is attempted first only
   /// because it needs the token that is about to be destroyed.
-  Future<void> signOut() async {
+  Future<void> signOut({bool revokeServer = true}) async {
     // Before the revoke, so the socket is not racing a session that is about
     // to stop existing.
     await _attempt('socket', () async => _socket?.disconnect());
 
-    await _revokeServerSession();
+    if (revokeServer) await _revokeServerSession();
 
     // Ordered most-sensitive first, and each guarded on its own: one failure
     // must not leave the rest behind.

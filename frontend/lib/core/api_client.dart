@@ -38,7 +38,19 @@ class ApiClient {
           return handler.next(error);
         }
 
-        if (!await refreshSession()) return handler.next(error);
+        if (!await refreshSession()) {
+          if (await refreshToken != null) {
+            // A retained refresh token means the exchange was unavailable,
+            // not rejected. Do not forward the expired access token's 401 as
+            // evidence that the authenticated session has been revoked.
+            return handler.next(DioException(
+              requestOptions: request,
+              type: DioExceptionType.connectionError,
+              message: 'Session refresh temporarily unavailable',
+            ));
+          }
+          return handler.next(error);
+        }
 
         final token = await accessToken;
         if (token == null) return handler.next(error);
@@ -82,15 +94,34 @@ class ApiClient {
 
   Dio get dio => _dio;
 
-  Future<void> saveTokens(
-      {required String access, required String refresh}) async {
-    await _storage.write(key: _kAccess, value: access);
-    await _storage.write(key: _kRefresh, value: refresh);
+  int _credentialGeneration = 0;
+  Future<void> _tokenWrites = Future.value();
+
+  Future<void> _writeTokens(Future<void> Function() action) {
+    // A failed write is still reported to its caller. Later erasure must be
+    // able to run even if that earlier write failed.
+    return _tokenWrites =
+        _tokenWrites.catchError((Object _) {}).then((_) => action());
   }
 
-  Future<String?> get accessToken => _storage.read(key: _kAccess);
+  Future<void> saveTokens({required String access, required String refresh}) {
+    final generation = ++_credentialGeneration;
+    return _writeTokens(() async {
+      if (generation != _credentialGeneration) return;
+      await _storage.write(key: _kAccess, value: access);
+      await _storage.write(key: _kRefresh, value: refresh);
+    });
+  }
 
-  Future<String?> get refreshToken => _storage.read(key: _kRefresh);
+  Future<String?> get accessToken async {
+    await _tokenWrites;
+    return _storage.read(key: _kAccess);
+  }
+
+  Future<String?> get refreshToken async {
+    await _tokenWrites;
+    return _storage.read(key: _kRefresh);
+  }
 
   /// Serialises refreshes so a burst of 401s produces one exchange.
   ///
@@ -113,8 +144,9 @@ class ApiClient {
   }
 
   Future<bool> _doRefresh() async {
+    final generation = _credentialGeneration;
     final refresh = await refreshToken;
-    if (refresh == null) return false;
+    if (refresh == null || generation != _credentialGeneration) return false;
 
     try {
       // A bare Dio: this must not pass through the interceptor that calls
@@ -125,6 +157,7 @@ class ApiClient {
         data: {'refresh_token': refresh},
       );
       final data = res.data!;
+      if (generation != _credentialGeneration) return false;
       await saveTokens(
         access: data['access_token'] as String,
         refresh: data['refresh_token'] as String,
@@ -132,7 +165,8 @@ class ApiClient {
       return true;
     } on DioException catch (e) {
       final status = e.response?.statusCode;
-      if (status == 401 || status == 403) {
+      if ((status == 401 || status == 403) &&
+          generation == _credentialGeneration) {
         await clearTokens();
         return false;
       }
@@ -144,9 +178,12 @@ class ApiClient {
     }
   }
 
-  Future<void> clearTokens() async {
-    await _storage.delete(key: _kAccess);
-    await _storage.delete(key: _kRefresh);
+  Future<void> clearTokens() {
+    _credentialGeneration++;
+    return _writeTokens(() async {
+      await _storage.delete(key: _kAccess);
+      await _storage.delete(key: _kRefresh);
+    });
   }
 
   Future<Response<T>> authedPost<T>(String path, {Object? data}) async {

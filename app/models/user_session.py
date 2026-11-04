@@ -37,12 +37,11 @@ class UserSession(Base):
     indefinite record of where somebody signed in from. Live sessions are never
     swept — see app/services/retention_worker.py.
 
-    Fable5-Enhancement: ws_connection_id links the DB session to the in-memory
-    Redis WebSocket registry so an admin can force-disconnect a specific device
-    without knowing the socket internals. Revocation flow:
-      1. Admin sets session.revoked_at
-      2. Worker reads Redis SESSIONS db → publishes DISCONNECT to that connection ID
-      3. Client receives close frame; re-auth required.
+    WebSockets carry this session ID in their one-use ticket and connection
+    registry. Fresh database authorization governs incoming actions and outgoing
+    data; post-commit Pub/Sub notifications accelerate server-controlled closure.
+    Periodic verification also closes idle invalid sessions. The nullable legacy
+    ws_connection_id field is retained for schema compatibility, not authorization.
     """
 
     __tablename__ = "user_sessions"

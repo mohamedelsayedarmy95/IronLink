@@ -264,10 +264,11 @@ class TestCorruptedInput:
     def test_a_truncated_frame_is_not_valid_json_and_is_handled(self) -> None:
         from app.api.routes import websocket as ws_route
 
-        source = inspect.getsource(ws_route.chat_socket)
+        source = inspect.getsource(ws_route._receive_loop)
         # A JSONDecodeError inside the receive loop must be answered, not
         # allowed to escape and close every conversation on the socket.
-        assert "json.JSONDecodeError" in source
+        assert "except ValueError" in source  # includes JSONDecodeError
+        assert "invalid JSON frame" in source
         assert "continue" in source
 
     def test_a_malformed_frame_body_does_not_reach_the_database(self) -> None:

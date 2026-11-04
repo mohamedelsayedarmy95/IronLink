@@ -82,7 +82,7 @@ class _ConnectionBannerState extends State<ConnectionBanner> {
     // An outdated client is terminal — the transport has stopped retrying,
     // because the server will refuse this build every time. There is nothing
     // to wait out, so it is said at once.
-    if (status == WsStatus.outdated) {
+    if (status == WsStatus.outdated || status == WsStatus.signInRequired) {
       setState(() {
         _status = status;
         _settled = false;
@@ -114,6 +114,7 @@ class _ConnectionBannerState extends State<ConnectionBanner> {
 
     final message = switch (_status) {
       WsStatus.outdated => t.connectionOutdated,
+      WsStatus.signInRequired => t.failureUnauthorized,
       WsStatus.offline => t.connectionOffline,
       WsStatus.connecting => t.connectionConnecting,
       WsStatus.connected => '',

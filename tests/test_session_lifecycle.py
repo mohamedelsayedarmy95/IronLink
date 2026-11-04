@@ -16,6 +16,15 @@ def _source(fn) -> str:
     return inspect.getsource(fn)
 
 
+def _authentication_source() -> str:
+    # HTTP and WebSockets now share one policy. Preserve these original policy
+    # checks at its new location; real WS/HTTP negative tests exercise behavior.
+    from app.api.deps import get_current_user
+    from app.core.session_auth import authenticated_session
+    assert 'authenticated_session(' in _source(get_current_user)
+    return _source(authenticated_session)
+
+
 # ── Session binding ──────────────────────────────────────────────────────────
 
 def test_a_request_is_authenticated_against_its_session() -> None:
@@ -23,7 +32,7 @@ def test_a_request_is_authenticated_against_its_session() -> None:
     kicked device kept working until its token expired on its own."""
     from app.api.deps import get_current_user
 
-    source = _source(get_current_user)
+    source = _authentication_source()
     assert "UserSession" in source
     assert "UserSession.revoked_at.is_(None)" in source
 
@@ -31,14 +40,14 @@ def test_a_request_is_authenticated_against_its_session() -> None:
 def test_an_expired_session_is_rejected() -> None:
     from app.api.deps import get_current_user
 
-    assert "UserSession.expires_at >" in _source(get_current_user)
+    assert "UserSession.expires_at >" in _authentication_source()
 
 
 def test_the_session_must_belong_to_the_token_holder() -> None:
     """Otherwise anyone could quote someone else's live session id."""
     from app.api.deps import get_current_user
 
-    assert "UserSession.user_id == user.id" in _source(get_current_user)
+    assert "UserSession.user_id == User.id" in _authentication_source()
 
 
 def test_a_token_without_a_session_claim_is_refused() -> None:
@@ -58,7 +67,7 @@ def test_the_account_wide_lever_still_exists() -> None:
     replace it."""
     from app.api.deps import get_current_user
 
-    assert "token_version != user.token_version" in _source(get_current_user)
+    assert "User.token_version == identity.token_version" in _authentication_source()
 
 
 # ── Signing in no longer kicks your other devices ────────────────────────────
