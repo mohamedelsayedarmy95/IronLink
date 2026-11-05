@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../auth_repository.dart';
+import '../local_otp.dart';
 
 // ── Events ────────────────────────────────────────────────────────────────────
 
@@ -252,6 +253,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(state.copyWith(
         status: AuthStatus.loading, phoneNumber: event.phoneNumber));
     try {
+      if (localOtpEnabled) {
+        await _repo.requestOtp(event.phoneNumber);
+        add(const _CodeSent('', null));
+        return;
+      }
       await _repo.sendPhoneOtp(
         phoneNumber: event.phoneNumber,
         forceResendingToken: state.resendToken,
@@ -304,6 +310,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       MilitaryIdSubmitted event, Emitter<AuthState> emit) async {
     emit(state.copyWith(status: AuthStatus.loading));
     try {
+      if (localOtpEnabled) {
+        final user = await _repo.verify(
+          phoneNumber: state.phoneNumber,
+          otpCode: state.otpCode,
+          militaryId: event.militaryId,
+          deviceFingerprint: deviceFingerprint,
+        );
+        emit(state.copyWith(status: AuthStatus.success, user: user));
+        return;
+      }
       // Auto-verification already produced an ID token; otherwise exchange
       // the manually-typed OTP for one now.
       final idToken = state.idToken ??

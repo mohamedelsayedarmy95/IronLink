@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/crypto/group_signal.dart';
+import '../../core/crypto/signal.dart';
 import '../../core/icons.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/empty_state.dart';
@@ -94,9 +96,16 @@ class _GroupsScreenState extends State<GroupsScreen> {
       const {'moderator', 'admin', 'owner'}.contains(group.myRole);
 
   void _openChat(BuildContext context, GroupInfo group) {
+    final groupCrypto = context.read<GroupSignalService>();
+    final pairwise = context.read<SignalService>();
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => GroupChatScreen(group: group, myId: widget.myId),
+        builder: (_) => GroupChatScreen(
+          group: group,
+          myId: widget.myId,
+          groupCrypto: groupCrypto,
+          pairwise: pairwise,
+        ),
       ),
     );
   }
