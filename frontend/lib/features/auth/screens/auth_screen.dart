@@ -79,7 +79,7 @@ class AuthScreen extends StatelessWidget {
                   if (state.step == AuthStep.militaryId)
                     _CompletedRow(
                         label: t.otpCodeLabel,
-                        value: 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢'),
+                        value: '••••••'),
                   const SizedBox(height: IronSpacing.xs),
                   AnimatedSwitcher(
                     duration: IronMotion.entrance,

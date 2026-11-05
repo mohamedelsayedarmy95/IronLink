@@ -49,12 +49,12 @@ class ChannelApiService {
 }
 
 class Channel {
-  final int id;
+  final String id;
   final String name;
   final String? description;
   final String type; // public or private
   final String? category;
-  final int ownerId;
+  final String ownerId;
   final bool isVerified;
   final int subscriberCount;
 
@@ -74,7 +74,7 @@ class Channel {
       id: json['id'],
       name: json['name'],
       description: json['description'],
-      type: json['type'],
+      type: json['channel_type'],
       category: json['category'],
       ownerId: json['owner_id'],
       isVerified: json['is_verified'],

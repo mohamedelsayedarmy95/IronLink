@@ -10,8 +10,11 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.database import get_db
+from app.services.channel_access import require_channel_media_access
 from app.config import settings
 from app.core.redis import redis_sessions
 from app.models import User
@@ -246,7 +249,8 @@ async def upload_complete(
         assembled, thumb = _process_image(assembled, mime)
         if thumb is not None:
             thumbnail_key = _storage.put_object(
-                settings.S3_BUCKET_ATTACHMENTS, thumb, "image/jpeg", suffix="_thumb.jpg"
+                settings.S3_BUCKET_ATTACHMENTS, thumb, "image/jpeg", suffix="_thumb.jpg",
+                owner_id=str(user.id),
             )
     elif mime.startswith("video/"):
         # Fable5-Enhancement: video thumbnailing needs ffmpeg, which does not
@@ -259,6 +263,7 @@ async def upload_complete(
     media_key = _storage.put_object(
         settings.S3_BUCKET_ATTACHMENTS, assembled, mime,
         suffix=_ext_for(mime),
+        owner_id=str(user.id),
     )
     _storage.delete_staging(upload_id, state["total_chunks"])
     await redis_sessions.delete(_state_key(upload_id), _chunks_key(upload_id))
@@ -287,9 +292,11 @@ async def upload_complete(
 @router.get("/{media_key}/url", response_model=PresignedOut)
 async def presigned_view_url(
     media_key: str,
+    db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> PresignedOut:
     """5-minute pre-signed view link, generated fresh on each open."""
+    await require_channel_media_access(db, media_key, user.id)
     try:
         url = _storage.presign_download_ttl(
             settings.S3_BUCKET_ATTACHMENTS, media_key, PRESIGN_VIEW_TTL

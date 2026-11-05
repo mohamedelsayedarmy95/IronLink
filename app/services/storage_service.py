@@ -121,15 +121,28 @@ class StorageService:
         )
 
     def put_object(
-        self, bucket: str, data: bytes, mime_type: str, *, suffix: str = ""
+        self, bucket: str, data: bytes, mime_type: str, *, suffix: str = "",
+        owner_id: str | None = None,
     ) -> str:
         """Stores bytes under a random key; returns the key."""
         object_key = f"{uuid4().hex}{suffix}"
         self._client.put_object(
             bucket, object_key, io.BytesIO(data), length=len(data),
             content_type=mime_type,
+            metadata={'ironlink-owner-id': owner_id} if owner_id is not None else None,
         )
         return object_key
+
+    def object_owner(self, bucket: str, object_key: str) -> str | None:
+        """Server-written upload provenance; unknown legacy objects fail closed."""
+        try:
+            metadata = self._client.stat_object(bucket, object_key).metadata or {}
+        except S3Error as exc:
+            if exc.code in {'NoSuchKey', 'NoSuchObject', 'NotFound'}:
+                return None
+            raise
+        return next((value for key, value in metadata.items()
+                     if key.lower() == 'x-amz-meta-ironlink-owner-id'), None)
 
     # ── Chunked-upload staging (media.py) ─────────────────────────────────────
     # Staged chunks live in the attachments bucket under staging/{upload_id}/{n}

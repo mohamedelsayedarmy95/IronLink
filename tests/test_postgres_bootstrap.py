@@ -199,7 +199,7 @@ def test_fresh_database_all_migrations_and_non_admin_identities(database):
     bootstrap.bootstrap(database)
     bootstrap.verify_runtime(database)
     with connect(database) as conn:
-        assert scalar(conn, "SELECT version_num FROM public.alembic_version") == "0013_webauthn_credentials"
+        assert scalar(conn, "SELECT version_num FROM public.alembic_version") == bootstrap.expected_revision()
         assert scalar(conn, "SELECT count(*) FROM pg_tables WHERE schemaname='public'") == len(bootstrap.application_tables()) + 1
         assert not scalar(conn, "SELECT pg_get_userbyid(relowner)=current_user FROM pg_class WHERE oid='public.audit_logs'::regclass")
 
@@ -404,7 +404,7 @@ def test_paused_alembic_session_serializes_and_cannot_outlive_its_lock(database,
     revision = f'''from alembic import op
 from pathlib import Path
 revision = "9999_lock_failure_probe"
-down_revision = "0013_webauthn_credentials"
+down_revision = "{bootstrap.expected_revision()}"
 def upgrade():
     connection = op.get_bind()
     connection.exec_driver_sql("CREATE TABLE public.lock_failure_probe (id integer)")

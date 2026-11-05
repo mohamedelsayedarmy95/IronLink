@@ -15,6 +15,7 @@ import 'core/theme.dart';
 import 'core/ws_service.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/bloc/auth_bloc.dart';
+import 'features/auth/local_otp.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/chat/ai_consent_repository.dart';
 import 'features/chat/chat_repository.dart';
@@ -36,7 +37,7 @@ void main() async {
     // Reads android/app/google-services.json natively. Must happen before
     // the auth screen mounts — Firebase Phone Auth needs it on the very
     // first screen, not just for push notifications post-login.
-    await Firebase.initializeApp();
+    if (!localOtpEnabled) await Firebase.initializeApp();
   } catch (_) {
     // No Firebase config (local dev without google-services.json): Phone
     // Auth and push both stay unavailable rather than crashing the app.

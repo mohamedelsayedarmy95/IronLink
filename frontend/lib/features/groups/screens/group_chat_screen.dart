@@ -24,10 +24,14 @@ class GroupChatScreen extends StatelessWidget {
     super.key,
     required this.group,
     required this.myId,
+    required this.groupCrypto,
+    required this.pairwise,
   });
 
   final GroupInfo group;
   final String myId;
+  final GroupSignalService groupCrypto;
+  final SignalService pairwise;
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +41,8 @@ class GroupChatScreen extends StatelessWidget {
         myId: myId,
         repo: ctx.read<GroupsRepository>(),
         ws: ctx.read<WsService>(),
-        groupCrypto: ctx.read<GroupSignalService>(),
-        pairwise: ctx.read<SignalService>(),
+        groupCrypto: groupCrypto,
+        pairwise: pairwise,
       )..add(const GroupChatOpened()),
       child: _GroupChatView(group: group, myId: myId),
     );
