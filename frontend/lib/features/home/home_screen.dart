@@ -249,6 +249,7 @@ class _HomeScreenState extends State<_HomeView> {
     ).signOut();
 
     if (!mounted) return;
+    context.read<AuthBloc>().add(const SessionInvalidated());
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const SplashScreen()),
       (_) => false,
