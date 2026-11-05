@@ -66,3 +66,18 @@ Known backlog, unselected: atomic OTP/rate limits, community/channel ACL coverag
 production OTP delivery/account-enumeration behavior. No next mission has started.
 
 Awaiting owner selection of the next IronLink development mission.
+
+## Mission 02B feature proposal (unmerged)
+
+`feature/mission-02b-private-channel-authorization` is based on the verified
+`08edbb39a3960f4453af37d749b3a28a35c176ae` integration baseline. It adds server-side
+private channel discovery/read/subscription authorization, owner grants/revocation,
+scheduled-post filtering and durable channel-media key scope. See
+`docs/CHANNEL_AUTHORIZATION.md` for the access matrix, API, migration 0014 and
+signed-URL limitations. Flutter channel parsing matches UUID and `channel_type`
+response fields. The new mandatory real-PG16 channel gate rejects skipped tests;
+the previous PostgreSQL and WebSocket gates remain required. Hosted exact-head CI
+and final delivery evidence belong in the feature PR and final Mission 02B report.
+
+Keep the feature PR OPEN for owner review. Do not merge it or PR #2, deploy, change
+production credentials/databases or select another mission under this authorization.

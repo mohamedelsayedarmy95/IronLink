@@ -105,6 +105,9 @@ jobs:
       - name: WebSocket session authorization (real PG16 and Redis, no skipped tests)
         run: python -m scripts.test_websocket_sessions
 
+      - name: Channel privacy authorization (real PG16, no skipped tests)
+        run: python -m scripts.test_channel_authorization
+
       # Every migration declares a downgrade, and until this step none had ever
       # been executed — not in CI, not anywhere. An untested downgrade is a
       # plan, not a capability, and the difference only becomes apparent during

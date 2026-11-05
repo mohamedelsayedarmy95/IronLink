@@ -84,6 +84,18 @@ class ChannelPost(Base):
     )
 
 
+class ChannelMediaKey(Base):
+    """Immutable channel scope; NULL channel is a retained deletion tombstone."""
+
+    __tablename__ = 'channel_media_keys'
+
+    media_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    channel_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey('channels.id', ondelete='SET NULL'),
+        nullable=True, index=True,
+    )
+
+
 class ChannelSubscription(Base):
     __tablename__ = "channel_subscriptions"
 

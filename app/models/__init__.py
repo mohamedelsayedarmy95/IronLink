@@ -16,6 +16,7 @@ from .channel import (
     Channel,
     ChannelAnalytics,
     ChannelPost,
+    ChannelMediaKey,
     ChannelSubscription,
     ChannelType,
 )
@@ -101,6 +102,7 @@ __all__ = [
     "Channel",
     "ChannelAnalytics",
     "ChannelPost",
+    "ChannelMediaKey",
     "ChannelSubscription",
     "ChannelType",
     "COMMUNITY_ROLE_RANK",
