@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import WebSocket
 from redis.asyncio import Redis
+from sqlalchemy import select
 
 from app.core.redis import redis_sessions as redis_client
 from app.core.session_auth import SessionInvalid

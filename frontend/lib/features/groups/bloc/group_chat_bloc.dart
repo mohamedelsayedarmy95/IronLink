@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart'
     show DuplicateMessageException;
 
+import '../../../core/client_ref.dart';
 import '../../../core/crypto/attachment_crypto.dart';
 import '../../../core/crypto/group_signal.dart';
 import '../../../core/crypto/signal.dart';
@@ -166,7 +167,6 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
   final SignalService _pairwise;
 
   StreamSubscription? _sub;
-  int _refCounter = 0;
 
   /// The epoch this device has already distributed a sender key for. Kept so
   /// the (network-heavy) distribution does not repeat on every send.
@@ -274,7 +274,7 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
         group: groupId,
         to: d.recipientId,
         content: d.payload,
-        clientRef: 'skdm_${++_refCounter}',
+        clientRef: newClientRef('skdm'),
       );
     }
 
@@ -312,7 +312,7 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
       return;
     }
 
-    final ref = 'ref_${++_refCounter}';
+    final ref = newClientRef('ref');
     _ws.sendGroupText(group: groupId, content: envelope, clientRef: ref);
 
     // The bubble shows the plaintext, not the envelope.
@@ -374,7 +374,7 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
       return;
     }
 
-    final ref = 'ref_${++_refCounter}';
+    final ref = newClientRef('ref');
     _ws.sendGroupMedia(
       group: groupId,
       kind: e.kind,

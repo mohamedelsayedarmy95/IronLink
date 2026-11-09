@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/crypto/signal.dart';
 import '../../../core/ws_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../chat_repository.dart';
@@ -58,7 +59,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
     await _future;
   }
 
@@ -100,19 +103,28 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             itemBuilder: (context, i) => _ChatCard(
               chat: chats[i].chat,
               preview: chats[i].preview,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChatRoomScreen(
-                    repo: widget.repo,
-                    ws: widget.ws,
-                    myId: widget.myId,
-                    peerId: chats[i].chat.peerId,
-                    peerName: chats[i].chat.peerName,
-                    peerOnline: chats[i].chat.isOnline,
-                    isSecret: false,
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChatRoomScreen(
+                      repo: widget.repo,
+                      ws: widget.ws,
+                      myId: widget.myId,
+                      peerId: chats[i].chat.peerId,
+                      peerName: chats[i].chat.peerName,
+                      peerOnline: chats[i].chat.isOnline,
+                      isSecret: false,
+                      signalService: context.read<SignalService>(),
+                    ),
                   ),
-                ),
-              ),
+                );
+                // The future was created once in initState, so returning from
+                // a conversation used to show the list exactly as it was
+                // before the messages were sent. Reload on return rather than
+                // polling: this is the moment the data can have changed.
+                if (!mounted) return;
+                await _refresh();
+              },
             ),
           );
         },

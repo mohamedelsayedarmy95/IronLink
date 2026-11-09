@@ -89,3 +89,44 @@ class OneTimePreKey(Base):
         UniqueConstraint("user_id", "key_id", name="uq_one_time_prekey_user_key"),
         Index("ix_one_time_prekeys_user_id_id", "user_id", "id"),
     )
+
+
+class ConsumedOneTimePreKey(Base):
+    """Identity-scoped tombstone for a one-time pre-key that was consumed.
+
+    Deleting a claimed pre-key is what makes it single-use, but deletion alone
+    is not enough: the client retries an earlier bundle upload whenever the
+    original response was lost, and that upload still contains the claimed
+    key. Without a record of the claim, the retry would insert the key again
+    and hand the same one-time key to a second sender.
+
+    The tombstone is scoped by identity key, not just by key id. Pre-key ids
+    are generated per installation, so a new identity may legitimately reuse
+    the same numeric id; only the same identity and id together identify the
+    consumed key. `created_at` is the consumption time. Only public material
+    is stored — see the contract on UserKeyBundle.
+
+    Rows are retained across identity changes on purpose: switching away from
+    an identity does not make keys consumed under it safe to republish.
+    """
+
+    __tablename__ = "one_time_prekey_consumptions"
+
+    user_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    identity_key: Mapped[str] = mapped_column(Text, nullable=False)
+    key_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    public_key: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "identity_key",
+            "key_id",
+            name="uq_one_time_prekey_consumption_user_identity_key",
+        ),
+    )

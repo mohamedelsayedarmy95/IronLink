@@ -268,6 +268,34 @@ void main() {
       expect(jsonDecode(queued.single)['content'], 'survive me');
     });
 
+    test('every recovered message keeps its original reference', () async {
+      // Recovery is a replay, not a re-send: the frames are read from storage
+      // exactly as they were written. Regenerating a reference here would give
+      // the server two different keys for one logical message, and the copy
+      // already stored would be delivered a second time.
+      final store = InMemoryOutboxStore();
+      final before = WsService.forTest(outbox: store);
+
+      before.send({'type': 'text', 'content': 'first', 'client_ref': 'ref_a'});
+      before.send({'type': 'text', 'content': 'second', 'client_ref': 'ref_b'});
+      await before.debugSettled;
+      final written = await before.debugOutbox;
+
+      final after = WsService.forTest(outbox: store);
+      final recovered = await after.debugOutbox;
+
+      expect(recovered, written, reason: 'recovery must not rewrite the queue');
+      expect(
+        [for (final raw in recovered) jsonDecode(raw)['client_ref']],
+        ['ref_a', 'ref_b'],
+      );
+      expect(
+        [for (final raw in recovered) jsonDecode(raw)['content']],
+        ['first', 'second'],
+        reason: 'a new message must not be lost behind an older one',
+      );
+    });
+
     test('but not a sign-out', () async {
       final store = InMemoryOutboxStore();
       final ws = WsService.forTest(outbox: store);

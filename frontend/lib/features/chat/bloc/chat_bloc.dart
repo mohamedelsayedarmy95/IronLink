@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/api_client.dart';
+import '../../../core/client_ref.dart';
 import '../../../core/crypto/attachment_crypto.dart';
 import '../../../core/ws_service.dart';
 import '../chat_repository.dart';
@@ -479,7 +480,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   StreamSubscription? _sub;
   StreamSubscription? _droppedSub;
   Timer? _typingDebounce;
-  int _refCounter = 0;
 
   /// Decrypts a message that came from server history rather than live.
   ///
@@ -575,7 +575,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
       target: e.messageId,
       to: peerId,
       content: next,
-      clientRef: 'rx_${++_refCounter}',
+      clientRef: newClientRef('rx'),
     );
   }
 
@@ -648,7 +648,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   }
 
   void _onTextSent(TextSent e, Emitter<ChatRoomState> emit) async {
-    final ref = 'ref_${++_refCounter}';
+    final ref = newClientRef('ref');
     String contentToSend = e.content;
 
     if (_encrypted) {
@@ -701,7 +701,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatRoomState> {
   }
 
   void _onMediaSent(MediaSent e, Emitter<ChatRoomState> emit) async {
-    final ref = 'ref_${++_refCounter}';
+    final ref = newClientRef('ref');
     String contentToSend = e.caption ?? '[${e.kind}]';
     String mediaKeyToSend = e.mediaKey;
 

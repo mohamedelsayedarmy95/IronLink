@@ -41,6 +41,7 @@ class ChatRoomScreen extends StatelessWidget {
     required this.peerId,
     required this.peerName,
     required this.peerOnline,
+    required this.signalService,
     // Encrypted unless a caller deliberately says otherwise. A protection
     // that has to be switched on is one most people never get.
     this.isSecret = false,
@@ -53,6 +54,15 @@ class ChatRoomScreen extends StatelessWidget {
   final String peerId;
   final String peerName;
   final bool peerOnline;
+
+  /// The one provided at Home, so every chat shares a single key store and
+  /// session state rather than each screen building its own.
+  ///
+  /// Passed in rather than read from the context: this screen is pushed as a
+  /// new route, and a route's subtree lives under the Navigator — outside the
+  /// `MultiRepositoryProvider` that scopes the home screen. Reading it from
+  /// `context` there threw `ProviderNotFoundException` and crashed the chat.
+  final SignalService signalService;
 
   /// Additionally keeps nothing on the device. Encryption is independent of
   /// this and is on either way.
@@ -76,9 +86,7 @@ class ChatRoomScreen extends StatelessWidget {
         baseUrl: baseUrl,
         api: context.read<ApiClient>(),
         store: context.read<MessageStore>(),
-        // The one provided at Home, so every chat shares a single key store
-        // and session state rather than each screen building its own.
-        signalService: context.read<SignalService>(),
+        signalService: signalService,
       )..add(const ChatOpened()),
       child: _ChatRoomView(
         isSecret: isSecret,

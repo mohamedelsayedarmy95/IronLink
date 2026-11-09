@@ -31,9 +31,9 @@ def test_no_private_key_columns_in_schema() -> None:
     guarantee should hold because there is nowhere to put a private key, not
     because the current handlers happen not to write one.
     """
-    from app.models import OneTimePreKey, UserKeyBundle
+    from app.models import ConsumedOneTimePreKey, OneTimePreKey, UserKeyBundle
 
-    for model in (UserKeyBundle, OneTimePreKey):
+    for model in (UserKeyBundle, OneTimePreKey, ConsumedOneTimePreKey):
         for column in model.__table__.columns:
             name = column.name.lower()
             assert "private" not in name, (
@@ -204,3 +204,30 @@ def test_one_time_prekey_has_no_soft_consume_column() -> None:
         "single-use pre-keys are deleted on claim; a soft flag invites the "
         "double-hand-out race this design avoids"
     )
+
+
+def test_consumed_prekey_tombstone_is_identity_scoped() -> None:
+    """A key id is only unique inside one identity's pre-key sequence.
+
+    An identity reset may legitimately reuse numeric ids, so the tombstone
+    must include the identity key rather than relying on (user_id, key_id).
+    """
+    from app.models import ConsumedOneTimePreKey
+
+    names = {c.name for c in ConsumedOneTimePreKey.__table__.columns}
+    assert {"user_id", "identity_key", "key_id", "public_key"} <= names
+    assert "consumed_at" not in names
+    assert not {"private", "secret"} & {name.lower() for name in names}
+
+    uniques = {
+        tuple(sorted(column.name for column in constraint.columns))
+        for constraint in ConsumedOneTimePreKey.__table__.constraints
+        if constraint.__class__.__name__ == "UniqueConstraint"
+    }
+    assert ("identity_key", "key_id", "user_id") in uniques
+
+
+def test_prekey_consumption_tombstone_migration_is_head() -> None:
+    from app.core.database_bootstrap import expected_revision
+
+    assert expected_revision() == "0015_prekey_tombstones"

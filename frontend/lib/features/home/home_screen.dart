@@ -272,6 +272,7 @@ class _HomeScreenState extends State<_HomeView> {
           peerName: peerName ?? peerId,
           peerOnline: false,
           isSecret: false,
+          signalService: context.read<SignalService>(),
         ),
       ),
     );
@@ -344,6 +345,7 @@ class _HomeScreenState extends State<_HomeView> {
                           peerName: contact.fullName,
                           peerOnline: false,
                           isSecret: false,
+                          signalService: context.read<SignalService>(),
                         ),
                       ),
                     ),
