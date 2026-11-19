@@ -38,7 +38,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    branch: fix/boot-crashes-and-backend-merge
+    branch: staging/infra-recovery-03
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeploy: true
