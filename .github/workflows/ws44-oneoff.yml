@@ -1,0 +1,47 @@
+name: IronLink WS-44 one-off
+
+on:
+  push:
+    branches:
+      - ci/ws44-152c9687-oneoff
+    paths:
+      - .github/workflows/ws44-oneoff.yml
+
+permissions:
+  contents: read
+
+jobs:
+  ws44:
+    name: Redis-backed WebSocket regressions (44 cases)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the approved test checkpoint
+        uses: actions/checkout@v7
+        with:
+          ref: 152c96874f43220f0e5c33ef913862a940e36602
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install the checkpoint requirements
+        run: python -m pip install -r requirements.txt
+      - name: Run only the 44 original WebSocket cases
+        run: >-
+          python -m scripts.test_websocket_sessions --focused
+          test_ticket_issued_before_revocation_cannot_connect
+          test_ticket_is_bound_to_validated_session_and_consumed_once
+          test_expired_ticket_cannot_connect
+          test_invalid_ticket_identity_is_rejected
+          test_remote_revoke_closes_exact_session_across_workers_and_preserves_messages
+          test_malformed_frame_is_rejected_without_losing_valid_connection
+          test_missed_notification_cannot_authorize_any_action
+          test_revoked_connection_does_not_receive_new_protected_delivery
+          test_idle_session_invalidation_is_enforced_without_notifications
+          test_logout_and_refresh_replay_close_existing_socket
+          test_client_cannot_publish_a_revocation_control_frame
+          test_database_failure_fails_closed_without_accepting_message
+          test_redis_subscription_loss_closes_and_valid_session_reconnects
+          test_operation_authorized_before_revoke_commit_may_finish
+          test_account_suspension_requires_new_authentication_after_reactivation
